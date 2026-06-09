@@ -1,0 +1,21 @@
+rules_version = '2';
+
+// Phase 1 rules. Paste into Firebase console > Firestore > Rules.
+// Replace the admin email if you ever change NEXT_PUBLIC_ADMIN_EMAIL.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.email.lower() == "guy_te3@hotmail.com";
+    }
+
+    // allowlist/{email}: a signed-in user may read ONLY their own entry (to learn
+    // whether they're approved). Only the admin can add/remove people.
+    match /allowlist/{email} {
+      allow read: if isAdmin() || (isSignedIn() && request.auth.token.email.lower() == email);
+      allow write: if isAdmin();
+    }
+  }
+}
