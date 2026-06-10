@@ -14,6 +14,7 @@ export type EntityType =
   | "museum"
   | "club"
   | "party"   // legacy — kept for existing Firestore docs; displayed under Clubs tab
+  | "spa"
   | "sight"
   | "hike"
   | "event"
@@ -26,6 +27,7 @@ export const ENTITY_TABS: { type: EntityType; label: string; emoji: string; oper
   { type: "vintage", label: "Vintage", emoji: "👕" },
   { type: "museum", label: "Museums", emoji: "🖼" },
   { type: "club", label: "Clubs", emoji: "🎶" },
+  { type: "spa", label: "Spa", emoji: "🧖" },
   { type: "sight", label: "Sights", emoji: "📸" },
   { type: "hike", label: "Hikes", emoji: "🥾" },
   { type: "event", label: "Events", emoji: "🎫" },
@@ -143,16 +145,17 @@ export function categorizeEvent(e: ItinEvent): EntityType {
   )
     return "club";
   if (/\b(hike|trail|falls|mountain|greylock|cascade|kaaterskill|ledge)\b/.test(t)) return "hike";
+  // spa/banya before general sights so they don't land in the wrong bucket
+  if (/\b(banya|spa|bathhouse|sauna|hammam|onsen)\b/.test(t)) return "spa";
   if (
-    /\b(high line|coney|boardwalk|beach|riis|hersheypark|chocolate world|mermaid parade|seneca|banya|spa|water park|storm king)\b/.test(
+    /\b(high line|coney|boardwalk|beach|riis|hersheypark|chocolate world|mermaid parade|seneca|water park|storm king)\b/.test(
       t
     )
   )
     return "sight";
-  if (/\b(dinner|brunch|lunch|breakfast|cafe|coffee|food|bagel|pizza|bites|bbq|deli|snack|eat)\b/.test(t))
-    return "food";
+  // travel & admin checked before food — "Rental Car Pickup", "Return", "En Route" etc.
   if (
-    /\b(flight|train|amtrak|greyhound|megabus|ferry|coach|transit|airport|depart|departure|arrival|arrive|car\s+rental|drive\s+to|bus\s+to)\b/.test(
+    /\b(flight|train|amtrak|greyhound|megabus|ferry|coach|transit|airport|depart|departure|arrival|arrive|car\s+rental|rental\s+car|drive\s+to|bus\s+to|en\s+route|return\s+to|heading\s+to)\b/.test(
       t
     )
   )
@@ -163,6 +166,8 @@ export function categorizeEvent(e: ItinEvent): EntityType {
     )
   )
     return "admin";
+  if (/\b(dinner|brunch|lunch|breakfast|cafe|coffee|food|bagel|pizza|bites|bbq|deli|snack|eat)\b/.test(t))
+    return "food";
   return "event";
 }
 

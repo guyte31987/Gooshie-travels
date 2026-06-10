@@ -13,6 +13,7 @@ import {
 import { useTripData } from "./TripData";
 import { useAuth } from "./AuthProvider";
 import { EntityDetail } from "./EntityDetail";
+import { EntityForm } from "./EntityForm";
 import { saveTripItem } from "@/lib/db";
 import { slugId } from "@/lib/slug";
 import { exportEntities } from "@/lib/export";
@@ -212,6 +213,7 @@ function EntityList({
 function EntityRow({ e, canEdit, tripId }: { e: Entity; canEdit: boolean; tripId: string }) {
   const { tripName } = useTripData();
   const [showDetail, setShowDetail] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
 
   return (
     <li>
@@ -238,18 +240,34 @@ function EntityRow({ e, canEdit, tripId }: { e: Entity; canEdit: boolean; tripId
             )}
           </div>
         </button>
-        {canEdit && !e.transient && (
-          <button
-            onClick={() => toggleMembership(tripId, e, true)}
-            title="Remove from trip"
-            className="shrink-0 mt-0.5 text-slate-300 hover:text-rose-500 text-sm leading-none px-1"
-          >
-            ✕
-          </button>
+        {canEdit && (
+          <div className="flex shrink-0 items-center gap-1 mt-0.5">
+            <button
+              onClick={() => setShowEdit(true)}
+              className="rounded border border-slate-200 px-2 py-0.5 text-xs font-medium text-slate-500 hover:bg-slate-50"
+            >
+              Edit
+            </button>
+            {!e.transient && (
+              <button
+                onClick={() => toggleMembership(tripId, e, true)}
+                title="Remove from trip"
+                className="text-slate-300 hover:text-rose-500 text-sm leading-none px-1"
+              >
+                ✕
+              </button>
+            )}
+          </div>
         )}
       </div>
       {showDetail && (
         <EntityDetail entity={e} tripId={tripId} tripName={tripName} onClose={() => setShowDetail(false)} />
+      )}
+      {showEdit && (
+        <EntityForm
+          entity={{ id: e.id, name: e.name, type: e.type, generalArea: e.generalArea, area: e.area, address: e.address, hours: e.hours, price: e.price, source: e.source, booking: e.booking, notes: e.notes, closed: e.closed, bestDay: e.bestDay, needsBooking: e.needsBooking }}
+          onClose={() => setShowEdit(false)}
+        />
       )}
     </li>
   );

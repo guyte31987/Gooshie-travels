@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ENTITY_TABS, type Entity, type TripSlot } from "@/lib/entities";
 import { Comments } from "./Comments";
+import { EntityForm } from "./EntityForm";
 import { useTripData } from "./TripData";
 import { useAuth } from "./AuthProvider";
 import { saveInstance, deleteInstanceOverride, type Instance } from "@/lib/db";
@@ -20,9 +21,13 @@ export function EntityDetail({
   tripName?: string;
   onClose: () => void;
 }) {
-  const type = ENTITY_TABS.find((t) => t.type === entity.type);
+  const type = ENTITY_TABS.find((t) => t.type === entity.type || (entity.type === "party" && t.type === "club"));
+  const { isAdmin, role: authRole } = useAuth();
+  const canEdit = isAdmin || authRole === "editor";
+  const [editing, setEditing] = useState(false);
 
   return (
+    <>
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 sm:items-center sm:p-4"
       onClick={onClose}
@@ -49,9 +54,19 @@ export function EntityDetail({
               {entity.area && <span>· {entity.area}</span>}
             </div>
           </div>
-          <button onClick={onClose} className="shrink-0 text-slate-400 hover:text-slate-600">
-            ✕
-          </button>
+          <div className="flex shrink-0 items-center gap-2">
+            {canEdit && (
+              <button
+                onClick={() => setEditing(true)}
+                className="rounded border border-slate-300 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"
+              >
+                Edit
+              </button>
+            )}
+            <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
+              ✕
+            </button>
+          </div>
         </div>
 
         {/* Entity notes + details */}
@@ -94,6 +109,14 @@ export function EntityDetail({
         )}
       </div>
     </div>
+
+    {editing && (
+      <EntityForm
+        entity={{ id: entity.id, name: entity.name, type: entity.type, generalArea: entity.generalArea, area: entity.area, address: entity.address, hours: entity.hours, price: entity.price, source: entity.source, booking: entity.booking, notes: entity.notes, closed: entity.closed, bestDay: entity.bestDay, needsBooking: entity.needsBooking }}
+        onClose={() => setEditing(false)}
+      />
+    )}
+    </>
   );
 }
 

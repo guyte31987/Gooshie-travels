@@ -18,11 +18,11 @@ const FIELDS: { key: keyof DBEntity; label: string; textarea?: boolean }[] = [
 
 export function EntityForm({
   entity,
-  areas,
+  areas = [],
   onClose,
 }: {
   entity: DBEntity | null;
-  areas: string[];
+  areas?: string[];
   onClose: () => void;
 }) {
   const isNew = !entity;
