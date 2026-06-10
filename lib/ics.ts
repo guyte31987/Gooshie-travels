@@ -76,6 +76,30 @@ function parseUtc(v: string): number | undefined {
   return Date.UTC(+y, +mo - 1, +d, +h, +mi, +s);
 }
 
+// Parse a local-time timestamp like 20260619T090000 (no Z) using a known IANA
+// timezone. Google Calendar emits these when the event was created in a specific
+// timezone (DTSTART;TZID=America/New_York:20260619T090000).
+function parseLocalTime(v: string, tzid: string): number | undefined {
+  const m = v.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})$/);
+  if (!m) return undefined;
+  try {
+    // Treat the local components as UTC (naive), then compute the tz offset at
+    // that instant and shift back. One iteration is sufficient for non-DST-boundary times.
+    const naive = Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]);
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: tzid,
+      year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", second: "2-digit",
+      hour12: false,
+    }).formatToParts(new Date(naive));
+    const get = (t: string) => Number(parts.find((p) => p.type === t)!.value);
+    const fmtMs = Date.UTC(get("year"), get("month") - 1, get("day"), get("hour"), get("minute"), get("second"));
+    return naive + (naive - fmtMs);
+  } catch {
+    return undefined;
+  }
+}
+
 // Parse a date-only value like 20260624 to YYYY-MM-DD.
 function parseDate(v: string): string | undefined {
   const m = v.match(/^(\d{4})(\d{2})(\d{2})$/);
@@ -83,7 +107,7 @@ function parseDate(v: string): string | undefined {
   return `${m[1]}-${m[2]}-${m[3]}`;
 }
 
-export function parseIcs(raw: string): TripEvent[] {
+export function parseIcs(raw: string, calTz = DEFAULT_TIMEZONE): TripEvent[] {
   const lines = unfold(raw);
   const events: TripEvent[] = [];
   let cur: Partial<TripEvent> & { _props?: Record<string, RawProp> } | null = null;
@@ -120,14 +144,14 @@ export function parseIcs(raw: string): TripEvent[] {
           cur.isAllDay = true;
           cur.allDayStart = parseDate(prop.value);
         } else {
-          cur.startMs = parseUtc(prop.value);
+          cur.startMs = parseUtc(prop.value) ?? parseLocalTime(prop.value, prop.params.TZID ?? calTz);
         }
         break;
       case "DTEND":
         if (prop.params.VALUE === "DATE") {
           cur.allDayEnd = parseDate(prop.value);
         } else {
-          cur.endMs = parseUtc(prop.value);
+          cur.endMs = parseUtc(prop.value) ?? parseLocalTime(prop.value, prop.params.TZID ?? calTz);
         }
         break;
     }
@@ -196,9 +220,12 @@ function eachDateInRange(startKey: string, endKeyExclusive: string): string[] {
  * context (hotels, Airbnbs) rather than a single-day activity.
  */
 function isStay(e: TripEvent): boolean {
-  if (!e.isAllDay || !e.allDayStart) return false;
-  if (!e.allDayEnd) return false;
-  return e.allDayEnd > e.allDayStart;
+  if (!e.isAllDay || !e.allDayStart || !e.allDayEnd) return false;
+  const [sy, sm, sd] = e.allDayStart.split("-").map(Number);
+  const [ey, em, ed] = e.allDayEnd.split("-").map(Number);
+  // iCalendar DTEND is exclusive, so a single-day all-day event has end = start+1.
+  // Require 2+ day span (end >= start+2) to distinguish multi-night stays from day activities.
+  return Date.UTC(ey, em - 1, ed) - Date.UTC(sy, sm - 1, sd) >= 2 * 86_400_000;
 }
 
 export function buildSchedule(events: TripEvent[], tz: string): ScheduleDay[] {

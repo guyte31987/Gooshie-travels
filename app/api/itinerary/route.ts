@@ -26,7 +26,7 @@ export async function GET(request: Request) {
     }
     const ics = await res.text();
     const tz = parseCalendarTimezone(ics);
-    const events = parseIcs(ics);
+    const events = parseIcs(ics, tz);
     const days = buildSchedule(events, tz);
     return NextResponse.json({
       configured: true,

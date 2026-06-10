@@ -21,6 +21,19 @@ import {
 import { slugId } from "@/lib/slug";
 import { firebaseConfigured } from "@/lib/firebase";
 
+// Strip HTML tags, Google Meet / Zoom links, and collapse blank lines from a
+// raw calendar event description before saving it as an entity note.
+function cleanDescription(raw: string | undefined): string | undefined {
+  if (!raw) return undefined;
+  const cleaned = raw
+    .replace(/<[^>]+>/g, " ")
+    .replace(/https?:\/\/(?:meet\.google\.com|zoom\.us|us\d+\.zoom\.us)\/\S*/g, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .replace(/ {2,}/g, " ")
+    .trim();
+  return cleaned || undefined;
+}
+
 type TripDataValue = {
   tripId: string;
   tripName: string;
@@ -117,7 +130,8 @@ export function TripDataProvider({
         generalArea: e.generalArea,
         area: e.area,
         address: e.address,
-        notes: e.notes,
+        notes: cleanDescription(e.notes),
+        calendarSource: true,
       };
       saveEntity(dbEntity).then(() =>
         saveTripItem(tripId, { entityId: dbId, added: true })

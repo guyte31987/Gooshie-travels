@@ -189,6 +189,11 @@ export function DatabaseView() {
                           CLOSED
                         </span>
                       )}
+                      {e.calendarSource && (
+                        <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-medium text-sky-700">
+                          from calendar
+                        </span>
+                      )}
                     </div>
                     <div className="mt-1 flex flex-wrap gap-x-3 text-xs text-slate-400">
                       {e.generalArea && (

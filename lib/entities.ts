@@ -189,6 +189,7 @@ function parsePlannedSlots(raw: string, tz: string): TripSlot[] {
 function normLoose(s: string): string {
   return s
     .toLowerCase()
+    .replace(/^the\s+/, "")
     .replace(/[^a-z0-9 ]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
@@ -317,7 +318,7 @@ export function buildEntities(days: ItinDay[], tz: string): Entity[] {
       id: "cal:" + group.type + ":" + norm(group.name),
       name: group.name,
       type: group.type,
-      generalArea: suggestGeneralArea(first.location, group.name),
+      generalArea: suggestGeneralArea(first.location) ?? suggestGeneralArea(group.name),
       address: first.location,
       notes: first.description,
       slots: group.events.map(conf),
@@ -460,7 +461,7 @@ export function resolveTripEntities(opts: {
       id: "new:" + group.type + ":" + norm(group.name),
       name: group.name,
       type: group.type,
-      generalArea: suggestGeneralArea(first.location, group.name),
+      generalArea: suggestGeneralArea(first.location) ?? suggestGeneralArea(group.name),
       address: first.location,
       notes: first.description,
       transient: true,

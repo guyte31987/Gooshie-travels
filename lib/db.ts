@@ -48,6 +48,8 @@ export type DBEntity = {
   bestDay?: string;
   /** Default booking requirement — instances can override per-occurrence. */
   needsBooking?: boolean;
+  /** Set when this entity was auto-created from an unmatched calendar event and hasn't been manually reviewed. */
+  calendarSource?: boolean;
 };
 
 export type StoredAppearance = {
