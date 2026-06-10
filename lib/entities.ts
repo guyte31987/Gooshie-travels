@@ -194,11 +194,28 @@ function normLoose(s: string): string {
     .trim();
 }
 
+/**
+ * Strip common verb phrases from a calendar title so the place name can be
+ * extracted cleanly. "Go to Met Cloisters" → "Met Cloisters".
+ */
+const PLACE_PREFIX_RE =
+  /^(?:go(?:ing)?(?:\s+to)?|visit(?:ing)?|see(?:ing)?|tour(?:ing)?|explore(?:ing)?|check(?:ing)?\s+(?:in|out)(?:\s+(?:at|to))?|head(?:ing)?\s+to|get(?:ting)?\s+to|travel(?:ing)?\s+to|drive\s+to|walk(?:ing)?\s+to|fly(?:ing)?\s+to|(?:dinner|lunch|breakfast|brunch|drinks?|coffee)\s+(?:at|@)|meet(?:ing)?(?:\s+(?:at|@))?)\s+/i;
+
+export function extractPlaceName(summary: string): string {
+  return cleanName(summary).replace(PLACE_PREFIX_RE, "").trim();
+}
+
 function matchesEntity(entityName: string, e: ItinEvent): boolean {
   const n = normLoose(entityName);
   if (n.length < 4) return false;
-  const hay = `${normLoose(e.summary)} ${normLoose(e.location ?? "")}`;
-  return hay.includes(n);
+  // Check location first (most precise), then the extracted place name, then full summary.
+  const loc = normLoose(e.location ?? "");
+  if (loc && loc.includes(n)) return true;
+  const extracted = normLoose(extractPlaceName(e.summary));
+  if (extracted.includes(n)) return true;
+  // Allow full-summary match only if entity name is reasonably specific (7+ chars)
+  // to prevent short names ("Met") from matching unrelated events.
+  return n.length >= 7 && normLoose(e.summary).includes(n);
 }
 
 // --- shared slot helpers ---------------------------------------------------
@@ -293,12 +310,12 @@ export function buildEntities(days: ItinDay[], tz: string): Entity[] {
     });
   }
 
-  // 4) Remaining calendar events → categorized entities, grouped by name
+  // 4) Remaining calendar events → categorized entities, grouped by extracted place name
   for (const group of groupUnmatched(allEvents, matchedUids)) {
     const first = group.events[0];
     entities.push({
       id: "cal:" + group.type + ":" + norm(group.name),
-      name: cleanName(group.name),
+      name: group.name,
       type: group.type,
       generalArea: suggestGeneralArea(first.location, group.name),
       address: first.location,
@@ -327,8 +344,11 @@ function groupUnmatched(allEvents: ItinEvent[], matchedUids: Set<string>) {
   for (const e of allEvents) {
     if (matchedUids.has(e.uid)) continue;
     const type = categorizeEvent(e);
-    const key = type + ":" + norm(e.summary);
-    if (!byKey.has(key)) byKey.set(key, { name: e.summary, type, events: [] });
+    // Group and name by the extracted place name so "Go to Met Cloisters" and
+    // "Visit Met Cloisters" (different events, same place) collapse into one entity.
+    const placeName = extractPlaceName(e.summary);
+    const key = type + ":" + norm(placeName);
+    if (!byKey.has(key)) byKey.set(key, { name: placeName, type, events: [] });
     byKey.get(key)!.events.push(e);
   }
   return [...byKey.values()];
@@ -438,7 +458,7 @@ export function resolveTripEntities(opts: {
     const first = group.events[0];
     out.push({
       id: "new:" + group.type + ":" + norm(group.name),
-      name: cleanName(group.name),
+      name: group.name,
       type: group.type,
       generalArea: suggestGeneralArea(first.location, group.name),
       address: first.location,
