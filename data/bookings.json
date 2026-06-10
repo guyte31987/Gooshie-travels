@@ -1,0 +1,252 @@
+[
+  {
+    "priority": "URGENT",
+    "task": "FIST 10 Year @ Basement tickets",
+    "who": "Guy",
+    "status": "Booked/Done",
+    "deadline": "Fri Jun 19 Night",
+    "cost": "Check RA",
+    "platform": "Resident Advisor",
+    "notes": "Will sell out. Mandatory event anchor. Plan B: Paragon / Bossa Nova."
+  },
+  {
+    "priority": "URGENT",
+    "task": "LadyLand festival tickets (Kim Petras, Romy, CupcakKe)",
+    "who": "Guy",
+    "status": "Booked/Done",
+    "deadline": "Sat Jun 27",
+    "cost": "Check AXS",
+    "platform": "AXS / Under the K Bridge",
+    "notes": "Full festival setup, not just Kim Petras solo show. Guaranteed sell-out."
+  },
+  {
+    "priority": "URGENT",
+    "task": "Hershey Tickets and Accomdation",
+    "who": "Guy",
+    "status": "Booked/Done",
+    "deadline": "Thu Jun 25",
+    "cost": "Check Site",
+    "platform": "sixflags.com/greatadventure",
+    "notes": "Buy online early + Fast Lane add-on for a steep discount."
+  },
+  {
+    "priority": "URGENT",
+    "task": "HOY Pure Honey Pride tickets (Mike Q, Kevin Aviance)",
+    "who": "",
+    "status": "Pending",
+    "deadline": "Fri Jun 26 10pm",
+    "cost": "~$17-43",
+    "platform": "DICE or Shotgun",
+    "notes": "Pride week main party. Plan B: Blessed Madonna Sat Jun 20 (~$17) if preferred."
+  },
+  {
+    "priority": "HIGH",
+    "task": "Berkshires accommodation (Hotel Downstreet)",
+    "who": "Guy",
+    "status": "Booked/Done",
+    "deadline": "Before Trip",
+    "cost": "~$110/night",
+    "platform": "hoteldownstreet.com",
+    "notes": "2 nights: Mon Jun 22 + Tue Jun 23. Downtown North Adams location or Airbnb cabin."
+  },
+  {
+    "priority": "HIGH",
+    "task": "Rental car booking (Continuous 4-day)",
+    "who": "Mitch",
+    "status": "Booked/Done",
+    "deadline": "Before Trip",
+    "cost": "Check Rates",
+    "platform": "Hertz/Avis/Enterprise",
+    "notes": "Brooklyn pickup Mon morning, return Thu morning after Six Flags. Midsize SUV for trailheads."
+  },
+  {
+    "priority": "HIGH",
+    "task": "Accomdation in East Williamsburg / Bushwick",
+    "who": "Guy",
+    "status": "Booked/Done",
+    "deadline": "Before Trip",
+    "cost": "Check Rates",
+    "platform": "Airbnb/Booking",
+    "notes": "Target Morgan Av or Jefferson L. 1BR, check for bedroom AC, self check-in, above ground floor."
+  },
+  {
+    "priority": "HIGH",
+    "task": "Storm King Art Center timed entry tickets",
+    "who": "Guy",
+    "status": "Booked/Done",
+    "deadline": "Mon Jun 22",
+    "cost": "Check Site",
+    "platform": "stormking.org",
+    "notes": "Book June 2026 timed entry early. Popular summer sculpture destination."
+  },
+  {
+    "priority": "MEDIUM",
+    "task": "Bong reservation",
+    "who": "Guy",
+    "status": "Pending",
+    "deadline": "7th June",
+    "cost": "Splurge",
+    "platform": "Bong",
+    "notes": "Cambodian resturant 100+"
+  },
+  {
+    "priority": "MEDIUM",
+    "task": "Mezze Bistro + Bar reservation (No Comply alternative)",
+    "who": "Guy",
+    "status": "Pending",
+    "deadline": "Wed Jun 24 ~5pm",
+    "cost": "Splurge",
+    "platform": "mezzerestaurant.com",
+    "notes": "Moved from Tuesday to Wednesday because they are closed Tue. Berkshires splurge anchor."
+  },
+  {
+    "priority": "MEDIUM",
+    "task": "Dean's dinner reservation (New Entry)",
+    "who": "Guy",
+    "status": "Booked/Done",
+    "deadline": "Fri Jun 19 - 14 Days",
+    "cost": "Check Resy",
+    "platform": "deans.nyc",
+    "notes": "213 6th Ave SoHo. Resy drops 2 weeks ahead (Jun 5) at 9am or walk-in at bar. Pre-FIST fuel."
+  },
+  {
+    "priority": "MEDIUM",
+    "task": "Lil' Deb's Oasis dinner reservation",
+    "who": "Guy",
+    "status": "Booked/Done",
+    "deadline": "Mon Jun 22 ~5:30pm",
+    "cost": "Cost of dinner",
+    "platform": "Walk-in fine for 2",
+    "notes": "Hudson NY. Queer-owned, tropical comfort food. Open Mon 5-9pm. Confirmed accurate timing."
+  },
+  {
+    "priority": "MEDIUM",
+    "task": "MASS MoCA timed entry ticket",
+    "who": "",
+    "status": "Pending",
+    "deadline": "Wed Jun 24 ~1pm",
+    "cost": "Check Site",
+    "platform": "massmoca.org",
+    "notes": "Sol LeWitt, Kiefer, Turrell. High priority afternoon art anchor."
+  },
+  {
+    "priority": "MEDIUM",
+    "task": "Mister Sunday RSVP for door discount",
+    "who": "Guy",
+    "status": "Booked/Done",
+    "deadline": "By Fri Jun 19",
+    "cost": "Free RSVP",
+    "platform": "nowadays.nyc/rsvp",
+    "notes": "Soul Summit Takeover on Sun Jun 21. Solstice peak."
+  },
+  {
+    "priority": "MEDIUM",
+    "task": "Met Costume Art timed entry ticket",
+    "who": "",
+    "status": "Pending",
+    "deadline": "Fri Jun 19 ~10am",
+    "cost": "Museum General",
+    "platform": "metmuseum.org",
+    "notes": "Condé M. Nast Galleries. Morning anchor to start the trip."
+  },
+  {
+    "priority": "MEDIUM",
+    "task": "Enter TodayTix R&J lottery (Plan B Days)",
+    "who": "",
+    "status": "Pending",
+    "deadline": "Wed 24 / Thu 25 AM",
+    "cost": "Lottery Win",
+    "platform": "TodayTix App",
+    "notes": "Enter mornings of both Wed Jun 24 and Thu Jun 25. Both are now Plan B backup options."
+  },
+  {
+    "priority": "MEDIUM",
+    "task": "Create Public Theater Patron ID",
+    "who": "",
+    "status": "Pending",
+    "deadline": "Before Trip",
+    "cost": "Free",
+    "platform": "publictheater.org/register",
+    "notes": "Required to enter the Romeo & Juliet Delacorte Theater lottery."
+  },
+  {
+    "priority": "LOW",
+    "task": "Studio Museum in Harlem timed entry (New Entry)",
+    "who": "",
+    "status": "Pending",
+    "deadline": "Fri Jun 19 ~2pm",
+    "cost": "Free / Pay-What",
+    "platform": "studiomuseum.org",
+    "notes": "New David Adjaye building. Extended Juneteenth hours 11am-8pm. Hammons, Ligon, Conwill."
+  },
+  {
+    "priority": "LOW",
+    "task": "Frick Collection strategy swap (v15 Fix)",
+    "who": "",
+    "status": "Pending",
+    "deadline": "Fri Jun 26 Plan B",
+    "cost": "Museum General",
+    "platform": "frick.org",
+    "notes": "Plan B for Fri Jun 26. Note: CLOSED on Juneteenth (Jun 19). Open Wed-Mon 10:30am-5:30pm."
+  },
+  {
+    "priority": "LOW",
+    "task": "Clark Art Institute strategy swap",
+    "who": "",
+    "status": "Pending",
+    "deadline": "Wed Jun 24 Plan B",
+    "cost": "Check Site",
+    "platform": "clarkart.edu",
+    "notes": "Williamstown. Plan B if skipping Wed morning hike. Open Tue-Sun."
+  },
+  {
+    "priority": "LOW",
+    "task": "King Spa entry preparation",
+    "who": "",
+    "status": "Pending",
+    "deadline": "Thu Jun 25 night",
+    "cost": "$70-80 entry",
+    "platform": "thekingspanj.com",
+    "notes": "Walk-in fine. Palisades Park NJ open until 2am. Post-Six Flags wind-down."
+  },
+  {
+    "priority": "LOW",
+    "task": "STATE Food + Drink calendar verification",
+    "who": "",
+    "status": "Pending",
+    "deadline": "Before Trip",
+    "cost": "Check Site",
+    "platform": "statefoodanddrink.com",
+    "notes": "Vietnamese Tuesdays at Greylock WORKS. Check calendar for Tue Jun 23 before trip."
+  },
+  {
+    "priority": "LOW",
+    "task": "Mermaid Spa banya verification",
+    "who": "",
+    "status": "Pending",
+    "deadline": "Sat Jun 20 afternoon",
+    "cost": "~$30-40 + entry",
+    "platform": "Call direct",
+    "notes": "No reservation, walk-in. Call to confirm Saturday hours. Russian food in robes."
+  },
+  {
+    "priority": "LOW",
+    "task": "Russian & Turkish Baths strategy mapping",
+    "who": "",
+    "status": "Pending",
+    "deadline": "As needed",
+    "cost": "~$50 entry",
+    "platform": "Walk-in",
+    "notes": "268 E 10th St. Plan B for Sat 20 banya, Sun 21 morning recovery, or Sat 27 pre-Riis."
+  },
+  {
+    "priority": "LOW",
+    "task": "Flights check & confirmation",
+    "who": "",
+    "status": "Pending",
+    "deadline": "Before Trip",
+    "cost": "Confirmed",
+    "platform": "Airline App",
+    "notes": "Confirm Thu Jun 18 arrival and Sun Jun 28 departure (7pm+) to catch Pride March + Fest."
+  }
+]

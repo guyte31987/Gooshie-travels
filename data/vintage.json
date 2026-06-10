@@ -1,0 +1,82 @@
+[
+  {
+    "name": "Awoke Vintage",
+    "area": "Williamsburg",
+    "address": "132 N 5th St, Brooklyn, NY 11249",
+    "hours": "10:00 AM – 9:00 PM (Daily)",
+    "vibe": "Curated 60s–90s denim, jackets, accessories. Every piece feels chosen by someone who actually loves vintage fashion. Clean, boutique feel.",
+    "price": "$$ (mid)",
+    "bestDay": "Any evening — open daily 10am–9pm. Easy post-dinner wander on any NYC night",
+    "borough": "Brooklyn"
+  },
+  {
+    "name": "Raggedy Threads",
+    "area": "Williamsburg",
+    "address": "602 Grand St, Brooklyn, NY 11211",
+    "hours": "12:00 PM – 6:00 PM (Daily)",
+    "vibe": "Specialises in vintage tees, 40s–60s denim, workwear, military, knitwear. Rustic ranch, Soviet working-class chic, mid-century rust belt. Mostly menswear. Closest to your actual taste.",
+    "price": "$$–$$$",
+    "bestDay": "Fri 19 (afternoon after Met/Studio Museum, or Sat 20 morning before Coney)",
+    "borough": "Brooklyn"
+  },
+  {
+    "name": "Friends NYC",
+    "area": "Bushwick",
+    "address": "56 Bogart St, Brooklyn, NY 11206",
+    "hours": "11:00 AM – 8:30 PM (Daily)",
+    "vibe": "Indie department store carrying vintage clothing + local designers, Lazy Oaf, HUF, Pendleton, and choice designer vintage. More lifestyle/gifts mixed in. Friendly, creative vibe.",
+    "price": "$",
+    "bestDay": "Any quiet Bushwick morning — literally on your doorstep. Sat 20 or Sun 21 pre-Mister Sunday",
+    "borough": "Brooklyn"
+  },
+  {
+    "name": "OPC (Other People's Clothes)",
+    "area": "Bushwick",
+    "address": "333 Troutman St, Brooklyn, NY 11237",
+    "hours": "11:00 AM – 8:00 PM (Daily)",
+    "vibe": "Bigger dig, no-filler policy — creative chaos with the right payoff if you search. No fast fashion accepted.",
+    "price": "$",
+    "bestDay": "Any afternoon. Thurs 18 arrival evening if you land early enough",
+    "borough": "Brooklyn"
+  },
+  {
+    "name": "Monk Vintage",
+    "area": "Williamsburg",
+    "address": "496 Driggs Ave, Brooklyn, NY 11211",
+    "hours": "11:30 AM – 8:00 PM (Daily)",
+    "vibe": "90s and Y2K focus, big rotating inventory, bold colourful pieces. More volume than curation but prices around $25.",
+    "price": "$–$$",
+    "bestDay": "Sat 20 or Sat 27 before Kim Petras — both walking distance",
+    "borough": "Brooklyn"
+  },
+  {
+    "name": "Grand Street Local",
+    "area": "Williamsburg",
+    "address": "154 Grand St, Brooklyn, NY 11249",
+    "hours": "12:00 PM – 7:00 PM (Daily)",
+    "vibe": "Strong focus on vintage streetwear, especially tees and sneakers. Good for band tees and graphic prints.",
+    "price": "$$",
+    "bestDay": "Fri 19 or Fri 26 — pairs with Raggedy Threads as a Williamsburg sweep",
+    "borough": "Brooklyn"
+  },
+  {
+    "name": "Procell",
+    "area": "Bowery / LES",
+    "address": "5 Delancey St, New York, NY 10002",
+    "hours": "Mon–Sat: 12:00 PM – 7:00 PM | Sun: 12:00 PM – 6:00 PM",
+    "vibe": "Hand-picked only, no bulk buying — streetwear, sportswear, designer, graphic tees all coexisting. The NYC benchmark.",
+    "price": "$$$",
+    "bestDay": "Fri 26 en route to Drag March — opens noon",
+    "borough": "Manhattan"
+  },
+  {
+    "name": "Desert Vintage",
+    "area": "Lower East Side",
+    "address": "34 Orchard St, New York, NY 10002",
+    "hours": "11:00 AM – 7:00 PM (Daily)",
+    "vibe": "No rummaging — 90s Margiela, 80s Montana, 2000s Miyake, all pristine. More elevated.",
+    "price": "$$$$",
+    "bestDay": "Fri 26 same sweep as Procell",
+    "borough": "Manhattan"
+  }
+]

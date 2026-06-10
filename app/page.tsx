@@ -1,13 +1,25 @@
 "use client";
 
+import { useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
 import { SignIn } from "@/components/SignIn";
 import { Schedule } from "@/components/Schedule";
+import { PlanningTab } from "@/components/PlanningTab";
 import { RequestAccess } from "@/components/RequestAccess";
+
+// Leaflet touches window, so the map is client-only.
+const TripMap = dynamic(() => import("@/components/TripMap").then((m) => m.TripMap), {
+  ssr: false,
+  loading: () => <div className="py-12 text-center text-sm text-slate-400">Loading map…</div>,
+});
+
+type Tab = "itinerary" | "planning" | "map";
 
 export default function Home() {
   const { user, access, role, isAdmin, loading, signOut } = useAuth();
+  const [tab, setTab] = useState<Tab>("itinerary");
 
   if (loading) {
     return (
@@ -53,10 +65,45 @@ export default function Home() {
         </div>
       </header>
 
+      <nav className="mb-5 flex gap-1 rounded-lg bg-slate-100 p-1 text-sm">
+        <TabBtn active={tab === "itinerary"} onClick={() => setTab("itinerary")}>
+          Itinerary
+        </TabBtn>
+        <TabBtn active={tab === "planning"} onClick={() => setTab("planning")}>
+          Planning
+        </TabBtn>
+        <TabBtn active={tab === "map"} onClick={() => setTab("map")}>
+          Map
+        </TabBtn>
+      </nav>
+
       <main>
-        <Schedule />
+        {tab === "itinerary" && <Schedule />}
+        {tab === "planning" && <PlanningTab />}
+        {tab === "map" && <TripMap />}
       </main>
     </div>
+  );
+}
+
+function TabBtn({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex-1 rounded-md px-3 py-1.5 font-medium transition ${
+        active ? "bg-white text-ink shadow-sm" : "text-slate-500 hover:text-slate-700"
+      }`}
+    >
+      {children}
+    </button>
   );
 }
 
