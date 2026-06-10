@@ -35,8 +35,12 @@ export type TripSlot = {
   kind: SlotKind;
   dayKey?: string;
   label: string;
+  /** Time-of-day, when known (e.g. "6:00 PM"). Shown distinctly from the day. */
+  time?: string;
   note?: string;
   mismatch?: boolean;
+  /** Source calendar event uid, for confirmed slots — lets the itinerary link. */
+  uid?: string;
 };
 
 export type Entity = {
@@ -181,7 +185,8 @@ function flatten(days: ItinDay[]): { allEvents: ItinEvent[]; dayKeyOf: Map<strin
 
 function confirmedSlot(e: ItinEvent, dayKeyOf: Map<string, string>, tz: string): TripSlot {
   const dk = dayKeyOf.get(e.uid)!;
-  return { kind: "confirmed", dayKey: dk, label: slotDayLabel(dk, tz, timeOf(e, tz)) };
+  const time = timeOf(e, tz);
+  return { kind: "confirmed", dayKey: dk, label: slotDayLabel(dk, tz, time), time, uid: e.uid };
 }
 
 /** Merge planned slots onto confirmed ones, flagging genuine disagreements. */
@@ -486,6 +491,17 @@ export function buildSyncReport(entities: Entity[]): SyncIssue[] {
 
   const order: IssueSeverity[] = ["conflict", "warning", "info"];
   return issues.sort((a, b) => order.indexOf(a.severity) - order.indexOf(b.severity));
+}
+
+/** Map each calendar event uid to the entity (and its slot) it resolved to. */
+export function indexByEventUid(entities: Entity[]): Map<string, { entity: Entity; slot: TripSlot }> {
+  const map = new Map<string, { entity: Entity; slot: TripSlot }>();
+  for (const e of entities) {
+    for (const s of e.slots) {
+      if (s.uid) map.set(s.uid, { entity: e, slot: s });
+    }
+  }
+  return map;
 }
 
 export function groupByType(entities: Entity[]): Record<EntityType, Entity[]> {

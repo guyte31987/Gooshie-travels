@@ -69,10 +69,20 @@ service cloud.firestore {
       allow read, write: if isEditor();
     }
 
-    // Managed metadata (general-area list, seed marker) — members read, editors write.
+    // Managed metadata (general-area list, seed marker, dismissed issues).
     match /meta/{doc} {
       allow read: if isMember();
       allow write: if isEditor();
+    }
+
+    // Comments on instances/appearances — any member can read and post; the
+    // author or an admin can delete.
+    match /comments/{id} {
+      allow read: if isMember();
+      allow create: if isMember()
+        && request.resource.data.authorEmail == request.auth.token.email.lower();
+      allow delete: if isAdmin()
+        || (isAuth() && resource.data.authorEmail == request.auth.token.email.lower());
     }
   }
 }

@@ -11,6 +11,7 @@ import {
 } from "@/lib/entities";
 import { useTripData } from "./TripData";
 import { useAuth } from "./AuthProvider";
+import { EntityDetail } from "./EntityDetail";
 import { saveTripItem } from "@/lib/db";
 import { slugId } from "@/lib/slug";
 import { exportEntities } from "@/lib/export";
@@ -196,14 +197,12 @@ function EntityList({
 }
 
 function EntityCard({ e, canEdit, tripId }: { e: Entity; canEdit: boolean; tripId: string }) {
-  const [open, setOpen] = useState(false);
+  const { tripName } = useTripData();
+  const [showDetail, setShowDetail] = useState(false);
   return (
     <li className="rounded-xl border border-slate-200 bg-white shadow-sm">
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-start justify-between gap-2 p-4 text-left"
-      >
-        <div className="min-w-0">
+      <div className="flex items-start gap-2 p-4">
+        <button onClick={() => setShowDetail(true)} className="min-w-0 flex-1 text-left">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="font-medium">{e.name}</h3>
             {e.closed && (
@@ -223,53 +222,20 @@ function EntityCard({ e, canEdit, tripId }: { e: Entity; canEdit: boolean; tripI
               e.slots.map((s, i) => <SlotBadge key={i} s={s} />)
             )}
           </div>
-        </div>
-        <span className="shrink-0 text-slate-300">{open ? "▲" : "▼"}</span>
-      </button>
+        </button>
+        {canEdit && !e.transient && (
+          <button
+            onClick={() => toggleMembership(tripId, e, true)}
+            title="Remove from trip"
+            className="shrink-0 rounded border border-slate-200 px-2 py-1 text-xs text-slate-400 hover:border-rose-200 hover:text-rose-600"
+          >
+            ✕
+          </button>
+        )}
+      </div>
 
-      {open && (
-        <div className="border-t border-slate-100 px-4 py-3 text-sm">
-          {e.notes && <p className="text-slate-600">{e.notes}</p>}
-          <dl className="mt-2 space-y-1 text-xs text-slate-500">
-            {e.generalArea && <Row label="Region">{e.generalArea}</Row>}
-            {e.hours && <Row label="Hours">{e.hours}</Row>}
-            {e.address && <Row label="Address">{e.address}</Row>}
-            {e.bestDay && <Row label="Best day">{e.bestDay}</Row>}
-            {e.booking && <Row label="Booking">{e.booking}</Row>}
-            {e.source && <Row label="Source">{e.source}</Row>}
-          </dl>
-          {e.slots.length > 0 && (
-            <div className="mt-3">
-              <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                Where it fits the trip
-              </div>
-              <ul className="space-y-1">
-                {e.slots.map((s, i) => (
-                  <li key={i} className="flex items-center gap-2 text-xs">
-                    <SlotBadge s={s} />
-                    {s.note && <span className="text-slate-400">{s.note}</span>}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          {canEdit && (
-            <div className="mt-3 flex items-center gap-2 border-t border-slate-100 pt-3">
-              {e.transient ? (
-                <span className="text-xs text-amber-600">
-                  Not in the Database yet — add it from the Database screen.
-                </span>
-              ) : (
-                <button
-                  onClick={() => toggleMembership(tripId, e, true)}
-                  className="rounded border border-rose-200 px-2.5 py-1 text-xs font-medium text-rose-600 hover:bg-rose-50"
-                >
-                  Remove from trip
-                </button>
-              )}
-            </div>
-          )}
-        </div>
+      {showDetail && (
+        <EntityDetail entity={e} tripId={tripId} tripName={tripName} onClose={() => setShowDetail(false)} />
       )}
     </li>
   );
@@ -293,15 +259,6 @@ function SlotBadge({ s }: { s: TripSlot }) {
     <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${styles[s.kind]}`}>
       {prefix} {s.label}
     </span>
-  );
-}
-
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="flex gap-2">
-      <dt className="w-16 shrink-0 font-medium text-slate-400">{label}</dt>
-      <dd className="text-slate-600">{children}</dd>
-    </div>
   );
 }
 

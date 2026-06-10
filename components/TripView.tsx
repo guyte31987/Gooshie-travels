@@ -32,7 +32,7 @@ export function TripView({ tripId }: { tripId: string }) {
   }
 
   return (
-    <TripDataProvider tripId={trip.id} tripAreas={trip.areas}>
+    <TripDataProvider tripId={trip.id} tripName={trip.name} tripAreas={trip.areas}>
       <div className="mx-auto min-h-screen max-w-2xl px-4 pb-16">
         <AppHeader title={trip.name} subtitle={trip.dateLabel} backHref="/" />
 

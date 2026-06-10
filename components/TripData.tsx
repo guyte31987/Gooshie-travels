@@ -12,6 +12,7 @@ import { firebaseConfigured } from "@/lib/firebase";
 
 type TripDataValue = {
   tripId: string;
+  tripName: string;
   tripAreas: string[];
   days: ItinDay[];
   tz: string;
@@ -26,10 +27,12 @@ const Ctx = createContext<TripDataValue | null>(null);
 
 export function TripDataProvider({
   tripId,
+  tripName,
   tripAreas,
   children,
 }: {
   tripId: string;
+  tripName: string;
   tripAreas: string[];
   children: ReactNode;
 }) {
@@ -72,6 +75,7 @@ export function TripDataProvider({
     <Ctx.Provider
       value={{
         tripId,
+        tripName,
         tripAreas,
         days,
         tz,

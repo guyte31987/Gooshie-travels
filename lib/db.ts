@@ -8,13 +8,16 @@
 // are persisted here.
 
 import {
+  addDoc,
   collection,
   deleteDoc,
   doc,
   getDoc,
   onSnapshot,
+  query,
   serverTimestamp,
   setDoc,
+  where,
   writeBatch,
   type Firestore,
 } from "firebase/firestore";
@@ -194,4 +197,57 @@ export async function isSeeded(): Promise<boolean> {
   if (!db) return false;
   const snap = await getDoc(doc(db, "meta", "seeded"));
   return snap.exists();
+}
+
+// --- comments (per instance/appearance) ------------------------------------
+
+export type Comment = {
+  id: string;
+  instanceId: string;
+  text: string;
+  authorName: string;
+  authorEmail: string;
+  createdAt?: { seconds: number } | null;
+};
+
+export function subscribeComments(instanceId: string, cb: (c: Comment[]) => void): () => void {
+  if (!db) return () => {};
+  const q = query(collection(db, "comments"), where("instanceId", "==", instanceId));
+  return onSnapshot(q, (snap) => {
+    const rows = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Comment, "id">) }));
+    rows.sort((a, b) => (a.createdAt?.seconds ?? 0) - (b.createdAt?.seconds ?? 0));
+    cb(rows);
+  });
+}
+
+export async function addComment(
+  instanceId: string,
+  text: string,
+  authorName: string,
+  authorEmail: string
+): Promise<void> {
+  await addDoc(collection(requireDb(), "comments"), {
+    instanceId,
+    text,
+    authorName,
+    authorEmail,
+    createdAt: serverTimestamp(),
+  });
+}
+
+export async function deleteComment(id: string): Promise<void> {
+  await deleteDoc(doc(requireDb(), "comments", id));
+}
+
+// --- dismissed sync issues (admin) -----------------------------------------
+
+export function subscribeDismissedIssues(cb: (keys: string[]) => void): () => void {
+  if (!db) return () => {};
+  return onSnapshot(doc(db, "meta", "dismissedIssues"), (snap) => {
+    cb(snap.exists() ? ((snap.data().keys as string[]) ?? []) : []);
+  });
+}
+
+export async function setDismissedIssues(keys: string[]): Promise<void> {
+  await setDoc(doc(requireDb(), "meta", "dismissedIssues"), { keys });
 }

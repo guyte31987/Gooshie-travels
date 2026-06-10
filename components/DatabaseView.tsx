@@ -22,6 +22,7 @@ export function DatabaseView() {
   const [loaded, setLoaded] = useState(false);
   const [q, setQ] = useState("");
   const [region, setRegion] = useState("");
+  const [type, setType] = useState("");
   const [editing, setEditing] = useState<DBEntity | null | "new">(null);
   const [seeding, setSeeding] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,10 +43,13 @@ export function DatabaseView() {
 
   const filtered = entities
     .filter((e) => !region || e.generalArea === region)
+    .filter((e) => !type || e.type === type)
     .filter(
       (e) => !q || `${e.name} ${e.area ?? ""} ${e.notes ?? ""}`.toLowerCase().includes(q.toLowerCase())
     )
     .sort((a, b) => a.name.localeCompare(b.name));
+
+  const typeCount = (t: string) => entities.filter((e) => e.type === t).length;
 
   const typeOf = (t: string) => ENTITY_TABS.find((x) => x.type === t);
 
@@ -129,6 +133,17 @@ export function DatabaseView() {
             </button>
           </div>
 
+          <div className="mb-3 flex flex-wrap gap-1.5 text-xs">
+            <TypeChip active={!type} onClick={() => setType("")}>
+              All <span className="text-slate-400">{entities.length}</span>
+            </TypeChip>
+            {ENTITY_TABS.filter((t) => typeCount(t.type) > 0).map((t) => (
+              <TypeChip key={t.type} active={type === t.type} onClick={() => setType(t.type)}>
+                {t.emoji} {t.label} <span className="text-slate-400">{typeCount(t.type)}</span>
+              </TypeChip>
+            ))}
+          </div>
+
           <div className="mb-3 flex items-center gap-2 text-xs text-slate-400">
             <span>Export {filtered.length}:</span>
             {(["csv", "excel", "word"] as const).map((f) => (
@@ -206,5 +221,26 @@ export function DatabaseView() {
         />
       )}
     </div>
+  );
+}
+
+function TypeChip({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`rounded-full px-2.5 py-1 font-medium transition ${
+        active ? "bg-ink text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+      }`}
+    >
+      {children}
+    </button>
   );
 }

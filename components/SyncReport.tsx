@@ -8,6 +8,9 @@ import {
   type SyncIssue,
   type IssueSeverity,
 } from "@/lib/entities";
+import { subscribeDismissedIssues, setDismissedIssues } from "@/lib/db";
+
+const issueKey = (i: SyncIssue) => `${i.severity}:${i.kind}:${i.entity}`;
 
 type ItinResponse = { days?: ItinDay[]; tz?: string; syncedAt?: string; count?: number };
 
@@ -18,11 +21,20 @@ const SEVERITY: Record<IssueSeverity, { label: string; dot: string; box: string 
 };
 
 export function SyncReport() {
-  const [issues, setIssues] = useState<SyncIssue[]>([]);
+  const [allIssues, setAllIssues] = useState<SyncIssue[]>([]);
+  const [dismissed, setDismissed] = useState<string[]>([]);
   const [syncedAt, setSyncedAt] = useState<string | null>(null);
   const [eventCount, setEventCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [resyncing, setResyncing] = useState(false);
+
+  useEffect(() => subscribeDismissedIssues(setDismissed), []);
+
+  const dismissedSet = new Set(dismissed);
+  const issues = allIssues.filter((i) => !dismissedSet.has(issueKey(i)));
+
+  const dismiss = (i: SyncIssue) => setDismissedIssues([...new Set([...dismissed, issueKey(i)])]);
+  const restoreAll = () => setDismissedIssues([]);
 
   const load = useCallback(async (fresh: boolean) => {
     if (fresh) setResyncing(true);
@@ -33,7 +45,7 @@ export function SyncReport() {
       });
       const data: ItinResponse = await res.json();
       const entities = buildEntities(data.days ?? [], data.tz ?? "Europe/London");
-      setIssues(buildSyncReport(entities));
+      setAllIssues(buildSyncReport(entities));
       setSyncedAt(data.syncedAt ?? new Date().toISOString());
       setEventCount(data.count ?? 0);
     } finally {
@@ -95,6 +107,13 @@ export function SyncReport() {
                     {issue.kind}
                   </span>
                   <span className="ml-auto text-sm font-medium">{issue.entity}</span>
+                  <button
+                    onClick={() => dismiss(issue)}
+                    title="Dismiss this issue"
+                    className="text-slate-400 hover:text-slate-700"
+                  >
+                    ✕
+                  </button>
                 </div>
                 <p className="mt-1 text-sm text-slate-600">{issue.detail}</p>
               </li>
@@ -103,11 +122,20 @@ export function SyncReport() {
         </ul>
       )}
 
+      {dismissed.length > 0 && (
+        <div className="mt-3 flex items-center justify-between text-xs text-slate-400">
+          <span>{dismissed.length} dismissed</span>
+          <button onClick={restoreAll} className="underline-offset-2 hover:underline">
+            Restore all
+          </button>
+        </div>
+      )}
+
       <p className="mt-4 text-xs text-slate-400">
         The plan re-syncs from your Google Calendar automatically on each load (and daily in the
-        background). Use <strong>Re-sync now</strong> to force an immediate fresh pull. To resolve a
-        conflict, fix it in Google Calendar or adjust the plan — once entity editing lands you&apos;ll
-        be able to resolve items here directly.
+        background). Use <strong>Re-sync now</strong> to force an immediate fresh pull. Dismiss
+        issues you&apos;ve handled with the ✕; fix conflicts in Google Calendar or by editing the
+        entity.
       </p>
     </div>
   );

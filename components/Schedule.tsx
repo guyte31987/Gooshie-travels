@@ -1,7 +1,10 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import { useTripData } from "./TripData";
+import { EntityDetail } from "./EntityDetail";
 import { dayHeading } from "@/lib/ics";
+import { indexByEventUid, ENTITY_TABS, type Entity } from "@/lib/entities";
 
 type TripEvent = {
   uid: string;
@@ -22,7 +25,10 @@ function timeRange(e: TripEvent, tz: string): string {
 }
 
 export function Schedule() {
-  const { days, tz, loading } = useTripData();
+  const { days, tz, loading, entities, tripId, tripName } = useTripData();
+  const [detail, setDetail] = useState<Entity | null>(null);
+  const index = useMemo(() => indexByEventUid(entities), [entities]);
+  const emojiOf = (e: Entity) => ENTITY_TABS.find((t) => t.type === e.type)?.emoji ?? "";
 
   if (loading) return <Notice tone="muted">Loading itinerary…</Notice>;
   if (days.length === 0)
@@ -54,28 +60,63 @@ export function Schedule() {
             {day.events.length === 0 && (
               <li className="text-sm text-slate-400">No scheduled events.</li>
             )}
-            {day.events.map((e) => (
-              <li
-                key={e.uid}
-                className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
-              >
-                <div className="flex items-baseline justify-between gap-3">
-                  <h3 className="font-medium leading-snug">{e.summary}</h3>
-                  <span className="shrink-0 text-xs font-medium text-slate-500">
-                    {timeRange(e, tz)}
-                  </span>
-                </div>
-                {e.location && (
-                  <p className="mt-1 text-sm text-slate-500">📍 {e.location}</p>
-                )}
-                {e.description && (
-                  <p className="mt-2 whitespace-pre-line text-sm text-slate-600">{e.description}</p>
-                )}
-              </li>
-            ))}
+            {day.events.map((e) => {
+              const linked = index.get(e.uid)?.entity;
+              return (
+                <li
+                  key={e.uid}
+                  className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+                >
+                  <div className="flex items-baseline justify-between gap-3">
+                    {linked ? (
+                      <button
+                        onClick={() => setDetail(linked)}
+                        className="group flex items-center gap-1.5 text-left"
+                      >
+                        <span>{emojiOf(linked)}</span>
+                        <h3 className="font-medium leading-snug text-indigo-700 underline-offset-2 group-hover:underline">
+                          {e.summary}
+                        </h3>
+                      </button>
+                    ) : (
+                      <h3 className="font-medium leading-snug">{e.summary}</h3>
+                    )}
+                    <span className="shrink-0 text-xs font-medium text-slate-500">
+                      {timeRange(e, tz)}
+                    </span>
+                  </div>
+                  {e.location && <p className="mt-1 text-sm text-slate-500">📍 {e.location}</p>}
+                  {e.description && (
+                    <div className="mt-2 rounded-lg bg-slate-50 px-3 py-2">
+                      <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                        Planning note
+                      </div>
+                      <p className="whitespace-pre-line text-sm text-slate-600">{e.description}</p>
+                    </div>
+                  )}
+                  {linked && (
+                    <button
+                      onClick={() => setDetail(linked)}
+                      className="mt-2 text-xs font-medium text-indigo-600 hover:underline"
+                    >
+                      Open {linked.name} · comments &amp; photos →
+                    </button>
+                  )}
+                </li>
+              );
+            })}
           </ol>
         </section>
       ))}
+
+      {detail && (
+        <EntityDetail
+          entity={detail}
+          tripId={tripId}
+          tripName={tripName}
+          onClose={() => setDetail(null)}
+        />
+      )}
     </div>
   );
 }
