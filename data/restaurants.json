@@ -3,616 +3,728 @@
     "name": "La Cantine",
     "area": "Bushwick",
     "source": "Sietsema",
-    "hours": "Daily",
+    "hours": "Daily 8:00 AM – 4:00 PM",
+    "oldHours": "Daily",
     "price": "$13–17",
     "why": "Poblano egg & cheese sandwich. 5-min walk from Airbnb. Best cheap pre-night-out fuel.",
     "days": "Fri 19 (pre-FIST)",
     "booking": "Walk-in",
-    "section": "Bushwick / East Williamsburg"
+    "section": "Bushwick / East Williamsburg",
+    "closed": false
   },
   {
     "name": "Tacos El Bronco",
     "area": "Bushwick",
     "source": "",
-    "hours": "Late night daily",
+    "hours": "Late night daily (typically 10:00 AM – 4:00 AM)",
+    "oldHours": "Late night daily",
     "price": "$10–15",
     "why": "Al pastor, suadero, lengua. Late counter, proper pre-techno fuel.",
     "days": "Any late night",
     "booking": "Walk-in",
-    "section": "Bushwick / East Williamsburg"
+    "section": "Bushwick / East Williamsburg",
+    "closed": false
   },
   {
     "name": "Roberta's",
     "area": "Bushwick",
     "source": "",
-    "hours": "Daily",
+    "hours": "Daily 11:00 AM – 11:00 PM",
+    "oldHours": "Daily",
     "price": "$20–25",
     "why": "Wood-fired pizza institution. Carb load option near Airbnb.",
     "days": "Any evening",
     "booking": "Walk-in",
-    "section": "Bushwick / East Williamsburg"
+    "section": "Bushwick / East Williamsburg",
+    "closed": false
   },
   {
     "name": "Bunna Cafe",
     "area": "Bushwick",
     "source": "",
-    "hours": "Daily",
+    "hours": "Daily 12:00 PM – 10:00 PM",
+    "oldHours": "Daily",
     "price": "$22–30",
     "why": "Ethiopian vegan, injera platter. Walking from Airbnb. Light reset meal.",
     "days": "Thu 25 / any",
     "booking": "Walk-in",
-    "section": "Bushwick / East Williamsburg"
+    "section": "Bushwick / East Williamsburg",
+    "closed": false
   },
   {
     "name": "Win Son Bakery",
     "area": "Williamsburg",
     "source": "Sietsema / Your list",
-    "hours": "Daily AM",
+    "hours": "Daily 7:00 AM – 4:00 PM",
+    "oldHours": "Daily AM",
     "price": "$12–18",
     "why": "Scallion pancake breakfast sandos, mochi donuts. Taiwanese-American. Walking from Airbnb. Proper persona.",
     "days": "Sat 20 brunch",
     "booking": "Walk-in",
-    "section": "Williamsburg"
+    "section": "Williamsburg",
+    "closed": false
   },
   {
     "name": "Kellogg's Diner",
     "area": "Williamsburg",
     "source": "",
-    "hours": "Daily",
+    "hours": "Open 24 Hours / 7 Days a week (Revived 24/7 format)",
+    "oldHours": "Daily",
     "price": "$18–28",
     "why": "Revived 1928 diner, Jackie Carnesi. Nostalgic format, serious cooking underneath.",
     "days": "Sat 20 or 27 brunch",
     "booking": "Walk-in",
-    "section": "Williamsburg"
+    "section": "Williamsburg",
+    "closed": false
   },
   {
     "name": "Frankel's Delicatessen",
     "area": "Williamsburg",
     "source": "",
-    "hours": "Daily AM",
+    "hours": "Daily 8:00 AM – 4:00 PM",
+    "oldHours": "Daily AM",
     "price": "$15–20",
     "why": "Pastrami egg & cheese, whitefish bagels. Real Jewish deli energy.",
     "days": "Sat 20 / 27 AM",
     "booking": "Walk-in",
-    "section": "Williamsburg"
+    "section": "Williamsburg",
+    "closed": false
   },
   {
     "name": "Birds of a Feather",
     "area": "Williamsburg",
     "source": "",
-    "hours": "Dinner daily",
+    "hours": "Daily 12:00 PM – 10:30 PM",
+    "oldHours": "Dinner daily",
     "price": "$25–35",
     "why": "Sichuan. Mapo tofu, dan dan noodles, dry-fried green beans. Walking from Airbnb.",
     "days": "Thu 25 / any dinner",
     "booking": "Walk-in",
-    "section": "Williamsburg"
+    "section": "Williamsburg",
+    "closed": false
   },
   {
     "name": "Bonnie's",
     "area": "Williamsburg",
     "source": "Your list",
-    "hours": "Dinner daily",
+    "hours": "Tuesday – Sunday 5:00 PM – 10:30 PM (Closed Monday)",
+    "oldHours": "Dinner daily",
     "price": "$45–65",
     "why": "Calvin Eng's Cantonese-American. Pork floss McFlurry. One of the most talked-about NYC openings.",
     "days": "Wed 24 dinner (alt)",
     "booking": "Book — Resy 30 days out",
-    "section": "Williamsburg"
+    "section": "Williamsburg",
+    "closed": false
   },
   {
     "name": "Lighthouse",
     "area": "Williamsburg",
     "source": "",
-    "hours": "Dinner daily",
+    "hours": "Monday – Sunday 5:30 PM – 10:30 PM",
+    "oldHours": "Dinner daily",
     "price": "$25–35",
     "why": "Mediterranean meze. Easy landing after a long day. Consistent, solid.",
     "days": "Any dinner",
     "booking": "Walk-in",
-    "section": "Williamsburg"
+    "section": "Williamsburg",
+    "closed": false
   },
   {
     "name": "Sunday in Brooklyn",
     "area": "Williamsburg",
     "source": "",
-    "hours": "Weekends",
+    "hours": "Daily Brunch: 10:00 AM – 4:00 PM (Weekends from 9:00 AM); Dinner: Wednesday – Saturday 5:00 PM – 10:00 PM",
+    "oldHours": "Weekends",
     "price": "$22–30",
     "why": "Hazelnut praline pancakes. Brunch institution.",
     "days": "Sat 27 brunch",
     "booking": "Walk-in",
-    "section": "Williamsburg"
+    "section": "Williamsburg",
+    "closed": false
   },
   {
     "name": "Court Street Grocers",
     "area": "Williamsburg / Carroll Gdns",
     "source": "New Yorker",
-    "hours": "Daily AM–PM",
+    "hours": "Daily 8:00 AM – 6:00 PM",
+    "oldHours": "Daily AM–PM",
     "price": "$18–25",
     "why": "Vegitalian combo sandwich. Rosner-approved. Counter sandwich as art form.",
     "days": "Any lunch",
     "booking": "Walk-in",
-    "section": "Williamsburg"
+    "section": "Williamsburg",
+    "closed": false
   },
   {
     "name": "Wenwen",
     "area": "Greenpoint",
     "source": "Your list",
-    "hours": "Daily",
+    "hours": "Tuesday – Sunday 5:00 PM – 11:00 PM (Closed Monday)",
+    "oldHours": "Daily",
     "price": "$25–35",
     "why": "Taiwanese. BDSM Chicken, $69 Long Island Iced Tea. Persona absolutely loaded. Walking to Kim Petras venue.",
     "days": "Sat 27 brunch/dinner",
     "booking": "Walk-in",
-    "section": "Greenpoint"
+    "section": "Greenpoint",
+    "closed": false
   },
   {
     "name": "Strange Delight",
     "area": "Fort Greene",
     "source": "New Yorker",
-    "hours": "Dinner daily, lunch Sat–Sun",
+    "hours": "Dinner: Sun, Mon-Thu 5:00-9:30 PM, Fri-Sat 5:00-10:30 PM; Weekend Lunch: Sat-Sun 11:30 AM – 3:30 PM",
+    "oldHours": "Dinner daily, lunch Sat–Sun",
     "price": "$35–50",
     "why": "New Orleans-inflected. Blackened swordfish belly. Ham El-Waylly. Rosner best dishes 2024.",
     "days": "Thu 25 dinner",
     "booking": "Walk-in",
-    "section": "Fort Greene / Prospect Heights"
+    "section": "Fort Greene / Prospect Heights",
+    "closed": false
   },
   {
     "name": "Sukh",
     "area": "Fort Greene",
     "source": "New Yorker",
-    "hours": "Dinner daily",
+    "hours": "Monday – Sunday 5:00 PM – 10:00 PM",
+    "oldHours": "Dinner daily",
     "price": "$25–40",
     "why": "Surat Thani Thai. Train-car interior. Same block as Strange Delight — pick one. Khao khai ra-bert.",
     "days": "Thu 25 dinner",
     "booking": "Walk-in",
-    "section": "Fort Greene / Prospect Heights"
+    "section": "Fort Greene / Prospect Heights",
+    "closed": false
   },
   {
     "name": "Café Mado",
     "area": "Prospect Heights",
     "source": "New Yorker",
-    "hours": "All day daily",
+    "hours": "Wednesday – Monday 5:30 PM – 9:00 PM (Fri-Sat until 10:00 PM), Brunch Sat-Sun. Closed Tuesday.",
+    "oldHours": "All day daily",
     "price": "$25–45",
     "why": "Nico Russell (Place des Fêtes team). Jambon-beurre + seasonal. Rosner best dishes 2024. All-day flexibility.",
     "days": "Thu 25 dinner",
     "booking": "Walk-in",
-    "section": "Fort Greene / Prospect Heights"
+    "section": "Fort Greene / Prospect Heights",
+    "closed": false
   },
   {
     "name": "Place des Fêtes",
     "area": "Clinton Hill",
     "source": "New Yorker",
-    "hours": "Dinner daily",
+    "hours": "Monday – Sunday 5:30 PM – 10:30 PM",
+    "oldHours": "Dinner daily",
     "price": "$40–60",
     "why": "Nico Russell. Rosner called it 'heaven.' Natural wine. Neighbourhood restaurant as it should be.",
     "days": "Any dinner",
     "booking": "Book — Resy",
-    "section": "Fort Greene / Prospect Heights"
+    "section": "Fort Greene / Prospect Heights",
+    "closed": false
   },
   {
     "name": "Bong",
     "area": "Crown Heights",
     "source": "New Yorker",
-    "hours": "Dinner Tue–Sun",
+    "hours": "Tuesday – Sunday 5:30 PM – 11:00 PM (Closed Monday)",
+    "oldHours": "Dinner Tue–Sun",
     "price": "$50–80",
     "why": "Cambodian whole-fried fish. Rosner best of 2025. Serious destination dinner.",
     "days": "Wed 24 dinner (alt)",
     "booking": "Book — Resy at midnight, 20 days out",
-    "section": "Crown Heights"
+    "section": "Crown Heights",
+    "closed": false
   },
   {
     "name": "Sailor",
     "area": "Carroll Gardens",
     "source": "New Yorker / Your list",
-    "hours": "Dinner daily",
+    "hours": "Dinner: Mon-Sun 5:00-10:00 PM; Lunch: Wed-Fri 11:30 AM – 2:00 PM; Weekend Brunch: Sat-Sun 10:00 AM – 2:00 PM",
+    "oldHours": "Dinner daily",
     "price": "$55–75",
     "why": "Rosner full feature. Persona-driven seasonal. One of the stronger NYC restaurant openings in recent memory.",
     "days": "Any dinner",
     "booking": "Book — Resy",
-    "section": "Carroll Gardens"
+    "section": "Carroll Gardens",
+    "closed": false
   },
   {
     "name": "Cervo's",
     "area": "LES",
     "source": "",
-    "hours": "Dinner daily, lunch Sat–Sun",
+    "hours": "Monday – Sunday 5:30 PM – 11:00 PM (Dinner only, no lunch)",
+    "oldHours": "Dinner daily, lunch Sat–Sun",
     "price": "$35–50",
     "why": "Iberian seafood, sister to Hart's. Natural wine. Walk-in friendly. Perfect Sunday LES lunch.",
     "days": "Sun 21 lunch / Fri 26 dinner",
     "booking": "Walk-in",
-    "section": "Lower East Side (LES)"
+    "section": "Lower East Side (LES)",
+    "closed": false
   },
   {
     "name": "Mắm",
     "area": "LES",
     "source": "New Yorker",
-    "hours": "Lunch + dinner daily",
+    "hours": "Wednesday – Sunday 12:00 PM – 4:00 PM, 5:00 PM – 10:00 PM (Closed Mon-Tue)",
+    "oldHours": "Lunch + dinner daily",
     "price": "$25–35",
     "why": "Vietnamese, sidewalk plastic stools. Fermented shrimp paste focus. Casual, loud, delicious.",
     "days": "Sun 21 lunch (backup)",
     "booking": "Walk-in",
-    "section": "Lower East Side (LES)"
+    "section": "Lower East Side (LES)",
+    "closed": false
   },
   {
     "name": "Ha's Snack Bar",
     "area": "LES",
     "source": "New Yorker",
-    "hours": "Dinner Tue–Sat only",
+    "hours": "Tuesday – Saturday 5:00 PM – 10:30 PM (Closed Sunday & Monday)",
+    "oldHours": "Dinner Tue–Sat only",
     "price": "$45–65",
     "why": "Bon Appétit #1 NYC 2025. Counter only. Closed Sun + Mon — doesn't fit this trip. Future visit.",
     "days": "Not this trip",
     "booking": "Book — Resy, drops weekly",
-    "section": "Lower East Side (LES)"
+    "section": "Lower East Side (LES)",
+    "closed": false
   },
   {
     "name": "Russ & Daughters Cafe",
     "area": "LES",
     "source": "",
-    "hours": "Daily AM–PM",
+    "hours": "Daily 8:30 AM – 3:30 PM",
+    "oldHours": "Daily AM–PM",
     "price": "$25–40",
     "why": "Smoked fish sit-down. NYC institution. Sunday brunch on the LES.",
     "days": "Sun 21 brunch",
     "booking": "Walk-in",
-    "section": "Lower East Side (LES)"
+    "section": "Lower East Side (LES)",
+    "closed": false
   },
   {
     "name": "Bánh Anh Em",
     "area": "East Village",
     "source": "New Yorker",
-    "hours": "Daily",
+    "hours": "Daily 11:00 AM – 9:00 PM",
+    "oldHours": "Daily",
     "price": "$15–25",
     "why": "Pate banh mi — Rosner's best sandwich 2025. Pork floss. Close to Tompkins for Drag March.",
     "days": "Fri 26 pre-march dinner",
     "booking": "Walk-in",
-    "section": "East Village"
+    "section": "East Village",
+    "closed": false
   },
   {
     "name": "Superiority Burger",
     "area": "East Village",
     "source": "",
-    "hours": "Daily lunch + dinner",
+    "hours": "Wednesday – Monday 12:00 PM – 12:00 AM (Closed Tuesday)",
+    "oldHours": "Daily lunch + dinner",
     "price": "$15–20",
     "why": "Brooks Headley's legendary vegetarian counter. Small, quick, always good.",
     "days": "Fri 26 pre-march dinner",
     "booking": "Walk-in",
-    "section": "East Village"
+    "section": "East Village",
+    "closed": false
   },
   {
     "name": "Veselka",
     "area": "East Village",
     "source": "",
-    "hours": "24 hours",
+    "hours": "Mon-Thu 8:00 AM – 11:00 PM, Fri-Sat 8:00 AM – 12:00 AM, Sun 8:00 AM – 11:00 PM (NO LONGER 24 HOURS)",
+    "oldHours": "24 hours",
     "price": "$15–20",
     "why": "24hr Ukrainian diner. Pierogi, borscht. Pride Sunday fallback.",
     "days": "Sun 28 PrideFest",
     "booking": "Walk-in",
-    "section": "East Village"
+    "section": "East Village",
+    "closed": false
   },
   {
     "name": "Dean's",
     "area": "SoHo",
     "source": "Eater",
-    "hours": "Tue–Sat from 4pm",
+    "hours": "Tuesday – Saturday 4:00 PM – 12:00 AM; Weekend Lunch: Fri-Sun 12:00 PM – 3:00 PM",
+    "oldHours": "Tue–Sat from 4pm",
     "price": "$40–55",
     "why": "Jess Shadbolt + Annie Shi (King team). British seafood pub. Oysters, langoustines, Guinness on tap. Pre-FIST dinner.",
     "days": "Fri 19 dinner",
     "booking": "Book — Resy 2 wks ahead, or walk-in bar",
-    "section": "Nolita / SoHo"
+    "section": "Nolita / SoHo",
+    "closed": false
   },
   {
     "name": "Mommy Pai's",
     "area": "Nolita",
     "source": "New Yorker",
-    "hours": "Daily",
+    "hours": "Daily 11:30 AM – 9:00 PM",
+    "oldHours": "Daily",
     "price": "$15–22",
     "why": "Filet O'Tofu sandwich. Taiwanese-American takeout counter. Rosner-approved.",
     "days": "Fri 26 pre-march dinner",
     "booking": "Walk-in",
-    "section": "Nolita / SoHo"
+    "section": "Nolita / SoHo",
+    "closed": false
   },
   {
     "name": "Zimmi's",
     "area": "West Village",
     "source": "New Yorker",
-    "hours": "Dinner daily",
+    "hours": "Monday – Sunday 5:00 PM – 11:00 PM",
+    "oldHours": "Dinner daily",
     "price": "$40–55",
     "why": "Provençal. Chicken liver tagliatelle. Rosner highlight. Neighbourhood charm, serious cooking.",
     "days": "Any dinner",
     "booking": "Book — Resy",
-    "section": "West Village"
+    "section": "West Village",
+    "closed": false
   },
   {
     "name": "Buvette",
     "area": "West Village",
     "source": "",
-    "hours": "Daily all day",
+    "hours": "Daily 8:00 AM – 12:00 AM",
+    "oldHours": "Daily all day",
     "price": "$25–35",
     "why": "French café. Croque madame, eggs, natural wine. Near Pride March endpoint Sun 28.",
     "days": "Sun 28 brunch",
     "booking": "Walk-in",
-    "section": "West Village"
+    "section": "West Village",
+    "closed": false
   },
   {
     "name": "Passerine",
     "area": "Union Square",
     "source": "Sietsema",
-    "hours": "Lunch + dinner daily",
+    "hours": "Monday – Thursday 5:00 PM – 10:00 PM, Friday – Saturday 5:00 PM – 10:30 PM (Closed Sunday, no lunch)",
+    "oldHours": "Lunch + dinner daily",
     "price": "$25–40",
     "why": "Maharashtrian. Blue corn bhakri. Sietsema 2024 standout. 15 min walk to Tompkins for Drag March.",
     "days": "Fri 26 pre-march lunch",
     "booking": "Walk-in",
-    "section": "Union Square / Flatiron"
+    "section": "Union Square / Flatiron",
+    "closed": false
   },
   {
     "name": "S&P Lunch",
     "area": "Flatiron",
     "source": "Your list",
-    "hours": "Daily AM–PM",
+    "hours": "Mon-Fri 8:00 AM – 4:00 PM, Sat-Sun 9:00 AM – 4:00 PM",
+    "oldHours": "Daily AM–PM",
     "price": "$18–25",
     "why": "Russ & Daughters diner-counter reinvention. 5 min from Pride March start. Memorable last-day brunch.",
     "days": "Sun 28 brunch",
     "booking": "Walk-in",
-    "section": "Union Square / Flatiron"
+    "section": "Union Square / Flatiron",
+    "closed": false
   },
   {
     "name": "Cocina Consuelo",
     "area": "Hamilton Heights",
     "source": "New Yorker",
-    "hours": "Daily",
+    "hours": "Wednesday – Sunday 11:00 AM – 4:00 PM (Closed Monday & Tuesday)",
+    "oldHours": "Daily",
     "price": "$18–22",
     "why": "Karina Garcia. Salsa macha grilled cheese on croissant. On A train route south from Cloisters.",
     "days": "Fri 26 lunch (on route)",
     "booking": "Walk-in",
-    "section": "Upper Manhattan (Hamilton Heights / Fort Tryon)"
+    "section": "Upper Manhattan (Hamilton Heights / Fort Tryon)",
+    "closed": false
   },
   {
     "name": "Theodora",
     "area": "Fort Greene",
     "source": "Your list",
-    "hours": "Dinner daily",
+    "hours": "Monday – Sunday 5:00 PM – 11:00 PM",
+    "oldHours": "Dinner daily",
     "price": "$55–75",
     "why": "Tomer Blechman. Mediterranean wood-fire. Reservation required weeks out.",
     "days": "Any splurge dinner",
     "booking": "Book — Resy, weeks out",
-    "section": "Upper Manhattan (Hamilton Heights / Fort Tryon)"
+    "section": "Upper Manhattan (Hamilton Heights / Fort Tryon)",
+    "closed": false
   },
   {
     "name": "Laila",
     "area": "Bay Ridge",
     "source": "Sietsema",
-    "hours": "Daily",
+    "hours": "Daily 12:00 PM – 11:00 PM",
+    "oldHours": "Daily",
     "price": "$25–40",
     "why": "Syrian. Sietsema 'most memorable meal 2024.' On the Q line from Coney Island.",
     "days": "Sat 20 dinner (Plan B, Q line)",
     "booking": "Walk-in",
-    "section": "Brooklyn — other neighbourhoods"
+    "section": "Brooklyn — other neighbourhoods",
+    "closed": false
   },
   {
     "name": "Hainan Chicken House",
     "area": "Sunset Park",
     "source": "Pete Wells",
-    "hours": "Daily",
+    "hours": "Daily 11:00 AM – 8:30 PM",
+    "oldHours": "Daily",
     "price": "$20–30",
     "why": "Family-owned Hainanese chicken. Pete Wells big surprise pick 2024.",
     "days": "Any lunch/dinner",
     "booking": "Walk-in",
-    "section": "Brooklyn — other neighbourhoods"
+    "section": "Brooklyn — other neighbourhoods",
+    "closed": false
   },
   {
     "name": "Sawa",
     "area": "Park Slope",
     "source": "",
-    "hours": "Dinner daily",
+    "hours": "Monday – Sunday 5:00 PM – 11:00 PM",
+    "oldHours": "Dinner daily",
     "price": "$30–45",
     "why": "Lebanese. Kibbeh nayeh (raw lamb). Serious Middle Eastern cooking.",
     "days": "Any dinner",
     "booking": "Walk-in",
-    "section": "Brooklyn — other neighbourhoods"
+    "section": "Brooklyn — other neighbourhoods",
+    "closed": false
   },
   {
     "name": "JR & Son",
     "area": "Brooklyn",
     "source": "New Yorker",
-    "hours": "Daily",
+    "hours": "Monday – Sunday 5:00 PM – 10:00 PM",
+    "oldHours": "Daily",
     "price": "$25–40",
     "why": "Reinvented chicken parm, sesame-seeded. Brooklyn neighbourhood restaurant with a real point of view.",
     "days": "Any dinner",
     "booking": "Walk-in",
-    "section": "Brooklyn — other neighbourhoods"
+    "section": "Brooklyn — other neighbourhoods",
+    "closed": false
   },
   {
     "name": "Nathan's Famous",
     "area": "Coney Island",
     "source": "",
-    "hours": "Daily",
+    "hours": "Daily 10:00 AM – 11:00 PM",
+    "oldHours": "Daily",
     "price": "$8–12",
     "why": "1916 original. NYC obligation. Hot dog as pilgrimage.",
     "days": "Sat 20 (boardwalk)",
     "booking": "Walk-in",
-    "section": "Coney Island / Brighton Beach"
+    "section": "Coney Island / Brighton Beach",
+    "closed": false
   },
   {
     "name": "Ruby's Bar",
     "area": "Coney Island",
     "source": "",
-    "hours": "Daily",
+    "hours": "Daily 11:00 AM – 10:00 PM",
+    "oldHours": "Daily",
     "price": "$13",
     "why": "1934 boardwalk dive. Beer + chowder. Perfect post-parade stop.",
     "days": "Sat 20 (boardwalk)",
     "booking": "Walk-in",
-    "section": "Coney Island / Brighton Beach"
+    "section": "Coney Island / Brighton Beach",
+    "closed": false
   },
   {
     "name": "Totonno's Pizzeria",
     "area": "Coney Island",
     "source": "",
-    "hours": "Wed–Sun lunch",
+    "hours": "Saturday & Sunday 12:00 PM – 5:30 PM (TAKEOUT ONLY, CLOSED Monday-Friday)",
+    "oldHours": "Wed–Sun lunch",
     "price": "$8/slice",
     "why": "1924 coal-oven. One of NYC's oldest pizzerias. Verify hours.",
     "days": "Sat 20 (boardwalk)",
     "booking": "Walk-in",
-    "section": "Coney Island / Brighton Beach"
+    "section": "Coney Island / Brighton Beach",
+    "closed": false
   },
   {
     "name": "Skovorodka",
     "area": "Brighton Beach",
     "source": "",
-    "hours": "Daily",
+    "hours": "Daily 11:00 AM – 11:00 PM",
+    "oldHours": "Daily",
     "price": "$25–35",
     "why": "Pierogi-heavy. Local Russian institution. No frills.",
     "days": "Sat 20 dinner (Plan B)",
     "booking": "Walk-in",
-    "section": "Coney Island / Brighton Beach"
+    "section": "Coney Island / Brighton Beach",
+    "closed": false
   },
   {
     "name": "Mermaid Spa restaurant",
     "area": "Sea Gate / Coney Island",
     "source": "",
-    "hours": "Sat–Sun",
+    "hours": "Saturday & Sunday 9:00 AM – 10:00 PM (Spa hours match)",
+    "oldHours": "Sat–Sun",
     "price": "$30–40",
     "why": "Dinner in robes post-banya. Borscht, pelmeni, kotleti, vodka.",
     "days": "Sat 20 dinner (locked)",
     "booking": "Walk-in (in-banya)",
-    "section": "Coney Island / Brighton Beach"
+    "section": "Coney Island / Brighton Beach",
+    "closed": false
   },
   {
     "name": "Riis Park Beach Bazaar",
     "area": "Riis Park",
     "source": "",
-    "hours": "Daily (summer)",
+    "hours": "Daily (Open Summer season only)",
+    "oldHours": "Daily (summer)",
     "price": "$15–20",
     "why": "On-site at Riis. Tacos, lobster rolls, beer. Best beach lunch without bringing your own.",
     "days": "Sat 27 beach lunch",
     "booking": "Walk-in",
-    "section": "Rockaways / Riis Park Beach"
+    "section": "Rockaways / Riis Park Beach",
+    "closed": false
   },
   {
     "name": "Rockaway Beach Surf Club",
     "area": "Rockaway",
     "source": "",
-    "hours": "Daily (summer)",
+    "hours": "Daily (Open Summer season only)",
+    "oldHours": "Daily (summer)",
     "price": "$18–25",
     "why": "Tacos + beer, further east. Surfer-crowd energy.",
     "days": "Sat 27 (alt)",
     "booking": "Walk-in",
-    "section": "Rockaways / Riis Park Beach"
+    "section": "Rockaways / Riis Park Beach",
+    "closed": false
   },
   {
     "name": "Lil' Deb's Oasis",
     "area": "Hudson NY",
     "source": "Your list",
-    "hours": "Thu–Mon 5–9/10pm",
+    "hours": "Thursday – Monday 5:00 PM – 9:00/10:00 PM",
+    "oldHours": "Thu–Mon 5–9/10pm",
     "price": "$30–40",
     "why": "Tropical comfort food. Queer-owned, persona-loaded. One of the most exciting restaurants in the Hudson Valley.",
     "days": "Mon 22 dinner",
     "booking": "Walk-in for 2",
-    "section": "Berkshires / Hudson Valley — on the drive"
+    "section": "Berkshires / Hudson Valley — on the drive",
+    "closed": false
   },
   {
     "name": "Mezze Bistro + Bar",
     "area": "Williamstown MA",
     "source": "Splurge",
-    "hours": "Wed–Sun 5–8:30pm",
+    "hours": "Wednesday – Sunday 5:00 PM – 8:30 PM",
+    "oldHours": "Wed–Sun 5–8:30pm",
     "price": "$55–75",
     "why": "Mediterranean prix fixe, chef-led, local ingredients. Trip's one Berkshires splurge.",
     "days": "Wed 24 dinner",
     "booking": "Book — reserve in advance",
-    "section": "Berkshires / Hudson Valley — on the drive"
+    "section": "Berkshires / Hudson Valley — on the drive",
+    "closed": false
   },
   {
     "name": "No Comply Foods",
     "area": "Great Barrington MA",
     "source": "",
-    "hours": "Wed–Sat 5–9pm",
+    "hours": "Dinner: Wed-Sat 5:00-9:00 PM; Weekend Brunch: Sat 11:00 AM – 3:00 PM, Sun 10:00 AM – 2:00 PM",
+    "oldHours": "Wed–Sat 5–9pm",
     "price": "$20–35",
     "why": "Daily-changing menu, no tips, no reservations. Skater-punk ethos, serious cooking. Bon Appétit top US. 30 min south on return route.",
     "days": "Wed 24 dinner (Plan B)",
     "booking": "Walk-in — no reservations",
-    "section": "Berkshires / Hudson Valley — on the drive"
+    "section": "Berkshires / Hudson Valley — on the drive",
+    "closed": false
   },
   {
     "name": "Blue Mango",
     "area": "Williamstown MA",
     "source": "",
-    "hours": "Daily 11:30am–9:30pm",
+    "hours": "Daily 11:30 AM – 9:30 PM",
+    "oldHours": "Daily 11:30am–9:30pm",
     "price": "$20–30",
     "why": "Thai-Japanese. Reliable, walkable from Hotel Downstreet. Good casual post-hike dinner.",
     "days": "Tue 23 dinner",
     "booking": "Walk-in",
-    "section": "Berkshires / Hudson Valley — on the drive"
+    "section": "Berkshires / Hudson Valley — on the drive",
+    "closed": false
   },
   {
     "name": "STATE Food + Drink",
     "area": "North Adams MA",
     "source": "",
-    "hours": "Varies — check calendar",
+    "hours": "Dinner: Fri-Tue 5:30-8:30 PM; Cafe: Mon, Tue, Fri 9:00 AM – 2:00 PM; Brunch: Sat-Sun 9:00 AM – 2:00 PM (Closed Wed-Thu)",
+    "oldHours": "Varies — check calendar",
     "price": "$25–40",
     "why": "Vietnamese Tuesdays at Greylock WORKS. Event-driven — verify statefoodanddrink.com before going.",
     "days": "Tue 23 dinner (if running)",
     "booking": "Walk-in — check calendar first",
-    "section": "Berkshires / Hudson Valley — on the drive"
+    "section": "Berkshires / Hudson Valley — on the drive",
+    "closed": false
   },
   {
     "name": "Mission Bar + Tapas",
     "area": "North Adams MA",
     "source": "",
-    "hours": "Daily",
+    "hours": "PERMANENTLY CLOSED",
+    "oldHours": "Daily",
     "price": "$25–35",
     "why": "Queer-owned. Small plates, walking from Hotel Downstreet. Backup Mon or Tue dinner.",
     "days": "Mon 22 or Tue 23 dinner",
     "booking": "Walk-in",
-    "section": "Berkshires / Hudson Valley — on the drive"
+    "section": "Berkshires / Hudson Valley — on the drive",
+    "closed": true
   },
   {
     "name": "Tunnel City Coffee",
     "area": "Williamstown MA + MASS MoCA",
     "source": "",
-    "hours": "Daily 6am–3pm",
+    "hours": "Spring St: Mon-Thu 6am-4pm, Fri-Sun 6am-5pm; MASS MoCA: Mon-Fri 7am-3pm, Sat-Sun 8am-3pm",
+    "oldHours": "Daily 6am–3pm",
     "price": "$10–20",
     "why": "Specialty roaster. Pack the summit lunch here. Also on-site Wed at MASS MoCA.",
     "days": "Tue 23 packed lunch / Wed 24",
     "booking": "Walk-in",
-    "section": "Berkshires / Hudson Valley — on the drive"
+    "section": "Berkshires / Hudson Valley — on the drive",
+    "closed": false
   },
   {
     "name": "Bluebird & Co",
     "area": "Hancock MA",
     "source": "",
-    "hours": "Mon + Thu–Sun 5–9pm",
+    "hours": "Thursday – Monday 5:00 PM – 9:00 PM",
+    "oldHours": "Mon + Thu–Sun 5–9pm",
     "price": "$30–45",
     "why": "Same Mezze hospitality group. Mon dinner Plan B only if arriving before 9pm.",
     "days": "Mon 22 dinner (Plan B only)",
     "booking": "Walk-in",
-    "section": "Berkshires / Hudson Valley — on the drive"
+    "section": "Berkshires / Hudson Valley — on the drive",
+    "closed": false
   },
   {
     "name": "Trail House Kitchen",
     "area": "North Adams MA",
     "source": "",
-    "hours": "Daily",
+    "hours": "Sun-Thu 11:00 AM – 9:00 PM, Fri-Sat 11:00 AM – 10:00 PM",
+    "oldHours": "Daily",
     "price": "$15–22",
     "why": "2 min from MASS MoCA. Seasonal, outdoor patio in summer. Good Wed lunch.",
     "days": "Wed 24 lunch",
     "booking": "Walk-in",
-    "section": "Berkshires / Hudson Valley — on the drive"
+    "section": "Berkshires / Hudson Valley — on the drive",
+    "closed": false
   },
   {
     "name": "A-OK Berkshire BBQ",
     "area": "North Adams MA",
     "source": "",
-    "hours": "Daily",
+    "hours": "Friday – Monday 8:00 AM – 7:00 PM (CLOSED Tuesday, Wednesday, Thursday)",
+    "oldHours": "Daily",
     "price": "$18–25",
     "why": "Texas-style BBQ in western MA. Fast, cheap, satisfying mid-day fuel.",
     "days": "Wed 24 lunch",
     "booking": "Walk-in",
-    "section": "Berkshires / Hudson Valley — on the drive"
+    "section": "Berkshires / Hudson Valley — on the drive",
+    "closed": false
   },
   {
     "name": "Brewhaha Coffee",
     "area": "North Adams MA",
     "source": "",
-    "hours": "Daily AM",
+    "hours": "PERMANENTLY CLOSED",
+    "oldHours": "Daily AM",
     "price": "$10–12",
     "why": "Best coffee near Hotel Downstreet. Pastries, breakfast sandwiches.",
     "days": "Tue 23 + Wed 24 AM",
     "booking": "Walk-in",
-    "section": "Berkshires / Hudson Valley — on the drive"
+    "section": "Berkshires / Hudson Valley — on the drive",
+    "closed": true
   }
 ]

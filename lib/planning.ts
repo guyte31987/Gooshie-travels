@@ -7,11 +7,13 @@ export type Restaurant = {
   area: string;
   source: string;
   hours: string;
+  oldHours?: string;
   price: string;
   why: string;
   days: string;
   booking: string;
   section: string;
+  closed?: boolean;
 };
 
 export type VintageShop = {

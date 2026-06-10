@@ -1,46 +1,75 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { restaurants, vintage, bookings, distinct, priceTier } from "@/lib/planning";
+import { useEffect, useMemo, useState } from "react";
+import { bookings, distinct } from "@/lib/planning";
+import {
+  buildEntities,
+  groupByType,
+  ENTITY_TABS,
+  type Entity,
+  type EntityType,
+  type TripSlot,
+  type ItinDay,
+} from "@/lib/entities";
 
-type Sub = "food" | "vintage" | "bookings";
+type Tab = EntityType | "bookings";
 
 export function PlanningTab() {
-  const [sub, setSub] = useState<Sub>("food");
+  const [days, setDays] = useState<ItinDay[]>([]);
+  const [tz, setTz] = useState("Europe/London");
+  const [loaded, setLoaded] = useState(false);
+  const [tab, setTab] = useState<Tab>("food");
+
+  useEffect(() => {
+    fetch("/api/itinerary")
+      .then((r) => r.json())
+      .then((d: { days?: ItinDay[]; tz?: string }) => {
+        setDays(d.days ?? []);
+        setTz(d.tz ?? "Europe/London");
+      })
+      .finally(() => setLoaded(true));
+  }, []);
+
+  const grouped = useMemo(() => groupByType(buildEntities(days, tz)), [days, tz]);
+
   return (
     <div>
-      <div className="mb-4 flex gap-1 rounded-lg bg-slate-100 p-1 text-sm">
-        <SubBtn active={sub === "food"} onClick={() => setSub("food")}>
-          🍴 Food <span className="text-slate-400">{restaurants.length}</span>
-        </SubBtn>
-        <SubBtn active={sub === "vintage"} onClick={() => setSub("vintage")}>
-          👕 Vintage <span className="text-slate-400">{vintage.length}</span>
-        </SubBtn>
-        <SubBtn active={sub === "bookings"} onClick={() => setSub("bookings")}>
+      <div className="mb-4 flex flex-wrap gap-1.5 text-sm">
+        {ENTITY_TABS.map((t) => (
+          <TabChip key={t.type} active={tab === t.type} onClick={() => setTab(t.type)}>
+            {t.emoji} {t.label}{" "}
+            <span className="text-slate-400">{grouped[t.type]?.length ?? 0}</span>
+          </TabChip>
+        ))}
+        <TabChip active={tab === "bookings"} onClick={() => setTab("bookings")}>
           ✅ Bookings <span className="text-slate-400">{bookings.length}</span>
-        </SubBtn>
+        </TabChip>
       </div>
 
-      {sub === "food" && <FoodList />}
-      {sub === "vintage" && <VintageList />}
-      {sub === "bookings" && <BookingsList />}
+      {!loaded && tab !== "bookings" ? (
+        <p className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-400">
+          Loading entities…
+        </p>
+      ) : tab === "bookings" ? (
+        <BookingsList />
+      ) : (
+        <EntityList entities={grouped[tab] ?? []} />
+      )}
     </div>
   );
 }
 
-function FoodList() {
-  const areas = useMemo(() => distinct(restaurants, (r) => r.area), []);
+function EntityList({ entities }: { entities: Entity[] }) {
+  const areas = useMemo(() => distinct(entities, (e) => e.area ?? ""), [entities]);
   const [q, setQ] = useState("");
   const [area, setArea] = useState("");
-  const [maxTier, setMaxTier] = useState(0);
-  const [walkInOnly, setWalkInOnly] = useState(false);
+  const [scheduledOnly, setScheduledOnly] = useState(false);
 
-  const filtered = restaurants.filter((r) => {
-    if (area && r.area !== area) return false;
-    if (maxTier && priceTier(r.price) > maxTier) return false;
-    if (walkInOnly && !/walk-in/i.test(r.booking)) return false;
+  const filtered = entities.filter((e) => {
+    if (area && e.area !== area) return false;
+    if (scheduledOnly && !e.slots.some((s) => s.kind === "confirmed")) return false;
     if (q) {
-      const hay = `${r.name} ${r.area} ${r.why} ${r.source}`.toLowerCase();
+      const hay = `${e.name} ${e.area ?? ""} ${e.notes ?? ""}`.toLowerCase();
       if (!hay.includes(q.toLowerCase())) return false;
     }
     return true;
@@ -48,116 +77,144 @@ function FoodList() {
 
   return (
     <div>
-      <Filters>
+      <div className="mb-3 flex flex-wrap items-center gap-2">
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Search dishes, vibes, areas…"
-          className="min-w-[12rem] flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm outline-none focus:border-slate-400"
+          placeholder="Search…"
+          className="min-w-[10rem] flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm outline-none focus:border-slate-400"
         />
-        <Select value={area} onChange={setArea} placeholder="All areas" options={areas} />
-        <Select
-          value={maxTier ? String(maxTier) : ""}
-          onChange={(v) => setMaxTier(Number(v))}
-          placeholder="Any price"
-          options={[
-            ["1", "$ up to ~$20"],
-            ["2", "$$ up to ~$40"],
-            ["3", "$$$ up to ~$70"],
-            ["4", "$$$$ any"],
-          ]}
-        />
-        <Toggle checked={walkInOnly} onChange={setWalkInOnly}>
-          Walk-in
-        </Toggle>
-      </Filters>
+        {areas.length > 1 && (
+          <select
+            value={area}
+            onChange={(e) => setArea(e.target.value)}
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm"
+          >
+            <option value="">All areas</option>
+            {areas.filter(Boolean).map((a) => (
+              <option key={a} value={a}>
+                {a}
+              </option>
+            ))}
+          </select>
+        )}
+        <label className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-2 text-sm">
+          <input
+            type="checkbox"
+            checked={scheduledOnly}
+            onChange={(e) => setScheduledOnly(e.target.checked)}
+          />
+          In trip
+        </label>
+      </div>
 
-      <Count n={filtered.length} total={restaurants.length} />
-      <ul className="space-y-2">
-        {filtered.map((r) => (
-          <li key={r.name} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <h3 className="font-medium">{r.name}</h3>
-              <div className="flex items-center gap-2 text-xs text-slate-500">
-                <span>{r.area}</span>
-                {r.price && <span className="font-medium">{r.price}</span>}
-                <BookingPill booking={r.booking} />
-              </div>
-            </div>
-            {r.why && <p className="mt-1.5 text-sm text-slate-600">{r.why}</p>}
-            <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-400">
-              {r.hours && <span>🕑 {r.hours}</span>}
-              {r.days && <span>📅 {r.days}</span>}
-              {r.source && <span>via {r.source}</span>}
-            </div>
-          </li>
-        ))}
-      </ul>
+      <p className="mb-2 text-xs text-slate-400">
+        Showing {filtered.length} of {entities.length}
+      </p>
+      {filtered.length === 0 ? (
+        <p className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-400">
+          Nothing here yet.
+        </p>
+      ) : (
+        <ul className="space-y-2">
+          {filtered.map((e) => (
+            <EntityCard key={e.id} e={e} />
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
 
-function BookingPill({ booking }: { booking: string }) {
-  if (!booking) return null;
-  const walkIn = /walk-in/i.test(booking);
+function EntityCard({ e }: { e: Entity }) {
+  const [open, setOpen] = useState(false);
   return (
-    <span
-      className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
-        walkIn ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"
-      }`}
-      title={booking}
-    >
-      {walkIn ? "Walk-in" : "Book ahead"}
+    <li className="rounded-xl border border-slate-200 bg-white shadow-sm">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-start justify-between gap-2 p-4 text-left"
+      >
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="font-medium">{e.name}</h3>
+            {e.closed && (
+              <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[11px] font-semibold text-rose-700">
+                CLOSED
+              </span>
+            )}
+          </div>
+          <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
+            {e.area && <span>{e.area}</span>}
+            {e.price && <span className="font-medium">{e.price}</span>}
+          </div>
+          <div className="mt-1.5 flex flex-wrap gap-1">
+            {e.slots.length === 0 ? (
+              <span className="text-xs text-slate-300">not in the plan yet</span>
+            ) : (
+              e.slots.map((s, i) => <SlotBadge key={i} s={s} />)
+            )}
+          </div>
+        </div>
+        <span className="shrink-0 text-slate-300">{open ? "▲" : "▼"}</span>
+      </button>
+
+      {open && (
+        <div className="border-t border-slate-100 px-4 py-3 text-sm">
+          {e.notes && <p className="text-slate-600">{e.notes}</p>}
+          <dl className="mt-2 space-y-1 text-xs text-slate-500">
+            {e.hours && <Row label="Hours">{e.hours}</Row>}
+            {e.address && <Row label="Address">{e.address}</Row>}
+            {e.bestDay && <Row label="Best day">{e.bestDay}</Row>}
+            {e.booking && <Row label="Booking">{e.booking}</Row>}
+            {e.source && <Row label="Source">{e.source}</Row>}
+          </dl>
+          {e.slots.length > 0 && (
+            <div className="mt-3">
+              <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                Where it fits the trip
+              </div>
+              <ul className="space-y-1">
+                {e.slots.map((s, i) => (
+                  <li key={i} className="flex items-center gap-2 text-xs">
+                    <SlotBadge s={s} />
+                    {s.note && <span className="text-slate-400">{s.note}</span>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+    </li>
+  );
+}
+
+function SlotBadge({ s }: { s: TripSlot }) {
+  if (s.mismatch) {
+    return (
+      <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[11px] font-medium text-rose-700 ring-1 ring-rose-200">
+        ⚠️ {s.label} · differs from calendar
+      </span>
+    );
+  }
+  const styles: Record<string, string> = {
+    confirmed: "bg-emerald-50 text-emerald-700",
+    planned: "bg-indigo-50 text-indigo-700",
+    planB: "bg-amber-50 text-amber-700",
+  };
+  const prefix = s.kind === "confirmed" ? "✅" : s.kind === "planB" ? "🅱" : "📌";
+  return (
+    <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${styles[s.kind]}`}>
+      {prefix} {s.label}
     </span>
   );
 }
 
-function VintageList() {
-  const areas = useMemo(() => distinct(vintage, (v) => v.area), []);
-  const [q, setQ] = useState("");
-  const [area, setArea] = useState("");
-
-  const filtered = vintage.filter((v) => {
-    if (area && v.area !== area) return false;
-    if (q) {
-      const hay = `${v.name} ${v.area} ${v.vibe}`.toLowerCase();
-      if (!hay.includes(q.toLowerCase())) return false;
-    }
-    return true;
-  });
-
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div>
-      <Filters>
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Search shops, vibe…"
-          className="min-w-[12rem] flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm outline-none focus:border-slate-400"
-        />
-        <Select value={area} onChange={setArea} placeholder="All areas" options={areas} />
-      </Filters>
-
-      <Count n={filtered.length} total={vintage.length} />
-      <ul className="space-y-2">
-        {filtered.map((v) => (
-          <li key={v.name} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <h3 className="font-medium">{v.name}</h3>
-              <div className="flex items-center gap-2 text-xs text-slate-500">
-                <span>{v.area}</span>
-                {v.price && <span className="font-medium">{v.price}</span>}
-              </div>
-            </div>
-            {v.vibe && <p className="mt-1.5 text-sm text-slate-600">{v.vibe}</p>}
-            <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-400">
-              {v.address && <span>📍 {v.address}</span>}
-              {v.hours && <span>🕑 {v.hours}</span>}
-              {v.bestDay && <span>📅 {v.bestDay}</span>}
-            </div>
-          </li>
-        ))}
-      </ul>
+    <div className="flex gap-2">
+      <dt className="w-16 shrink-0 font-medium text-slate-400">{label}</dt>
+      <dd className="text-slate-600">{children}</dd>
     </div>
   );
 }
@@ -167,21 +224,34 @@ function BookingsList() {
   const [priority, setPriority] = useState("");
   const statuses = useMemo(() => distinct(bookings, (b) => b.status), []);
   const priorities = useMemo(() => distinct(bookings, (b) => b.priority), []);
-
-  const filtered = bookings.filter((b) => {
-    if (status && b.status !== status) return false;
-    if (priority && b.priority !== priority) return false;
-    return true;
-  });
+  const filtered = bookings.filter(
+    (b) => (!status || b.status === status) && (!priority || b.priority === priority)
+  );
 
   return (
     <div>
-      <Filters>
-        <Select value={priority} onChange={setPriority} placeholder="Any priority" options={priorities} />
-        <Select value={status} onChange={setStatus} placeholder="Any status" options={statuses} />
-      </Filters>
-
-      <Count n={filtered.length} total={bookings.length} />
+      <div className="mb-3 flex flex-wrap gap-2">
+        <select
+          value={priority}
+          onChange={(e) => setPriority(e.target.value)}
+          className="rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm"
+        >
+          <option value="">Any priority</option>
+          {priorities.map((p) => (
+            <option key={p}>{p}</option>
+          ))}
+        </select>
+        <select
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+          className="rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm"
+        >
+          <option value="">Any status</option>
+          {statuses.map((s) => (
+            <option key={s}>{s}</option>
+          ))}
+        </select>
+      </div>
       <ul className="space-y-2">
         {filtered.map((b, i) => {
           const done = /done|booked/i.test(b.status);
@@ -212,9 +282,7 @@ function BookingsList() {
   );
 }
 
-// --- shared UI bits --------------------------------------------------------
-
-function SubBtn({
+function TabChip({
   active,
   onClick,
   children,
@@ -226,70 +294,11 @@ function SubBtn({
   return (
     <button
       onClick={onClick}
-      className={`flex-1 rounded-md px-3 py-1.5 font-medium transition ${
-        active ? "bg-white text-ink shadow-sm" : "text-slate-500 hover:text-slate-700"
+      className={`rounded-full px-3 py-1.5 font-medium transition ${
+        active ? "bg-ink text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
       }`}
     >
       {children}
     </button>
-  );
-}
-
-function Filters({ children }: { children: React.ReactNode }) {
-  return <div className="mb-3 flex flex-wrap items-center gap-2">{children}</div>;
-}
-
-function Select({
-  value,
-  onChange,
-  placeholder,
-  options,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  placeholder: string;
-  options: (string | [string, string])[];
-}) {
-  return (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm outline-none focus:border-slate-400"
-    >
-      <option value="">{placeholder}</option>
-      {options.map((o) => {
-        const [val, label] = Array.isArray(o) ? o : [o, o];
-        return (
-          <option key={val} value={val}>
-            {label}
-          </option>
-        );
-      })}
-    </select>
-  );
-}
-
-function Toggle({
-  checked,
-  onChange,
-  children,
-}: {
-  checked: boolean;
-  onChange: (v: boolean) => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-2 text-sm">
-      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
-      {children}
-    </label>
-  );
-}
-
-function Count({ n, total }: { n: number; total: number }) {
-  return (
-    <p className="mb-2 text-xs text-slate-400">
-      Showing {n} of {total}
-    </p>
   );
 }
