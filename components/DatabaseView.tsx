@@ -24,13 +24,14 @@ export function DatabaseView() {
   const [region, setRegion] = useState("");
   const [editing, setEditing] = useState<DBEntity | null | "new">(null);
   const [seeding, setSeeding] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const unsub = subscribeEntities((e) => {
       setEntities(e);
       setLoaded(true);
     });
-    getAreas().then(setAreas);
+    getAreas().then(setAreas).catch(() => {});
     return unsub;
   }, []);
 
@@ -50,6 +51,7 @@ export function DatabaseView() {
 
   const seed = async () => {
     setSeeding(true);
+    setError(null);
     try {
       const res = await fetch("/api/itinerary", { cache: "no-store" });
       const data = await res.json();
@@ -64,6 +66,9 @@ export function DatabaseView() {
         items,
         itinerary: { tz, days, syncedAt: new Date().toISOString() },
       });
+    } catch (e) {
+      console.error("Seed failed:", e);
+      setError(e instanceof Error ? e.message : "Seed failed — see console.");
     } finally {
       setSeeding(false);
     }
@@ -90,6 +95,9 @@ export function DatabaseView() {
             </button>
           ) : (
             <p className="mt-3 text-xs text-indigo-500">Ask an admin to seed it.</p>
+          )}
+          {error && (
+            <p className="mt-3 rounded-lg bg-rose-100 p-2 text-xs text-rose-700">{error}</p>
           )}
         </div>
       ) : (

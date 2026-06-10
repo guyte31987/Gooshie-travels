@@ -2,7 +2,7 @@
 
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
 import { getAuth, type Auth } from "firebase/auth";
-import { getFirestore, type Firestore } from "firebase/firestore";
+import { initializeFirestore, getFirestore, type Firestore } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -27,7 +27,13 @@ let dbInstance: Firestore | undefined;
 if (firebaseConfigured) {
   app = getApps().length ? getApp() : initializeApp(firebaseConfig);
   authInstance = getAuth(app);
-  dbInstance = getFirestore(app);
+  // ignoreUndefinedProperties so writes with optional/empty fields don't throw.
+  try {
+    dbInstance = initializeFirestore(app, { ignoreUndefinedProperties: true });
+  } catch {
+    // Already initialized (e.g. hot reload) — fall back to the existing instance.
+    dbInstance = getFirestore(app);
+  }
 }
 
 export const auth = authInstance;
