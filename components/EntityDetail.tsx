@@ -11,13 +11,13 @@ import { saveInstance, deleteInstanceOverride, type Instance } from "@/lib/db";
  *  Opened from entity name links in EventPopup, Planning, Map, or Database. */
 export function EntityDetail({
   entity,
-  tripId,
-  tripName,
+  tripId = "",
+  tripName = "",
   onClose,
 }: {
   entity: Entity;
-  tripId: string;
-  tripName: string;
+  tripId?: string;
+  tripName?: string;
   onClose: () => void;
 }) {
   const type = ENTITY_TABS.find((t) => t.type === entity.type);
@@ -71,12 +71,13 @@ export function EntityDetail({
         </div>
 
         {/* Appearances in this trip */}
+        {tripId && (
         <div className="mt-4 border-t border-slate-100 pt-3">
           <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
             This trip
           </h3>
           {entity.slots.length === 0 ? (
-            <p className="text-sm text-slate-400">Not scheduled or planned for any trip yet.</p>
+            <p className="text-sm text-slate-400">Not scheduled or planned yet.</p>
           ) : (
             <div className="rounded-xl border border-slate-200">
               <div className="border-b border-slate-100 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-600">
@@ -90,6 +91,7 @@ export function EntityDetail({
             </div>
           )}
         </div>
+        )}
       </div>
     </div>
   );
