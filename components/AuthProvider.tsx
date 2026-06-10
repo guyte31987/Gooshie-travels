@@ -13,17 +13,21 @@ import {
 } from "firebase/auth";
 import { auth, firebaseConfigured } from "@/lib/firebase";
 import { resolveAccess, type AccessState } from "@/lib/access";
+import type { Role } from "@/lib/members";
 
 const EMAIL_KEY = "gooshie:emailForSignIn";
 
 type AuthContextValue = {
   user: User | null;
   access: AccessState;
+  role: Role | null;
+  isAdmin: boolean;
   loading: boolean;
   configured: boolean;
   signInWithGoogle: () => Promise<void>;
   sendMagicLink: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
+  refreshAccess: () => Promise<void>;
   error: string | null;
 };
 
@@ -32,8 +36,20 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [access, setAccess] = useState<AccessState>("unknown");
+  const [role, setRole] = useState<Role | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const loadAccess = async (u: User | null) => {
+    if (!u) {
+      setAccess("unknown");
+      setRole(null);
+      return;
+    }
+    const result = await resolveAccess(u.email);
+    setAccess(result.state);
+    setRole(result.role);
+  };
 
   useEffect(() => {
     if (!firebaseConfigured || !auth) {
@@ -57,11 +73,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const unsub = onAuthStateChanged(auth, async (u) => {
       setUser(u);
-      setAccess(u ? await resolveAccess(u.email) : "unknown");
+      await loadAccess(u);
       setLoading(false);
     });
     return () => unsub();
   }, []);
+
+  const refreshAccess = async () => {
+    await loadAccess(auth?.currentUser ?? null);
+  };
 
   const signInWithGoogle = async () => {
     if (!auth) return;
@@ -97,11 +117,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         user,
         access,
+        role,
+        isAdmin: access === "admin",
         loading,
         configured: firebaseConfigured,
         signInWithGoogle,
         sendMagicLink,
         signOut,
+        refreshAccess,
         error,
       }}
     >

@@ -1,21 +1,35 @@
 rules_version = '2';
 
-// Phase 1 rules. Paste into Firebase console > Firestore > Rules.
-// Replace the admin email if you ever change NEXT_PUBLIC_ADMIN_EMAIL.
+// Gooshie Travels — Firestore rules.
+// If you share a Firebase project with other apps, merge ONLY the `members`
+// block below into your existing rules (keep your other collections as-is) and
+// make sure isAdmin() lists every admin email.
 service cloud.firestore {
   match /databases/{database}/documents {
-    function isSignedIn() {
+    function isAuth() {
       return request.auth != null;
     }
     function isAdmin() {
-      return isSignedIn() && request.auth.token.email.lower() == "guy_te3@hotmail.com";
+      return isAuth() && (
+        request.auth.token.email.lower() == 'guy_te3@hotmail.com'
+        || request.auth.token.email.lower() == 'maissis1987@gmail.com'
+      );
     }
 
-    // allowlist/{email}: a signed-in user may read ONLY their own entry (to learn
-    // whether they're approved). Only the admin can add/remove people.
-    match /allowlist/{email} {
-      allow read: if isAdmin() || (isSignedIn() && request.auth.token.email.lower() == email);
-      allow write: if isAdmin();
+    // members/{email}: membership + role for the app.
+    //  - A signed-in user can read ONLY their own record (to learn their status).
+    //  - A signed-in user can create ONLY their own request, and only as a
+    //    pending viewer — they can't grant themselves a role or approve.
+    //  - Only admins can approve/deny, change roles, or remove people.
+    match /members/{email} {
+      allow read: if isAdmin() || (isAuth() && request.auth.token.email.lower() == email);
+      allow create: if isAdmin() || (
+        isAuth()
+        && request.auth.token.email.lower() == email
+        && request.resource.data.status == 'pending'
+        && request.resource.data.role == 'viewer'
+      );
+      allow update, delete: if isAdmin();
     }
   }
 }
