@@ -50,6 +50,8 @@ export type DBEntity = {
   needsBooking?: boolean;
   /** Set when this entity was auto-created from an unmatched calendar event and hasn't been manually reviewed. */
   calendarSource?: boolean;
+  /** For party/event entities — links them to a parent club/venue entity. */
+  parentId?: string;
 };
 
 export type StoredAppearance = {

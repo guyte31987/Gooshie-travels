@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ENTITY_TABS, type EntityType } from "@/lib/entities";
-import { saveEntity, saveAreas, type DBEntity } from "@/lib/db";
+import { saveEntity, saveAreas, subscribeEntities, type DBEntity } from "@/lib/db";
 import { slugId } from "@/lib/slug";
 
 const FIELDS: { key: keyof DBEntity; label: string; textarea?: boolean }[] = [
@@ -30,6 +30,16 @@ export function EntityForm({
     entity ?? { id: "", name: "", type: "food", generalArea: "" }
   );
   const [busy, setBusy] = useState(false);
+  const [clubEntities, setClubEntities] = useState<DBEntity[]>([]);
+
+  useEffect(() => {
+    const unsub = subscribeEntities((all) =>
+      setClubEntities(all.filter((e) => e.type === "club" || e.type === "party"))
+    );
+    return unsub;
+  }, []);
+
+  const showParent = form.type === "club" || form.type === "party" || form.type === "event";
 
   const set = (k: keyof DBEntity, v: string | boolean) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -98,6 +108,29 @@ export function EntityForm({
               </datalist>
             </Field>
           </div>
+
+          {showParent && clubEntities.length > 0 && (
+            <div>
+              <label className="mb-1 block text-xs font-medium text-slate-500">
+                Parent venue <span className="font-normal text-slate-400">(optional — links this to a club)</span>
+              </label>
+              <select
+                value={form.parentId ?? ""}
+                onChange={(ev) => set("parentId", ev.target.value)}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-400"
+              >
+                <option value="">None</option>
+                {clubEntities
+                  .filter((c) => c.id !== form.id)
+                  .sort((a, b) => a.name.localeCompare(b.name))
+                  .map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+              </select>
+            </div>
+          )}
 
           {FIELDS.map((f) => (
             <Field key={String(f.key)} label={f.label}>

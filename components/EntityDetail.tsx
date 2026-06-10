@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ENTITY_TABS, type Entity, type TripSlot } from "@/lib/entities";
 import { Comments } from "./Comments";
 import { EntityForm } from "./EntityForm";
-import { useTripData } from "./TripData";
+import { useTripData, useOptionalTripData } from "./TripData";
 import { useAuth } from "./AuthProvider";
 import { saveInstance, deleteInstanceOverride, type Instance } from "@/lib/db";
 
@@ -25,6 +25,13 @@ export function EntityDetail({
   const { isAdmin, role: authRole } = useAuth();
   const canEdit = isAdmin || authRole === "editor";
   const [editing, setEditing] = useState(false);
+  const tripData = useOptionalTripData();
+  const childEntities = (tripData?.entities ?? []).filter(
+    (e) => e.parentId === entity.id
+  );
+  const parentEntity = entity.parentId
+    ? (tripData?.entities ?? []).find((e) => e.id === entity.parentId)
+    : undefined;
 
   return (
     <>
@@ -79,6 +86,42 @@ export function EntityDetail({
           {entity.bestDay && <Row label="Best day">{entity.bestDay}</Row>}
           {entity.source && <Row label="Source">{entity.source}</Row>}
         </dl>
+
+        {parentEntity && (
+          <div className="mt-3 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">
+            Venue: <span className="font-medium text-slate-700">{parentEntity.name}</span>
+          </div>
+        )}
+
+        {childEntities.length > 0 && (
+          <div className="mt-4 border-t border-slate-100 pt-3">
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+              Events at this venue
+            </h3>
+            <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white">
+              {childEntities.map((child) => {
+                const childTab = ENTITY_TABS.find((t) => t.type === child.type || (child.type === "party" && t.type === "club"));
+                const hasScheduled = child.slots.some((s) => s.kind === "confirmed");
+                return (
+                  <li key={child.id} className="flex items-center gap-2 px-3 py-2 text-sm">
+                    <span>{childTab?.emoji}</span>
+                    <span className="flex-1 font-medium">{child.name}</span>
+                    {hasScheduled && (
+                      <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
+                        scheduled
+                      </span>
+                    )}
+                    {child.slots.filter(s => s.kind !== "confirmed").length > 0 && !hasScheduled && (
+                      <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700">
+                        planned
+                      </span>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
 
         {/* Entity-level comments */}
         <div className="mt-4 border-t border-slate-100 pt-3">

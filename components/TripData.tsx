@@ -22,7 +22,7 @@ import { slugId } from "@/lib/slug";
 import { firebaseConfigured } from "@/lib/firebase";
 import { cleanCalendarDescription } from "@/lib/sync";
 
-type TripDataValue = {
+export type TripDataValue = {
   tripId: string;
   tripName: string;
   tripAreas: string[];
@@ -187,4 +187,9 @@ export function useTripData() {
   const ctx = useContext(Ctx);
   if (!ctx) throw new Error("useTripData must be used inside TripDataProvider");
   return ctx;
+}
+
+/** Returns trip data context if available, or null if outside a TripDataProvider. */
+export function useOptionalTripData(): TripDataValue | null {
+  return useContext(Ctx);
 }

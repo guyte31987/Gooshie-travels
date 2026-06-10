@@ -75,6 +75,8 @@ export type Entity = {
   needsBooking?: boolean;
   /** True when derived from a calendar event not yet saved in the Database. */
   transient?: boolean;
+  /** Links this entity to a parent venue (e.g. a party → its club). */
+  parentId?: string;
   slots: TripSlot[];
 };
 
@@ -105,6 +107,11 @@ function norm(s: string): string {
     .replace(/[^a-z0-9 ]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+/** Split "A or B or C" into trimmed parts. Returns [whole] if no " or " found. */
+function splitOrParts(summary: string): string[] {
+  return summary.split(/\s+or\s+/i).map((s) => s.trim()).filter(Boolean);
 }
 
 function slotDayLabel(dayKey: string, tz: string, time?: string): string {
@@ -318,7 +325,7 @@ export function buildEntities(days: ItinDay[], tz: string): Entity[] {
   }
 
   // 4) Remaining calendar events → categorized entities, grouped by extracted place name
-  for (const group of groupUnmatched(allEvents, matchedUids)) {
+  for (const group of groupUnmatched(allEvents, matchedUids, dayKeyOf, tz)) {
     const first = group.events[0];
     entities.push({
       id: "cal:" + group.type + ":" + norm(group.name),
@@ -327,7 +334,7 @@ export function buildEntities(days: ItinDay[], tz: string): Entity[] {
       generalArea: suggestGeneralArea(first.location) ?? suggestGeneralArea(group.name),
       address: first.location,
       notes: first.description,
-      slots: group.events.map(conf),
+      slots: [...group.events.map(conf), ...group.altSlots],
     });
   }
 
@@ -346,18 +353,59 @@ function stayLabel(s: ItinEvent, tz: string): string {
     : "Stay";
 }
 
-function groupUnmatched(allEvents: ItinEvent[], matchedUids: Set<string>) {
-  const byKey = new Map<string, { name: string; type: EntityType; events: ItinEvent[] }>();
+function groupUnmatched(
+  allEvents: ItinEvent[],
+  matchedUids: Set<string>,
+  dayKeyOf: Map<string, string>,
+  tz: string
+) {
+  const byKey = new Map<
+    string,
+    { name: string; type: EntityType; events: ItinEvent[]; altSlots: TripSlot[] }
+  >();
+
+  const getOrAdd = (key: string, name: string, type: EntityType) => {
+    if (!byKey.has(key)) byKey.set(key, { name, type, events: [], altSlots: [] });
+    return byKey.get(key)!;
+  };
+
   for (const e of allEvents) {
     if (matchedUids.has(e.uid)) continue;
-    const type = categorizeEvent(e);
-    // Group and name by the extracted place name so "Go to Met Cloisters" and
-    // "Visit Met Cloisters" (different events, same place) collapse into one entity.
-    const placeName = extractPlaceName(e.summary);
-    const key = type + ":" + norm(placeName);
-    if (!byKey.has(key)) byKey.set(key, { name: placeName, type, events: [] });
-    byKey.get(key)!.events.push(e);
+    const parts = splitOrParts(e.summary);
+
+    if (parts.length > 1) {
+      // Primary part → confirmed slot
+      const primaryName = extractPlaceName(parts[0]);
+      const primaryType = categorizeEvent({ ...e, summary: parts[0] });
+      getOrAdd(primaryType + ":" + norm(primaryName), primaryName, primaryType).events.push(e);
+
+      // Alternative parts → planB slots (same day/time, no calendar UID)
+      const dk = dayKeyOf.get(e.uid);
+      const time = timeOf(e, tz);
+      for (let i = 1; i < parts.length; i++) {
+        const altName = extractPlaceName(parts[i]);
+        const altType = categorizeEvent({ ...e, summary: parts[i] });
+        const altKey = altType + ":" + norm(altName);
+        const group = getOrAdd(altKey, altName, altType);
+        if (dk) {
+          group.altSlots.push({
+            kind: "planB",
+            dayKey: dk,
+            label: slotDayLabel(dk, tz, time),
+            time,
+            startMs: e.startMs,
+            note: `Alternative to ${extractPlaceName(parts[0])}`,
+          });
+        }
+      }
+    } else {
+      // No "or" — normal grouping by extracted place name
+      const placeName = extractPlaceName(e.summary);
+      const type = categorizeEvent(e);
+      getOrAdd(type + ":" + norm(placeName), placeName, type).events.push(e);
+    }
   }
+
   return [...byKey.values()];
 }
 
@@ -382,6 +430,7 @@ function toDBEntity(e: Entity): DBEntity {
     closed: e.closed,
     bestDay: e.bestDay,
     needsBooking: e.needsBooking,
+    parentId: e.parentId,
   };
 }
 
@@ -461,7 +510,7 @@ export function resolveTripEntities(opts: {
   for (const e of allEvents) if (isRemoved(e)) matchedUids.add(e.uid);
 
   // Transient: scheduled events matching nothing in the Database yet.
-  for (const group of groupUnmatched(allEvents, matchedUids)) {
+  for (const group of groupUnmatched(allEvents, matchedUids, dayKeyOf, tz)) {
     const first = group.events[0];
     out.push({
       id: "new:" + group.type + ":" + norm(group.name),
@@ -471,7 +520,7 @@ export function resolveTripEntities(opts: {
       address: first.location,
       notes: first.description,
       transient: true,
-      slots: group.events.map(conf),
+      slots: [...group.events.map(conf), ...group.altSlots],
     });
   }
 

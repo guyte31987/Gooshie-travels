@@ -211,7 +211,8 @@ function EntityList({
 }
 
 function EntityRow({ e, canEdit, tripId }: { e: Entity; canEdit: boolean; tripId: string }) {
-  const { tripName } = useTripData();
+  const { tripName, entities } = useTripData();
+  const parentEntity = e.parentId ? entities.find((ent) => ent.id === e.parentId) : undefined;
   const [showDetail, setShowDetail] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
 
@@ -232,6 +233,11 @@ function EntityRow({ e, canEdit, tripId }: { e: Entity; canEdit: boolean; tripId
               </span>
             )}
           </div>
+          {parentEntity && (
+            <span className="text-[11px] text-slate-400">
+              at {parentEntity.name}
+            </span>
+          )}
           <div className="mt-1 flex flex-wrap gap-1">
             {e.slots.length === 0 ? (
               <span className="text-[11px] text-slate-300">not placed yet</span>
