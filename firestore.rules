@@ -63,6 +63,10 @@ service cloud.firestore {
       allow read: if isMember();
       allow write: if isEditor();
     }
+    match /tripInstances/{tripId}/items/{instanceId} {
+      allow read: if isMember();
+      allow write: if isEditor();
+    }
 
     // Secret calendar URLs — editors only (never exposed to viewers).
     match /tripSecrets/{id} {

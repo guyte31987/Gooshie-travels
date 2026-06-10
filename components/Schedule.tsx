@@ -25,7 +25,7 @@ function timeRange(e: TripEvent, tz: string): string {
 }
 
 export function Schedule() {
-  const { days, tz, loading, entities, tripId, tripName } = useTripData();
+  const { days, tz, loading, entities, instanceMap, tripId, tripName } = useTripData();
   const [detail, setDetail] = useState<Entity | null>(null);
   const index = useMemo(() => indexByEventUid(entities), [entities]);
   const emojiOf = (e: Entity) => ENTITY_TABS.find((t) => t.type === e.type)?.emoji ?? "";
@@ -61,6 +61,8 @@ export function Schedule() {
               <li className="text-sm text-slate-400">No scheduled events.</li>
             )}
             {day.events.map((e) => {
+              const override = instanceMap.get(e.uid);
+              if (override?.removed) return null;
               const linked = index.get(e.uid)?.entity;
               return (
                 <li
@@ -75,11 +77,15 @@ export function Schedule() {
                       >
                         <span>{emojiOf(linked)}</span>
                         <h3 className="font-medium leading-snug text-indigo-700 underline-offset-2 group-hover:underline">
-                          {e.summary}
+                          {override?.title || e.summary}
                         </h3>
+                        {override?.locked && <span title="Locked">🔒</span>}
                       </button>
                     ) : (
-                      <h3 className="font-medium leading-snug">{e.summary}</h3>
+                      <h3 className="flex items-center gap-1.5 font-medium leading-snug">
+                        {override?.title || e.summary}
+                        {override?.locked && <span title="Locked">🔒</span>}
+                      </h3>
                     )}
                     <span className="shrink-0 text-xs font-medium text-slate-500">
                       {timeRange(e, tz)}

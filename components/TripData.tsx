@@ -7,7 +7,14 @@ import {
   type Entity,
   type ItinDay,
 } from "@/lib/entities";
-import { subscribeEntities, subscribeTripItems, type DBEntity, type TripItem } from "@/lib/db";
+import {
+  subscribeEntities,
+  subscribeTripItems,
+  subscribeInstances,
+  type DBEntity,
+  type TripItem,
+  type Instance,
+} from "@/lib/db";
 import { firebaseConfigured } from "@/lib/firebase";
 
 type TripDataValue = {
@@ -18,6 +25,7 @@ type TripDataValue = {
   tz: string;
   entities: Entity[];
   removedEntities: DBEntity[];
+  instanceMap: Map<string, Instance>;
   seeded: boolean;
   loading: boolean;
   refreshItinerary: () => Promise<void>;
@@ -40,6 +48,7 @@ export function TripDataProvider({
   const [tz, setTz] = useState("Europe/London");
   const [dbEntities, setDbEntities] = useState<DBEntity[]>([]);
   const [items, setItems] = useState<TripItem[]>([]);
+  const [instances, setInstances] = useState<Instance[]>([]);
   const [itinLoaded, setItinLoaded] = useState(false);
 
   const loadItinerary = async (fresh = false) => {
@@ -57,16 +66,19 @@ export function TripDataProvider({
     if (!firebaseConfigured) return;
     const unsubE = subscribeEntities(setDbEntities);
     const unsubI = subscribeTripItems(tripId, setItems);
+    const unsubN = subscribeInstances(tripId, setInstances);
     return () => {
       unsubE();
       unsubI();
+      unsubN();
     };
   }, [tripId]);
 
   const seeded = dbEntities.length > 0;
   const entities = seeded
-    ? resolveTripEntities({ dbEntities, items, days, tz, tripAreas })
+    ? resolveTripEntities({ dbEntities, items, days, tz, tripAreas, instances })
     : buildEntities(days, tz);
+  const instanceMap = new Map(instances.map((i) => [i.id, i]));
 
   const removedIds = new Set(items.filter((i) => i.removed && !i.added).map((i) => i.entityId));
   const removedEntities = dbEntities.filter((d) => removedIds.has(d.id));
@@ -81,6 +93,7 @@ export function TripDataProvider({
         tz,
         entities,
         removedEntities,
+        instanceMap,
         seeded,
         loading: !itinLoaded,
         refreshItinerary: () => loadItinerary(true),

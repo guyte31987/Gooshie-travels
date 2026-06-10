@@ -199,6 +199,36 @@ export async function isSeeded(): Promise<boolean> {
   return snap.exists();
 }
 
+// --- instances (per-occurrence overrides: lock / edit / remove) ------------
+
+export type Instance = {
+  id: string; // = calendar UID for calendar-derived occurrences
+  tripId: string;
+  entityId?: string;
+  locked?: boolean;
+  removed?: boolean;
+  /** App-owned overrides / additions. */
+  title?: string;
+  note?: string;
+  /** Snapshot captured on lock so the occurrence survives calendar deletion. */
+  dayKey?: string;
+  startMs?: number;
+  time?: string;
+};
+
+export const subscribeInstances = (tripId: string, cb: (i: Instance[]) => void) =>
+  subColl<Instance>(`tripInstances/${tripId}/items`, cb);
+
+export async function saveInstance(tripId: string, instance: Instance): Promise<void> {
+  await setDoc(doc(requireDb(), `tripInstances/${tripId}/items`, instance.id), instance, {
+    merge: true,
+  });
+}
+
+export async function deleteInstanceOverride(tripId: string, id: string): Promise<void> {
+  await deleteDoc(doc(requireDb(), `tripInstances/${tripId}/items`, id));
+}
+
 // --- comments (per instance/appearance) ------------------------------------
 
 export type Comment = {

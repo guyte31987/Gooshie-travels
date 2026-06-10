@@ -41,6 +41,8 @@ export type TripSlot = {
   mismatch?: boolean;
   /** Source calendar event uid, for confirmed slots — lets the itinerary link. */
   uid?: string;
+  /** App-owned (locked) — the calendar no longer overrides this occurrence. */
+  locked?: boolean;
 };
 
 export type Entity = {
@@ -309,7 +311,7 @@ function groupUnmatched(allEvents: ItinEvent[], matchedUids: Set<string>) {
 
 // --- DB seed + per-trip resolution -----------------------------------------
 
-import type { DBEntity, TripItem, StoredAppearance } from "./db";
+import type { DBEntity, TripItem, StoredAppearance, Instance } from "./db";
 
 /** Strip computed slots; keep just the storable attributes (with a stable id). */
 function toDBEntity(e: Entity): DBEntity {
@@ -362,21 +364,31 @@ export function resolveTripEntities(opts: {
   days: ItinDay[];
   tz: string;
   tripAreas: string[];
+  instances?: Instance[];
 }): Entity[] {
-  const { dbEntities, items, days, tz, tripAreas } = opts;
+  const { dbEntities, items, days, tz, tripAreas, instances = [] } = opts;
   const itemBy = new Map(items.map((i) => [i.entityId, i]));
+  const overrideBy = new Map(instances.map((i) => [i.id, i]));
   const areaSet = new Set(tripAreas);
   const { allEvents, dayKeyOf } = flatten(days);
   const matchedUids = new Set<string>();
   const out: Entity[] = [];
-  const conf = (e: ItinEvent) => confirmedSlot(e, dayKeyOf, tz);
+  // Apply per-occurrence overrides: drop removed, mark locked, override note.
+  const conf = (e: ItinEvent): TripSlot => {
+    const s = confirmedSlot(e, dayKeyOf, tz);
+    const ov = overrideBy.get(e.uid);
+    if (ov?.locked) s.locked = true;
+    if (ov?.note) s.note = ov.note;
+    return s;
+  };
+  const isRemoved = (e: ItinEvent) => overrideBy.get(e.uid)?.removed === true;
 
   for (const de of dbEntities) {
     const item = itemBy.get(de.id);
     const inByArea = de.generalArea ? areaSet.has(de.generalArea) : false;
     const included = item?.added || (inByArea && !item?.removed);
 
-    const confirmed = allEvents.filter((e) => matchesEntity(de.name, e));
+    const confirmed = allEvents.filter((e) => matchesEntity(de.name, e) && !isRemoved(e));
     // Only consume calendar events for entities actually in the trip.
     if (!included && confirmed.length === 0) continue;
     confirmed.forEach((e) => matchedUids.add(e.uid));
@@ -391,6 +403,9 @@ export function resolveTripEntities(opts: {
     const dismissed = new Set(item?.dismissed ?? []);
     out.push({ ...dbToEntity(de), slots: attachSlots(stored, confirmed.map(conf), dismissed) });
   }
+
+  // Removed occurrences shouldn't resurface as transient items either.
+  for (const e of allEvents) if (isRemoved(e)) matchedUids.add(e.uid);
 
   // Transient: scheduled events matching nothing in the Database yet.
   for (const group of groupUnmatched(allEvents, matchedUids)) {

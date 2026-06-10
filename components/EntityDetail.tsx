@@ -3,6 +3,9 @@
 import { useState } from "react";
 import { ENTITY_TABS, type Entity, type TripSlot } from "@/lib/entities";
 import { Comments } from "./Comments";
+import { useTripData } from "./TripData";
+import { useAuth } from "./AuthProvider";
+import { saveInstance, deleteInstanceOverride } from "@/lib/db";
 
 /** The shared entity popup, opened from anywhere (Planning, Database, Itinerary,
  * Map). Shows every attribute plus "Appears in" → this trip → each appearance
@@ -97,10 +100,31 @@ function Appearance({
   tripId: string;
   index: number;
 }) {
+  const { instanceMap } = useTripData();
+  const { isAdmin, role } = useAuth();
+  const canEdit = isAdmin || role === "editor";
   const [open, setOpen] = useState(false);
+  const [noteDraft, setNoteDraft] = useState(slot.note ?? "");
+  const [editingNote, setEditingNote] = useState(false);
+
+  const override = slot.uid ? instanceMap.get(slot.uid) : undefined;
+  const locked = slot.locked || override?.locked;
   const instanceId = slot.uid
     ? `${tripId}:${slot.uid}`
     : `${tripId}:${entity.id}:${slot.kind}:${slot.dayKey ?? index}`;
+
+  const persist = (patch: Partial<{ locked: boolean; removed: boolean; note: string }>) => {
+    if (!slot.uid) return;
+    saveInstance(tripId, {
+      id: slot.uid,
+      tripId,
+      entityId: entity.id,
+      dayKey: slot.dayKey,
+      time: slot.time,
+      ...override,
+      ...patch,
+    });
+  };
 
   const tone =
     slot.kind === "confirmed"
@@ -120,12 +144,74 @@ function Appearance({
             {slot.time}
           </span>
         )}
+        {locked && <span title="Locked — app-owned">🔒</span>}
         {slot.mismatch && <span className="text-xs text-rose-600">⚠️ differs from calendar</span>}
         <span className="ml-auto text-slate-300">{open ? "▲" : "▼"}</span>
       </button>
       {slot.note && <p className="mt-1 text-xs text-slate-500">{slot.note}</p>}
       {open && (
         <div className="mt-2">
+          {canEdit && slot.uid && (
+            <div className="mb-2 flex flex-wrap items-center gap-2 text-xs">
+              <button
+                onClick={() => persist({ locked: !locked })}
+                className={`rounded border px-2 py-1 font-medium ${
+                  locked
+                    ? "border-amber-300 bg-amber-50 text-amber-700"
+                    : "border-slate-300 text-slate-600 hover:bg-slate-50"
+                }`}
+              >
+                {locked ? "🔒 Locked — unlock" : "🔓 Lock (app-owned)"}
+              </button>
+              <button
+                onClick={() => setEditingNote((v) => !v)}
+                className="rounded border border-slate-300 px-2 py-1 font-medium text-slate-600 hover:bg-slate-50"
+              >
+                Edit note
+              </button>
+              <button
+                onClick={() => {
+                  if (confirm("Remove this occurrence from the trip?")) persist({ removed: true });
+                }}
+                className="rounded border border-rose-200 px-2 py-1 font-medium text-rose-600 hover:bg-rose-50"
+              >
+                Remove
+              </button>
+              {override && (
+                <button
+                  onClick={() => deleteInstanceOverride(tripId, slot.uid!)}
+                  className="text-slate-400 hover:underline"
+                  title="Discard app overrides and trust the calendar again"
+                >
+                  reset to calendar
+                </button>
+              )}
+            </div>
+          )}
+          {editingNote && (
+            <div className="mb-2 flex gap-2">
+              <input
+                value={noteDraft}
+                onChange={(e) => setNoteDraft(e.target.value)}
+                placeholder="App note (advice, Plan B…)"
+                className="flex-1 rounded-lg border border-slate-300 px-2 py-1 text-xs outline-none focus:border-slate-400"
+              />
+              <button
+                onClick={() => {
+                  persist({ note: noteDraft });
+                  setEditingNote(false);
+                }}
+                className="rounded-lg bg-ink px-3 py-1 text-xs font-medium text-white"
+              >
+                Save
+              </button>
+            </div>
+          )}
+          {locked && (
+            <p className="mb-2 rounded-lg bg-amber-50 px-2 py-1 text-[11px] text-amber-700">
+              Locked: the app owns this occurrence — re-sync won&apos;t overwrite it.
+            </p>
+          )}
           <Comments instanceId={instanceId} />
         </div>
       )}
