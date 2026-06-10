@@ -280,6 +280,77 @@ function addDays(dayKey: string, n: number): string {
   ).padStart(2, "0")}`;
 }
 
+// --- admin sync / conflict report ------------------------------------------
+
+import { resolvePoint } from "./geo";
+
+export type IssueSeverity = "conflict" | "warning" | "info";
+export type SyncIssue = {
+  severity: IssueSeverity;
+  kind: string;
+  entity: string;
+  detail: string;
+};
+
+/**
+ * Collects everything the auto-import couldn't cleanly resolve so an admin can
+ * review and act: plan-vs-calendar conflicts, closed venues still in the plan,
+ * scheduled places that won't map, and low-confidence categorizations.
+ */
+export function buildSyncReport(entities: Entity[]): SyncIssue[] {
+  const issues: SyncIssue[] = [];
+  for (const e of entities) {
+    const inTrip = e.slots.length > 0;
+    const isConfirmed = e.slots.some((s) => s.kind === "confirmed");
+
+    for (const s of e.slots) {
+      if (s.mismatch) {
+        issues.push({
+          severity: "conflict",
+          kind: "Plan differs from calendar",
+          entity: e.name,
+          detail: `Your plan says "${s.note ?? s.label}" but the calendar has no matching event that day.`,
+        });
+      }
+    }
+
+    if (e.closed && inTrip) {
+      issues.push({
+        severity: "conflict",
+        kind: "Closed venue in plan",
+        entity: e.name,
+        detail: `${e.name} is permanently closed but still appears in the plan.`,
+      });
+    }
+
+    // Mirror the map's resolution order: address → area → name.
+    const mappable =
+      resolvePoint(e.address, e.id) || resolvePoint(e.area, e.id) || resolvePoint(e.name, e.id);
+    if (isConfirmed && !mappable) {
+      issues.push({
+        severity: "warning",
+        kind: "Won't show on map",
+        entity: e.name,
+        detail: `Scheduled, but its location couldn't be placed on the map${
+          e.address ? ` ("${e.address}")` : ""
+        }.`,
+      });
+    }
+
+    if (e.type === "event" && isConfirmed) {
+      issues.push({
+        severity: "info",
+        kind: "Uncategorized",
+        entity: e.name,
+        detail: `Only landed in the generic "Events" bucket — you may want to recategorize it.`,
+      });
+    }
+  }
+
+  const order: IssueSeverity[] = ["conflict", "warning", "info"];
+  return issues.sort((a, b) => order.indexOf(a.severity) - order.indexOf(b.severity));
+}
+
 export function groupByType(entities: Entity[]): Record<EntityType, Entity[]> {
   const out = {} as Record<EntityType, Entity[]>;
   for (const tab of ENTITY_TABS) out[tab.type] = [];

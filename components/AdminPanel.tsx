@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { useAuth } from "./AuthProvider";
 import {
   approveMember,
@@ -17,7 +16,7 @@ import {
 const ROLES: Role[] = ["viewer", "editor", "admin"];
 
 export function AdminPanel() {
-  const { isAdmin, loading } = useAuth();
+  const { isAdmin } = useAuth();
   const [members, setMembers] = useState<Member[]>([]);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<Role>("viewer");
@@ -41,9 +40,6 @@ export function AdminPanel() {
     [members]
   );
 
-  if (loading) return <Center>Loading…</Center>;
-  if (!isAdmin) return <Center>Admins only.</Center>;
-
   const onInvite = async (e: React.FormEvent) => {
     e.preventDefault();
     const email = inviteEmail.trim().toLowerCase();
@@ -54,14 +50,7 @@ export function AdminPanel() {
   };
 
   return (
-    <div className="mx-auto min-h-screen max-w-2xl px-4 pb-16">
-      <header className="flex items-center justify-between py-4">
-        <h1 className="text-xl font-semibold tracking-tight">Admin</h1>
-        <Link href="/" className="text-sm text-slate-500 underline-offset-2 hover:underline">
-          ← Back to trip
-        </Link>
-      </header>
-
+    <div>
       {/* Invite by email */}
       <Section title="Invite someone">
         <form onSubmit={onInvite} className="flex flex-wrap items-end gap-2">
@@ -217,10 +206,4 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 function Empty({ children }: { children: React.ReactNode }) {
   return <p className="rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-400">{children}</p>;
-}
-
-function Center({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="flex min-h-screen items-center justify-center text-sm text-slate-400">{children}</div>
-  );
 }

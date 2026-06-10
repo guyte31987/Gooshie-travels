@@ -45,6 +45,7 @@ const PLACES: Record<string, LatLng> = {
   cloisters: { lat: 40.8649, lng: -73.9316 },
   "5th ave": { lat: 40.7794, lng: -73.9632 },
   "central park": { lat: 40.7812, lng: -73.9665 },
+  "high line": { lat: 40.748, lng: -74.0048 },
   manhattan: { lat: 40.7831, lng: -73.9712 },
 
   // --- Queens ---
@@ -58,6 +59,7 @@ const PLACES: Record<string, LatLng> = {
   "new windsor": { lat: 41.4751, lng: -74.101 },
   "storm king": { lat: 41.4262, lng: -74.0584 },
   "cornwall-on-hudson": { lat: 41.4459, lng: -74.0271 },
+  cornwall: { lat: 41.4459, lng: -74.0271 },
   newburgh: { lat: 41.5034, lng: -74.0104 },
   beacon: { lat: 41.5048, lng: -73.9696 },
   kaaterskill: { lat: 42.1959, lng: -74.0631 },
