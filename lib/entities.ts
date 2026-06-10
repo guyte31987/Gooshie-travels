@@ -5,6 +5,7 @@
 // schedule, so planned slots that disagree with a confirmed one are flagged.
 
 import { restaurants, vintage, type Restaurant, type VintageShop } from "./planning";
+import { suggestGeneralArea } from "./areas";
 
 export type EntityType =
   | "food"
@@ -41,6 +42,7 @@ export type Entity = {
   id: string;
   name: string;
   type: EntityType;
+  generalArea?: string;
   area?: string;
   address?: string;
   hours?: string;
@@ -198,6 +200,7 @@ export function buildEntities(days: ItinDay[], tz: string): Entity[] {
       id: "food:" + r.name,
       name: r.name,
       type: "food",
+      generalArea: suggestGeneralArea(r.area, r.name),
       area: r.area,
       hours: r.hours,
       price: r.price,
@@ -217,6 +220,7 @@ export function buildEntities(days: ItinDay[], tz: string): Entity[] {
       id: "vintage:" + v.name,
       name: v.name,
       type: "vintage",
+      generalArea: suggestGeneralArea(v.address, v.area),
       area: v.area,
       address: v.address,
       hours: v.hours,
@@ -239,6 +243,7 @@ export function buildEntities(days: ItinDay[], tz: string): Entity[] {
       id: "stay:" + s.summary,
       name: s.summary,
       type: "accommodation",
+      generalArea: suggestGeneralArea(s.location, s.summary),
       address: s.location,
       slots: [{ kind: "confirmed", dayKey: s.allDayStart, label }],
     });
@@ -259,6 +264,7 @@ export function buildEntities(days: ItinDay[], tz: string): Entity[] {
       id: "cal:" + key,
       name: cleanName(group.name),
       type: group.type,
+      generalArea: suggestGeneralArea(first.location, group.name),
       address: first.location,
       notes: first.description,
       slots: group.events.map(confirmedSlotFor),

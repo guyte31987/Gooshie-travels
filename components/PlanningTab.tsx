@@ -61,11 +61,14 @@ export function PlanningTab() {
 
 function EntityList({ entities }: { entities: Entity[] }) {
   const areas = useMemo(() => distinct(entities, (e) => e.area ?? ""), [entities]);
+  const generalAreas = useMemo(() => distinct(entities, (e) => e.generalArea ?? ""), [entities]);
   const [q, setQ] = useState("");
   const [area, setArea] = useState("");
+  const [generalArea, setGeneralArea] = useState("");
   const [scheduledOnly, setScheduledOnly] = useState(false);
 
   const filtered = entities.filter((e) => {
+    if (generalArea && e.generalArea !== generalArea) return false;
     if (area && e.area !== area) return false;
     if (scheduledOnly && !e.slots.some((s) => s.kind === "confirmed")) return false;
     if (q) {
@@ -84,6 +87,20 @@ function EntityList({ entities }: { entities: Entity[] }) {
           placeholder="Search…"
           className="min-w-[10rem] flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm outline-none focus:border-slate-400"
         />
+        {generalAreas.filter(Boolean).length > 1 && (
+          <select
+            value={generalArea}
+            onChange={(e) => setGeneralArea(e.target.value)}
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium shadow-sm"
+          >
+            <option value="">All regions</option>
+            {generalAreas.filter(Boolean).map((a) => (
+              <option key={a} value={a}>
+                {a}
+              </option>
+            ))}
+          </select>
+        )}
         {areas.length > 1 && (
           <select
             value={area}
@@ -162,6 +179,7 @@ function EntityCard({ e }: { e: Entity }) {
         <div className="border-t border-slate-100 px-4 py-3 text-sm">
           {e.notes && <p className="text-slate-600">{e.notes}</p>}
           <dl className="mt-2 space-y-1 text-xs text-slate-500">
+            {e.generalArea && <Row label="Region">{e.generalArea}</Row>}
             {e.hours && <Row label="Hours">{e.hours}</Row>}
             {e.address && <Row label="Address">{e.address}</Row>}
             {e.bestDay && <Row label="Best day">{e.bestDay}</Row>}
