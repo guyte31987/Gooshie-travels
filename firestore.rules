@@ -1,9 +1,9 @@
 rules_version = '2';
 
 // Gooshie Travels — Firestore rules.
-// If you share a Firebase project with other apps, merge ONLY the `members`
-// block below into your existing rules (keep your other collections as-is) and
-// make sure isAdmin() lists every admin email.
+// If you share a Firebase project with other apps, merge the blocks below into
+// your existing rules (keep your other collections) and make sure isAdmin()
+// lists every admin email.
 service cloud.firestore {
   match /databases/{database}/documents {
     function isAuth() {
@@ -15,12 +15,24 @@ service cloud.firestore {
         || request.auth.token.email.lower() == 'maissis1987@gmail.com'
       );
     }
+    // An approved member (any status doc that is approved) — for reads.
+    function isMember() {
+      return isAdmin() || (
+        isAuth()
+        && exists(/databases/$(database)/documents/members/$(request.auth.token.email.lower()))
+        && get(/databases/$(database)/documents/members/$(request.auth.token.email.lower())).data.status == 'approved'
+      );
+    }
+    function isEditor() {
+      return isAdmin() || (
+        isAuth()
+        && exists(/databases/$(database)/documents/members/$(request.auth.token.email.lower()))
+        && get(/databases/$(database)/documents/members/$(request.auth.token.email.lower())).data.role in ['editor', 'admin']
+        && get(/databases/$(database)/documents/members/$(request.auth.token.email.lower())).data.status == 'approved'
+      );
+    }
 
-    // members/{email}: membership + role for the app.
-    //  - A signed-in user can read ONLY their own record (to learn their status).
-    //  - A signed-in user can create ONLY their own request, and only as a
-    //    pending viewer — they can't grant themselves a role or approve.
-    //  - Only admins can approve/deny, change roles, or remove people.
+    // Membership + roles.
     match /members/{email} {
       allow read: if isAdmin() || (isAuth() && request.auth.token.email.lower() == email);
       allow create: if isAdmin() || (
@@ -30,6 +42,37 @@ service cloud.firestore {
         && request.resource.data.role == 'viewer'
       );
       allow update, delete: if isAdmin();
+    }
+
+    // The Database (all entities) — members read, editors write.
+    match /entities/{id} {
+      allow read: if isMember();
+      allow write: if isEditor();
+    }
+
+    // Trips, cached itineraries, per-trip curation — members read, editors write.
+    match /trips/{id} {
+      allow read: if isMember();
+      allow write: if isEditor();
+    }
+    match /tripItineraries/{id} {
+      allow read: if isMember();
+      allow write: if isEditor();
+    }
+    match /tripEntities/{tripId}/items/{entityId} {
+      allow read: if isMember();
+      allow write: if isEditor();
+    }
+
+    // Secret calendar URLs — editors only (never exposed to viewers).
+    match /tripSecrets/{id} {
+      allow read, write: if isEditor();
+    }
+
+    // Managed metadata (general-area list, seed marker) — members read, editors write.
+    match /meta/{doc} {
+      allow read: if isMember();
+      allow write: if isEditor();
     }
   }
 }

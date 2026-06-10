@@ -1,40 +1,33 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { bookings, distinct } from "@/lib/planning";
 import {
-  buildEntities,
   groupByType,
   ENTITY_TABS,
   type Entity,
   type EntityType,
   type TripSlot,
-  type ItinDay,
 } from "@/lib/entities";
+import { useTripData } from "./TripData";
+import { useAuth } from "./AuthProvider";
+import { saveTripItem } from "@/lib/db";
+import { slugId } from "@/lib/slug";
+import { exportEntities } from "@/lib/export";
 
 type Tab = EntityType | "bookings";
 
 export function PlanningTab() {
-  const [days, setDays] = useState<ItinDay[]>([]);
-  const [tz, setTz] = useState("Europe/London");
-  const [loaded, setLoaded] = useState(false);
+  const { entities, loading, seeded, tripId } = useTripData();
+  const { isAdmin, role } = useAuth();
+  const canEdit = isAdmin || role === "editor";
   const [tab, setTab] = useState<Tab>("food");
 
-  useEffect(() => {
-    fetch("/api/itinerary")
-      .then((r) => r.json())
-      .then((d: { days?: ItinDay[]; tz?: string }) => {
-        setDays(d.days ?? []);
-        setTz(d.tz ?? "Europe/London");
-      })
-      .finally(() => setLoaded(true));
-  }, []);
-
-  const grouped = useMemo(() => groupByType(buildEntities(days, tz)), [days, tz]);
+  const grouped = useMemo(() => groupByType(entities), [entities]);
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap gap-1.5 text-sm">
+      <div className="mb-3 flex flex-wrap gap-1.5 text-sm">
         {ENTITY_TABS.map((t) => (
           <TabChip key={t.type} active={tab === t.type} onClick={() => setTab(t.type)}>
             {t.emoji} {t.label}{" "}
@@ -46,20 +39,55 @@ export function PlanningTab() {
         </TabChip>
       </div>
 
-      {!loaded && tab !== "bookings" ? (
+      {tab !== "bookings" && (
+        <ExportBar entities={grouped[tab] ?? []} name={`${tab}-${tripId}`} />
+      )}
+
+      {loading && tab !== "bookings" ? (
         <p className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-400">
           Loading entities…
         </p>
       ) : tab === "bookings" ? (
         <BookingsList />
       ) : (
-        <EntityList entities={grouped[tab] ?? []} />
+        <EntityList entities={grouped[tab] ?? []} canEdit={canEdit && seeded} tripId={tripId} />
       )}
     </div>
   );
 }
 
-function EntityList({ entities }: { entities: Entity[] }) {
+function ExportBar({ entities, name }: { entities: Entity[]; name: string }) {
+  return (
+    <div className="mb-3 flex items-center gap-2 text-xs text-slate-400">
+      <span>Export:</span>
+      {(["csv", "excel", "word"] as const).map((f) => (
+        <button
+          key={f}
+          onClick={() => exportEntities(entities, f, name)}
+          className="rounded border border-slate-300 px-2 py-0.5 font-medium text-slate-600 hover:bg-slate-50"
+        >
+          {f === "csv" ? "CSV" : f === "excel" ? "Excel" : "Word"}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+async function toggleMembership(tripId: string, e: Entity, remove: boolean) {
+  const id = e.transient ? slugId(e.type, e.name) : e.id;
+  await saveTripItem(tripId, { entityId: id, removed: remove, added: !remove });
+}
+
+function EntityList({
+  entities,
+  canEdit,
+  tripId,
+}: {
+  entities: Entity[];
+  canEdit: boolean;
+  tripId: string;
+}) {
+  const { removedEntities } = useTripData();
   const areas = useMemo(() => distinct(entities, (e) => e.area ?? ""), [entities]);
   const generalAreas = useMemo(() => distinct(entities, (e) => e.generalArea ?? ""), [entities]);
   const [q, setQ] = useState("");
@@ -135,15 +163,39 @@ function EntityList({ entities }: { entities: Entity[] }) {
       ) : (
         <ul className="space-y-2">
           {filtered.map((e) => (
-            <EntityCard key={e.id} e={e} />
+            <EntityCard key={e.id} e={e} canEdit={canEdit} tripId={tripId} />
           ))}
         </ul>
+      )}
+
+      {canEdit && removedEntities.length > 0 && (
+        <details className="mt-4">
+          <summary className="cursor-pointer text-xs font-medium text-slate-400">
+            Removed from this trip ({removedEntities.length})
+          </summary>
+          <ul className="mt-2 space-y-1">
+            {removedEntities.map((d) => (
+              <li
+                key={d.id}
+                className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm"
+              >
+                <span className="text-slate-500">{d.name}</span>
+                <button
+                  onClick={() => saveTripItem(tripId, { entityId: d.id, removed: false, added: false })}
+                  className="rounded border border-slate-300 px-2 py-0.5 text-xs font-medium text-slate-600 hover:bg-white"
+                >
+                  Add back
+                </button>
+              </li>
+            ))}
+          </ul>
+        </details>
       )}
     </div>
   );
 }
 
-function EntityCard({ e }: { e: Entity }) {
+function EntityCard({ e, canEdit, tripId }: { e: Entity; canEdit: boolean; tripId: string }) {
   const [open, setOpen] = useState(false);
   return (
     <li className="rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -199,6 +251,22 @@ function EntityCard({ e }: { e: Entity }) {
                   </li>
                 ))}
               </ul>
+            </div>
+          )}
+          {canEdit && (
+            <div className="mt-3 flex items-center gap-2 border-t border-slate-100 pt-3">
+              {e.transient ? (
+                <span className="text-xs text-amber-600">
+                  Not in the Database yet — add it from the Database screen.
+                </span>
+              ) : (
+                <button
+                  onClick={() => toggleMembership(tripId, e, true)}
+                  className="rounded border border-rose-200 px-2.5 py-1 text-xs font-medium text-rose-600 hover:bg-rose-50"
+                >
+                  Remove from trip
+                </button>
+              )}
             </div>
           )}
         </div>

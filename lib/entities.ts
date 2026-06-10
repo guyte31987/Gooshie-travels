@@ -6,6 +6,7 @@
 
 import { restaurants, vintage, type Restaurant, type VintageShop } from "./planning";
 import { suggestGeneralArea } from "./areas";
+import { slugId } from "./slug";
 
 export type EntityType =
   | "food"
@@ -52,6 +53,8 @@ export type Entity = {
   notes?: string;
   closed?: boolean;
   bestDay?: string;
+  /** True when derived from a calendar event not yet saved in the Database. */
+  transient?: boolean;
   slots: TripSlot[];
 };
 
@@ -167,30 +170,45 @@ function matchesEntity(entityName: string, e: ItinEvent): boolean {
   return hay.includes(n);
 }
 
-// --- the builder -----------------------------------------------------------
+// --- shared slot helpers ---------------------------------------------------
 
-export function buildEntities(days: ItinDay[], tz: string): Entity[] {
-  const allEvents: ItinEvent[] = days.flatMap((d) => d.events);
+function flatten(days: ItinDay[]): { allEvents: ItinEvent[]; dayKeyOf: Map<string, string> } {
+  const allEvents = days.flatMap((d) => d.events);
   const dayKeyOf = new Map<string, string>();
   for (const d of days) for (const e of d.events) dayKeyOf.set(e.uid, d.dayKey);
+  return { allEvents, dayKeyOf };
+}
 
+function confirmedSlot(e: ItinEvent, dayKeyOf: Map<string, string>, tz: string): TripSlot {
+  const dk = dayKeyOf.get(e.uid)!;
+  return { kind: "confirmed", dayKey: dk, label: slotDayLabel(dk, tz, timeOf(e, tz)) };
+}
+
+/** Merge planned slots onto confirmed ones, flagging genuine disagreements. */
+function attachSlots(planned: TripSlot[], confirmed: TripSlot[], dismissed?: Set<string>): TripSlot[] {
+  const confirmedDays = new Set(confirmed.map((s) => s.dayKey).filter(Boolean));
+  const keptPlanned = planned
+    .filter((p) => !(p.dayKey && confirmedDays.has(p.dayKey))) // agrees → already shown
+    .map((p) => {
+      const isMismatch = !!(p.dayKey && confirmedDays.size > 0);
+      if (isMismatch && dismissed?.has(conflictKey(p))) return p; // acknowledged
+      return isMismatch ? { ...p, mismatch: true } : p;
+    });
+  return [...confirmed, ...keptPlanned];
+}
+
+/** Stable key for a (planned) slot so a dismissed conflict can be remembered. */
+export function conflictKey(s: TripSlot): string {
+  return `${s.kind}:${s.dayKey ?? ""}:${s.note ?? ""}`;
+}
+
+// --- the builder (bundled seed data + calendar) ----------------------------
+
+export function buildEntities(days: ItinDay[], tz: string): Entity[] {
+  const { allEvents, dayKeyOf } = flatten(days);
   const matchedUids = new Set<string>();
   const entities: Entity[] = [];
-
-  const confirmedSlotFor = (e: ItinEvent): TripSlot => {
-    const dk = dayKeyOf.get(e.uid)!;
-    return { kind: "confirmed", dayKey: dk, label: slotDayLabel(dk, tz, timeOf(e, tz)) };
-  };
-
-  const attachSlots = (planned: TripSlot[], confirmed: TripSlot[]): TripSlot[] => {
-    const confirmedDays = new Set(confirmed.map((s) => s.dayKey).filter(Boolean));
-    const keptPlanned = planned
-      .filter((p) => !(p.dayKey && confirmedDays.has(p.dayKey))) // agrees → already shown
-      .map((p) =>
-        p.dayKey && confirmedDays.size > 0 ? { ...p, mismatch: true } : p
-      );
-    return [...confirmed, ...keptPlanned];
-  };
+  const conf = (e: ItinEvent) => confirmedSlot(e, dayKeyOf, tz);
 
   // 1) Food entities (list-backed)
   for (const r of restaurants as Restaurant[]) {
@@ -208,7 +226,7 @@ export function buildEntities(days: ItinDay[], tz: string): Entity[] {
       booking: r.booking,
       notes: r.why,
       closed: r.closed,
-      slots: attachSlots(parsePlannedSlots(r.days, tz), confirmed.map(confirmedSlotFor)),
+      slots: attachSlots(parsePlannedSlots(r.days, tz), confirmed.map(conf)),
     });
   }
 
@@ -227,29 +245,52 @@ export function buildEntities(days: ItinDay[], tz: string): Entity[] {
       price: v.price,
       notes: v.vibe,
       bestDay: v.bestDay,
-      slots: attachSlots(parsePlannedSlots(v.bestDay, tz), confirmed.map(confirmedSlotFor)),
+      slots: attachSlots(parsePlannedSlots(v.bestDay, tz), confirmed.map(conf)),
     });
   }
 
   // 3) Accommodation entities (multi-day stays), deduped by name
-  const stays = new Map<string, ItinEvent>();
-  for (const d of days) for (const s of d.basedIn) if (!stays.has(s.summary)) stays.set(s.summary, s);
-  for (const s of stays.values()) {
-    const label =
-      s.allDayStart && s.allDayEnd
-        ? `${slotDayLabel(s.allDayStart, tz)} → ${slotDayLabel(addDays(s.allDayEnd, -1), tz)}`
-        : "Stay";
+  for (const s of collectStays(days)) {
     entities.push({
       id: "stay:" + s.summary,
       name: s.summary,
       type: "accommodation",
       generalArea: suggestGeneralArea(s.location, s.summary),
       address: s.location,
-      slots: [{ kind: "confirmed", dayKey: s.allDayStart, label }],
+      slots: [{ kind: "confirmed", dayKey: s.allDayStart, label: stayLabel(s, tz) }],
     });
   }
 
   // 4) Remaining calendar events → categorized entities, grouped by name
+  for (const group of groupUnmatched(allEvents, matchedUids)) {
+    const first = group.events[0];
+    entities.push({
+      id: "cal:" + group.type + ":" + norm(group.name),
+      name: cleanName(group.name),
+      type: group.type,
+      generalArea: suggestGeneralArea(first.location, group.name),
+      address: first.location,
+      notes: first.description,
+      slots: group.events.map(conf),
+    });
+  }
+
+  return entities;
+}
+
+function collectStays(days: ItinDay[]): ItinEvent[] {
+  const stays = new Map<string, ItinEvent>();
+  for (const d of days) for (const s of d.basedIn) if (!stays.has(s.summary)) stays.set(s.summary, s);
+  return [...stays.values()];
+}
+
+function stayLabel(s: ItinEvent, tz: string): string {
+  return s.allDayStart && s.allDayEnd
+    ? `${slotDayLabel(s.allDayStart, tz)} → ${slotDayLabel(addDays(s.allDayEnd, -1), tz)}`
+    : "Stay";
+}
+
+function groupUnmatched(allEvents: ItinEvent[], matchedUids: Set<string>) {
   const byKey = new Map<string, { name: string; type: EntityType; events: ItinEvent[] }>();
   for (const e of allEvents) {
     if (matchedUids.has(e.uid)) continue;
@@ -258,20 +299,110 @@ export function buildEntities(days: ItinDay[], tz: string): Entity[] {
     if (!byKey.has(key)) byKey.set(key, { name: e.summary, type, events: [] });
     byKey.get(key)!.events.push(e);
   }
-  for (const [key, group] of byKey) {
+  return [...byKey.values()];
+}
+
+// --- DB seed + per-trip resolution -----------------------------------------
+
+import type { DBEntity, TripItem, StoredAppearance } from "./db";
+
+/** Strip computed slots; keep just the storable attributes (with a stable id). */
+function toDBEntity(e: Entity): DBEntity {
+  return {
+    id: slugId(e.type, e.name),
+    name: e.name,
+    type: e.type,
+    generalArea: e.generalArea,
+    area: e.area,
+    address: e.address,
+    hours: e.hours,
+    price: e.price,
+    source: e.source,
+    booking: e.booking,
+    notes: e.notes,
+    closed: e.closed,
+    bestDay: e.bestDay,
+  };
+}
+
+/** Build the one-time seed payload from the bundled-derived entities. */
+export function buildSeed(built: Entity[]): { entities: DBEntity[]; items: TripItem[] } {
+  const entities: DBEntity[] = [];
+  const items: TripItem[] = [];
+  for (const e of built) {
+    const dbId = slugId(e.type, e.name);
+    entities.push(toDBEntity(e));
+    const appearances: StoredAppearance[] = e.slots
+      .filter((s) => s.kind === "planned" || s.kind === "planB")
+      .map((s) => ({ kind: s.kind as "planned" | "planB", dayKey: s.dayKey, note: s.note }));
+    if (appearances.length) items.push({ entityId: dbId, appearances });
+  }
+  return { entities, items };
+}
+
+function dbToEntity(de: DBEntity): Entity {
+  return { ...de, slots: [] };
+}
+
+/**
+ * Resolve a trip's entities from the Database + curation. Membership: an entity
+ * is in the trip if its region is one of the trip's areas (and not removed), or
+ * it was explicitly added. Confirmed appearances are computed live from the
+ * trip's calendar; planned/Plan B come from stored curation. Calendar events
+ * matching no included entity surface as transient (not-yet-in-database) items.
+ */
+export function resolveTripEntities(opts: {
+  dbEntities: DBEntity[];
+  items: TripItem[];
+  days: ItinDay[];
+  tz: string;
+  tripAreas: string[];
+}): Entity[] {
+  const { dbEntities, items, days, tz, tripAreas } = opts;
+  const itemBy = new Map(items.map((i) => [i.entityId, i]));
+  const areaSet = new Set(tripAreas);
+  const { allEvents, dayKeyOf } = flatten(days);
+  const matchedUids = new Set<string>();
+  const out: Entity[] = [];
+  const conf = (e: ItinEvent) => confirmedSlot(e, dayKeyOf, tz);
+
+  for (const de of dbEntities) {
+    const item = itemBy.get(de.id);
+    const inByArea = de.generalArea ? areaSet.has(de.generalArea) : false;
+    const included = item?.added || (inByArea && !item?.removed);
+
+    const confirmed = allEvents.filter((e) => matchesEntity(de.name, e));
+    // Only consume calendar events for entities actually in the trip.
+    if (!included && confirmed.length === 0) continue;
+    confirmed.forEach((e) => matchedUids.add(e.uid));
+    if (!included) continue;
+
+    const stored: TripSlot[] = (item?.appearances ?? []).map((a) => ({
+      kind: a.kind,
+      dayKey: a.dayKey,
+      label: a.dayKey ? slotDayLabel(a.dayKey, tz) : a.kind === "planB" ? "Plan B" : "Flexible",
+      note: a.note,
+    }));
+    const dismissed = new Set(item?.dismissed ?? []);
+    out.push({ ...dbToEntity(de), slots: attachSlots(stored, confirmed.map(conf), dismissed) });
+  }
+
+  // Transient: scheduled events matching nothing in the Database yet.
+  for (const group of groupUnmatched(allEvents, matchedUids)) {
     const first = group.events[0];
-    entities.push({
-      id: "cal:" + key,
+    out.push({
+      id: "new:" + group.type + ":" + norm(group.name),
       name: cleanName(group.name),
       type: group.type,
       generalArea: suggestGeneralArea(first.location, group.name),
       address: first.location,
       notes: first.description,
-      slots: group.events.map(confirmedSlotFor),
+      transient: true,
+      slots: group.events.map(conf),
     });
   }
 
-  return entities;
+  return out;
 }
 
 function cleanName(s: string): string {

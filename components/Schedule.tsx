@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useTripData } from "./TripData";
+import { dayHeading } from "@/lib/ics";
 
 type TripEvent = {
   uid: string;
@@ -12,21 +13,6 @@ type TripEvent = {
   isAllDay: boolean;
 };
 
-type ScheduleDay = {
-  dayKey: string;
-  heading: string;
-  events: TripEvent[];
-  basedIn: TripEvent[];
-};
-
-type ApiResponse = {
-  configured: boolean;
-  tz?: string;
-  days: ScheduleDay[];
-  message?: string;
-  count?: number;
-};
-
 function timeRange(e: TripEvent, tz: string): string {
   if (e.isAllDay || typeof e.startMs !== "number") return "All day";
   const f = new Intl.DateTimeFormat("en-US", { timeZone: tz, hour: "numeric", minute: "2-digit" });
@@ -36,38 +22,18 @@ function timeRange(e: TripEvent, tz: string): string {
 }
 
 export function Schedule() {
-  const [data, setData] = useState<ApiResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const { days, tz, loading } = useTripData();
 
-  useEffect(() => {
-    fetch("/api/itinerary")
-      .then((r) => r.json())
-      .then(setData)
-      .catch((e) => setError(e.message));
-  }, []);
-
-  if (error) return <Notice tone="error">Couldn&apos;t load the itinerary: {error}</Notice>;
-  if (!data) return <Notice tone="muted">Loading itinerary…</Notice>;
-
-  if (!data.configured)
-    return (
-      <Notice tone="muted">
-        The trip calendar isn&apos;t connected yet. Add <code>TRIP_ICAL_URL</code> (the calendar&apos;s
-        secret iCal address) to see the day-by-day schedule.
-      </Notice>
-    );
-
-  if (data.days.length === 0)
-    return <Notice tone="muted">{data.message || "No events found in the calendar yet."}</Notice>;
-
-  const tz = data.tz || "Europe/London";
+  if (loading) return <Notice tone="muted">Loading itinerary…</Notice>;
+  if (days.length === 0)
+    return <Notice tone="muted">No events found in the calendar yet.</Notice>;
 
   return (
     <div className="space-y-8">
-      {data.days.map((day) => (
+      {days.map((day) => (
         <section key={day.dayKey} className="scroll-mt-20">
           <div className="sticky top-0 z-10 -mx-4 bg-slate-50/90 px-4 py-2 backdrop-blur">
-            <h2 className="text-lg font-semibold">{day.heading}</h2>
+            <h2 className="text-lg font-semibold">{dayHeading(day.dayKey)}</h2>
           </div>
 
           {day.basedIn.length > 0 && (

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { AppHeader } from "./AppHeader";
 import { Schedule } from "./Schedule";
 import { PlanningTab } from "./PlanningTab";
+import { TripDataProvider } from "./TripData";
 import { getTrip } from "@/lib/trips";
 
 const TripMap = dynamic(() => import("./TripMap").then((m) => m.TripMap), {
@@ -31,27 +32,29 @@ export function TripView({ tripId }: { tripId: string }) {
   }
 
   return (
-    <div className="mx-auto min-h-screen max-w-2xl px-4 pb-16">
-      <AppHeader title={trip.name} subtitle={trip.dateLabel} backHref="/" />
+    <TripDataProvider tripId={trip.id} tripAreas={trip.areas}>
+      <div className="mx-auto min-h-screen max-w-2xl px-4 pb-16">
+        <AppHeader title={trip.name} subtitle={trip.dateLabel} backHref="/" />
 
-      <nav className="mb-5 flex gap-1 rounded-lg bg-slate-100 p-1 text-sm">
-        <TabBtn active={tab === "itinerary"} onClick={() => setTab("itinerary")}>
-          Itinerary
-        </TabBtn>
-        <TabBtn active={tab === "planning"} onClick={() => setTab("planning")}>
-          Planning
-        </TabBtn>
-        <TabBtn active={tab === "map"} onClick={() => setTab("map")}>
-          Map
-        </TabBtn>
-      </nav>
+        <nav className="mb-5 flex gap-1 rounded-lg bg-slate-100 p-1 text-sm">
+          <TabBtn active={tab === "itinerary"} onClick={() => setTab("itinerary")}>
+            Itinerary
+          </TabBtn>
+          <TabBtn active={tab === "planning"} onClick={() => setTab("planning")}>
+            Planning
+          </TabBtn>
+          <TabBtn active={tab === "map"} onClick={() => setTab("map")}>
+            Map
+          </TabBtn>
+        </nav>
 
-      <main>
-        {tab === "itinerary" && <Schedule />}
-        {tab === "planning" && <PlanningTab />}
-        {tab === "map" && <TripMap />}
-      </main>
-    </div>
+        <main>
+          {tab === "itinerary" && <Schedule />}
+          {tab === "planning" && <PlanningTab />}
+          {tab === "map" && <TripMap />}
+        </main>
+      </div>
+    </TripDataProvider>
   );
 }
 
