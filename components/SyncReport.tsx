@@ -338,39 +338,53 @@ export function SyncReport() {
       {typeChangedItems.length > 0 && (
         <Section title={`Type mismatch (${typeChangedItems.length})`} tone="violet">
           <p className="mb-3 text-xs text-slate-400">
-            The calendar categorizes these differently from the DB. Update or keep the current type.
+            The parser guessed a different type from the calendar event title. Manually-curated entities
+            (no "from calendar" badge) are shown here for awareness only — the DB type is almost always correct.
           </p>
           <ul className="space-y-2">
             {typeChangedItems.map((item) => {
               const currentTab = ENTITY_TABS.find((t) => t.type === item.entity.type);
               const calTab = ENTITY_TABS.find((t) => t.type === item.calType);
+              const isAutoImported = item.entity.calendarSource;
               return (
-                <li key={item.entity.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-violet-200 bg-violet-50 p-3">
+                <li key={item.entity.id} className={`flex flex-wrap items-start gap-3 rounded-xl border p-3 ${isAutoImported ? "border-violet-200 bg-violet-50" : "border-slate-200 bg-slate-50"}`}>
                   <div className="flex-1 text-sm">
-                    <span className="font-medium">{item.entity.name}</span>
-                    <div className="mt-0.5 flex flex-wrap gap-2 text-xs">
-                      <span className="rounded-full bg-violet-100 px-2 py-0.5 text-violet-700">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-medium">{item.entity.name}</span>
+                      {!isAutoImported && (
+                        <span className="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700">manually curated</span>
+                      )}
+                    </div>
+                    <div className="mt-1 flex flex-wrap gap-2 text-xs">
+                      <span className={`rounded-full px-2 py-0.5 ${isAutoImported ? "bg-violet-100 text-violet-700" : "bg-slate-200 text-slate-600"}`}>
                         DB: {currentTab?.emoji} {item.entity.type}
                       </span>
                       <span className="text-slate-400">→</span>
                       <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-700">
-                        calendar says: {calTab?.emoji} {item.calType}
+                        parser saw: {calTab?.emoji} {item.calType}
                       </span>
                     </div>
+                    <div className="mt-1.5 rounded bg-white px-2 py-1 text-xs text-slate-500 border border-slate-200">
+                      <span className="font-medium text-slate-400">Calendar event: </span>
+                      {item.event.summary}
+                      {item.event.location && <span className="text-slate-400"> · {item.event.location}</span>}
+                    </div>
                   </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => updateType(item.entity, item.calType)}
-                      disabled={isSaving(item.entity.id)}
-                      className="rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-violet-700 disabled:opacity-50"
-                    >
-                      {isSaving(item.entity.id) ? "…" : `Update to ${item.calType}`}
-                    </button>
+                  <div className="flex flex-col gap-1.5">
+                    {isAutoImported && (
+                      <button
+                        onClick={() => updateType(item.entity, item.calType)}
+                        disabled={isSaving(item.entity.id)}
+                        className="rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-violet-700 disabled:opacity-50"
+                      >
+                        {isSaving(item.entity.id) ? "…" : `Update to ${item.calType}`}
+                      </button>
+                    )}
                     <button
                       onClick={() => mark(item.entity.id, "kept")}
                       className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
                     >
-                      Keep {item.entity.type}
+                      {isAutoImported ? `Keep ${item.entity.type}` : "Dismiss"}
                     </button>
                   </div>
                 </li>
