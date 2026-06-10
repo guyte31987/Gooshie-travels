@@ -207,15 +207,24 @@ export type Instance = {
   id: string; // = calendar UID for calendar-derived occurrences
   tripId: string;
   entityId?: string;
-  locked?: boolean;
   removed?: boolean;
-  /** App-owned overrides / additions. */
   title?: string;
-  note?: string;
   /** Snapshot captured on lock so the occurrence survives calendar deletion. */
   dayKey?: string;
   startMs?: number;
   time?: string;
+
+  // --- Schedule level (the calendar event occurrence) ---
+  /** Locks the schedule card: orphan-survival + protects scheduleNote from re-sync. */
+  scheduleLocked?: boolean;
+  /** Merged note: calendar description prepended on first lock, then freely editable. */
+  scheduleNote?: string;
+
+  // --- Entity instance level (only when entityId is set) ---
+  /** Can be toggled independently after schedule lock. */
+  entityInstanceLocked?: boolean;
+  /** Notes specific to this visit to the place. */
+  entityInstanceNote?: string;
   /** Booking state — null means inherit the entity's needsBooking default. */
   needsBooking?: boolean | null;
   booked?: boolean;
@@ -241,7 +250,10 @@ export async function deleteInstanceOverride(tripId: string, id: string): Promis
 
 export type Comment = {
   id: string;
-  instanceId: string;
+  /** Set for entity-instance-level comments (about a specific visit). */
+  instanceId?: string;
+  /** Set for entity-level comments (about the place in general). */
+  entityId?: string;
   text: string;
   authorName: string;
   authorEmail: string;
@@ -275,6 +287,31 @@ export async function addComment(
 
 export async function deleteComment(id: string): Promise<void> {
   await deleteDoc(doc(requireDb(), "comments", id));
+}
+
+export function subscribeEntityComments(entityId: string, cb: (c: Comment[]) => void): () => void {
+  if (!db) return () => {};
+  const q = query(collection(db, "comments"), where("entityId", "==", entityId));
+  return onSnapshot(q, (snap) => {
+    const rows = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Comment, "id">) }));
+    rows.sort((a, b) => (a.createdAt?.seconds ?? 0) - (b.createdAt?.seconds ?? 0));
+    cb(rows);
+  });
+}
+
+export async function addEntityComment(
+  entityId: string,
+  text: string,
+  authorName: string,
+  authorEmail: string
+): Promise<void> {
+  await addDoc(collection(requireDb(), "comments"), {
+    entityId,
+    text,
+    authorName,
+    authorEmail,
+    createdAt: serverTimestamp(),
+  });
 }
 
 // --- dismissed sync issues (admin) -----------------------------------------

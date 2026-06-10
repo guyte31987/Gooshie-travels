@@ -5,6 +5,7 @@ import { bookings, distinct } from "@/lib/planning";
 import {
   groupByType,
   ENTITY_TABS,
+  OPERATIONAL_TYPES,
   type Entity,
   type EntityType,
   type TripSlot,
@@ -23,18 +24,26 @@ export function PlanningTab() {
   const { isAdmin, role } = useAuth();
   const canEdit = isAdmin || role === "editor";
   const [tab, setTab] = useState<Tab>("food");
+  const [showOperational, setShowOperational] = useState(false);
 
   const grouped = useMemo(() => groupByType(entities), [entities]);
+  const visibleTabs = ENTITY_TABS.filter((t) => showOperational || !t.operational);
 
   return (
     <div>
       <div className="mb-3 flex flex-wrap gap-1.5 text-sm">
-        {ENTITY_TABS.map((t) => (
+        {visibleTabs.map((t) => (
           <TabChip key={t.type} active={tab === t.type} onClick={() => setTab(t.type)}>
             {t.emoji} {t.label}{" "}
             <span className="text-slate-400">{grouped[t.type]?.length ?? 0}</span>
           </TabChip>
         ))}
+        <button
+          onClick={() => { setShowOperational((v) => !v); if (OPERATIONAL_TYPES.has(tab as EntityType)) setTab("food"); }}
+          className="rounded-full px-3 py-1.5 font-medium text-slate-400 bg-slate-50 hover:bg-slate-100 text-sm"
+        >
+          {showOperational ? "Hide" : "Show"} admin/travel
+        </button>
         <TabChip active={tab === "bookings"} onClick={() => setTab("bookings")}>
           ✅ Bookings <span className="text-slate-400">{bookings.length}</span>
         </TabChip>

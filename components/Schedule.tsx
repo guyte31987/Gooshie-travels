@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useTripData } from "./TripData";
 import { EntityDetail } from "./EntityDetail";
+import { Comments } from "./Comments";
 import { useAuth } from "./AuthProvider";
 import { dayHeading } from "@/lib/ics";
 import { indexByEventUid, ENTITY_TABS, type Entity, type ItinEvent } from "@/lib/entities";
@@ -21,10 +22,12 @@ export function Schedule() {
     useTripData();
   const { isAdmin, role } = useAuth();
   const canEdit = isAdmin || role === "editor";
+  const [popupEvent, setPopupEvent] = useState<{ e: ItinEvent; dayKey: string } | null>(null);
   const [detail, setDetail] = useState<Entity | null>(null);
+
   const index = useMemo(() => indexByEventUid(entities), [entities]);
-  const entityById = useMemo(() => new Map(entities.map((e) => [e.id, e])), [entities]);
-  const emojiOf = (e: Entity) => ENTITY_TABS.find((t) => t.type === e.type)?.emoji ?? "";
+  const entityById = useMemo(() => new Map(entities.map((en) => [en.id, en])), [entities]);
+  const emojiOf = (en: Entity) => ENTITY_TABS.find((t) => t.type === en.type)?.emoji ?? "";
 
   if (loading) return <Notice tone="muted">Loading itinerary…</Notice>;
   if (augmentedDays.length === 0)
@@ -69,11 +72,9 @@ export function Schedule() {
                   tz={tz}
                   override={override}
                   linked={linked}
-                  canEdit={canEdit}
-                  dayKey={day.dayKey}
-                  onOpenDetail={setDetail}
                   emojiOf={emojiOf}
-                  tripId={tripId}
+                  onOpenPopup={() => setPopupEvent({ e, dayKey: day.dayKey })}
+                  onOpenEntity={(en) => { setDetail(en); }}
                 />
               );
             })}
@@ -90,6 +91,26 @@ export function Schedule() {
         />
       )}
 
+      {popupEvent && (
+        <EventPopup
+          e={popupEvent.e}
+          dayKey={popupEvent.dayKey}
+          tz={tz}
+          override={instanceMap.get(popupEvent.e.uid)}
+          linked={
+            index.get(popupEvent.e.uid)?.entity ??
+            (instanceMap.get(popupEvent.e.uid)?.entityId
+              ? entityById.get(instanceMap.get(popupEvent.e.uid)!.entityId!)
+              : undefined)
+          }
+          canEdit={canEdit}
+          tripId={tripId}
+          emojiOf={emojiOf}
+          onClose={() => setPopupEvent(null)}
+          onOpenEntity={(en) => { setDetail(en); setPopupEvent(null); }}
+        />
+      )}
+
       {detail && (
         <EntityDetail
           entity={detail}
@@ -102,100 +123,68 @@ export function Schedule() {
   );
 }
 
+// --- Compact card (tap to open EventPopup) ---
+
 function EventCard({
   e,
   tz,
   override,
   linked,
-  canEdit,
-  dayKey,
-  onOpenDetail,
   emojiOf,
-  tripId,
+  onOpenPopup,
+  onOpenEntity,
 }: {
   e: ItinEvent;
   tz: string;
   override: Instance | undefined;
   linked: Entity | undefined;
-  canEdit: boolean;
-  dayKey: string;
-  onOpenDetail: (entity: Entity) => void;
-  emojiOf: (e: Entity) => string;
-  tripId: string;
+  emojiOf: (en: Entity) => string;
+  onOpenPopup: () => void;
+  onOpenEntity: (en: Entity) => void;
 }) {
-  const [bookingOpen, setBookingOpen] = useState(false);
-  const [bookingNoteDraft, setBookingNoteDraft] = useState(override?.bookingNote ?? "");
-  const [bookingOffsetDraft, setBookingOffsetDraft] = useState(
-    override?.bookingOffsetDays?.toString() ?? ""
-  );
-
   const orphaned = !!e.orphaned;
-  const locked = override?.locked;
+  const scheduleLocked = override?.scheduleLocked;
 
   const entityNeedsBooking = linked?.needsBooking ?? false;
   const effectiveNeedsBooking =
-    override?.needsBooking === true
-      ? true
-      : override?.needsBooking === false
-        ? false
-        : entityNeedsBooking;
+    override?.needsBooking === true ? true
+    : override?.needsBooking === false ? false
+    : entityNeedsBooking;
   const isBooked = override?.booked ?? false;
 
-  const persist = (patch: Partial<Instance>) => {
-    saveInstance(tripId, {
-      id: e.uid,
-      tripId,
-      entityId: linked?.id ?? override?.entityId,
-      dayKey,
-      startMs: e.startMs,
-      time: e.isAllDay ? undefined : timeRange(e, tz),
-      ...override,
-      ...patch,
-    });
-  };
-
   const cardCls = orphaned
-    ? "rounded-xl border-2 border-dashed border-slate-300 bg-slate-50/60 p-4 shadow-sm"
-    : "rounded-xl border border-slate-200 bg-white p-4 shadow-sm";
+    ? "rounded-xl border-2 border-dashed border-slate-300 bg-slate-50/60 p-4 shadow-sm cursor-pointer hover:bg-slate-100/60 transition"
+    : "rounded-xl border border-slate-200 bg-white p-4 shadow-sm cursor-pointer hover:bg-slate-50 transition";
 
   return (
-    <li className={cardCls}>
+    <li className={cardCls} onClick={onOpenPopup}>
       {orphaned && (
-        <p className="mb-2 text-[11px] font-medium text-slate-400">
+        <p className="mb-1.5 text-[11px] font-medium text-slate-400">
           🗂 Locked · calendar event deleted
         </p>
       )}
 
       <div className="flex items-baseline justify-between gap-3">
-        {linked ? (
-          <button
-            onClick={() => onOpenDetail(linked)}
-            className="group flex items-center gap-1.5 text-left"
-          >
-            <span>{emojiOf(linked)}</span>
-            <h3 className="font-medium leading-snug text-indigo-700 underline-offset-2 group-hover:underline">
-              {override?.title || e.summary}
-            </h3>
-            {locked && <span title="Locked">🔒</span>}
-          </button>
-        ) : (
-          <h3 className="flex items-center gap-1.5 font-medium leading-snug">
+        <div className="flex min-w-0 items-center gap-1.5">
+          {linked && <span>{emojiOf(linked)}</span>}
+          <h3 className="truncate font-medium leading-snug">
             {override?.title || e.summary}
-            {locked && <span title="Locked">🔒</span>}
           </h3>
-        )}
+          {scheduleLocked && <span title="Schedule locked" className="shrink-0">🔒</span>}
+        </div>
         <span className="shrink-0 text-xs font-medium text-slate-500">{timeRange(e, tz)}</span>
       </div>
 
-      {e.location && <p className="mt-1 text-sm text-slate-500">📍 {e.location}</p>}
+      {e.location && <p className="mt-1 truncate text-sm text-slate-500">📍 {e.location}</p>}
 
-      {e.description && !orphaned && (
-        <div className="mt-2 rounded-lg bg-slate-50 px-3 py-2">
-          <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-            Planning note
-          </div>
-          <p className="whitespace-pre-line text-sm text-slate-600">{e.description}</p>
-        </div>
+      {/* Entity link — tapping stops propagation so it opens EntityDetail directly */}
+      {linked && (
+        <button
+          onClick={(ev) => { ev.stopPropagation(); onOpenEntity(linked); }}
+          className="mt-1.5 text-xs font-medium text-indigo-500 hover:underline"
+        >
+          {emojiOf(linked)} {linked.name} →
+        </button>
       )}
 
       {/* Booking badge */}
@@ -212,132 +201,419 @@ function EventCard({
           )}
           {override?.bookingOffsetDays != null && (
             <span className="text-[11px] text-slate-400">
-              · Book {override.bookingOffsetDays} days before trip
+              · {override.bookingOffsetDays} days before trip
             </span>
-          )}
-          {override?.bookingNote && (
-            <span className="text-[11px] italic text-slate-500">{override.bookingNote}</span>
-          )}
-        </div>
-      )}
-
-      {/* Editor action bar */}
-      {canEdit && (
-        <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-slate-100 pt-2 text-xs">
-          <button
-            onClick={() => {
-              if (confirm("Archive this item? Editors can restore it from the archive."))
-                persist({ removed: true });
-            }}
-            className="text-rose-400 hover:text-rose-600 hover:underline"
-          >
-            Archive
-          </button>
-          <button
-            onClick={() => persist({ locked: !locked })}
-            className={locked ? "text-amber-600 hover:underline" : "text-slate-400 hover:text-slate-600 hover:underline"}
-          >
-            {locked ? "🔒 Unlock" : "🔓 Lock"}
-          </button>
-          <button
-            onClick={() => setBookingOpen((o) => !o)}
-            className="text-slate-400 hover:text-slate-600 hover:underline"
-          >
-            📋 Booking
-          </button>
-          {linked && (
-            <button
-              onClick={() => onOpenDetail(linked)}
-              className="ml-auto font-medium text-indigo-600 hover:underline"
-            >
-              Full details →
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Booking form */}
-      {bookingOpen && canEdit && (
-        <div className="mt-2 space-y-2 rounded-lg bg-slate-50 p-3">
-          <div className="flex flex-wrap items-center gap-2 text-xs">
-            <span className="font-medium text-slate-500">Needs booking:</span>
-            {(
-              [
-                { label: "Yes", value: true as boolean | null },
-                { label: "No", value: false as boolean | null },
-                {
-                  label: `Default (${entityNeedsBooking ? "yes" : "no"})`,
-                  value: null as boolean | null,
-                },
-              ] as const
-            ).map(({ label, value }) => {
-              const active =
-                value === null
-                  ? override?.needsBooking == null
-                  : override?.needsBooking === value;
-              return (
-                <button
-                  key={label}
-                  onClick={() => persist({ needsBooking: value })}
-                  className={`rounded px-2 py-0.5 ${
-                    active
-                      ? "bg-slate-800 text-white"
-                      : "border border-slate-300 bg-white text-slate-600 hover:bg-slate-50"
-                  }`}
-                >
-                  {label}
-                </button>
-              );
-            })}
-          </div>
-
-          {effectiveNeedsBooking && (
-            <>
-              <label className="flex cursor-pointer items-center gap-2 text-xs text-slate-600">
-                <input
-                  type="checkbox"
-                  checked={isBooked}
-                  onChange={(ev) => persist({ booked: ev.target.checked })}
-                  className="rounded"
-                />
-                Mark as booked
-              </label>
-              <div className="flex gap-2">
-                <input
-                  value={bookingNoteDraft}
-                  onChange={(ev) => setBookingNoteDraft(ev.target.value)}
-                  placeholder="Note (platform, phone, Resy…)"
-                  className="flex-1 rounded-lg border border-slate-300 px-2 py-1 text-xs outline-none focus:border-slate-400"
-                />
-                <input
-                  type="number"
-                  min={1}
-                  value={bookingOffsetDraft}
-                  onChange={(ev) => setBookingOffsetDraft(ev.target.value)}
-                  placeholder="Days before"
-                  className="w-24 rounded-lg border border-slate-300 px-2 py-1 text-xs outline-none focus:border-slate-400"
-                  title="How many days before the trip start to make the booking"
-                />
-              </div>
-              <button
-                onClick={() => {
-                  persist({
-                    bookingNote: bookingNoteDraft || undefined,
-                    bookingOffsetDays: bookingOffsetDraft ? Number(bookingOffsetDraft) : undefined,
-                  });
-                  setBookingOpen(false);
-                }}
-                className="rounded-lg bg-ink px-3 py-1 text-xs font-medium text-white"
-              >
-                Save
-              </button>
-            </>
           )}
         </div>
       )}
     </li>
   );
 }
+
+// --- EventPopup (full instance detail) ---
+
+function EventPopup({
+  e,
+  dayKey,
+  tz,
+  override,
+  linked,
+  canEdit,
+  tripId,
+  emojiOf,
+  onClose,
+  onOpenEntity,
+}: {
+  e: ItinEvent;
+  dayKey: string;
+  tz: string;
+  override: Instance | undefined;
+  linked: Entity | undefined;
+  canEdit: boolean;
+  tripId: string;
+  emojiOf: (en: Entity) => string;
+  onClose: () => void;
+  onOpenEntity: (en: Entity) => void;
+}) {
+  const orphaned = !!e.orphaned;
+  const scheduleLocked = override?.scheduleLocked;
+  const entityInstanceLocked = override?.entityInstanceLocked;
+
+  const [scheduleNoteDraft, setScheduleNoteDraft] = useState(override?.scheduleNote ?? "");
+  const [entityNoteDraft, setEntityNoteDraft] = useState(override?.entityInstanceNote ?? "");
+  const [bookingOpen, setBookingOpen] = useState(false);
+  const [bookingNoteDraft, setBookingNoteDraft] = useState(override?.bookingNote ?? "");
+  const [bookingOffsetDraft, setBookingOffsetDraft] = useState(
+    override?.bookingOffsetDays?.toString() ?? ""
+  );
+
+  const entityNeedsBooking = linked?.needsBooking ?? false;
+  const effectiveNeedsBooking =
+    override?.needsBooking === true ? true
+    : override?.needsBooking === false ? false
+    : entityNeedsBooking;
+
+  const instanceId = `${tripId}:${e.uid}`;
+
+  const persist = (patch: Partial<Instance>) => {
+    saveInstance(tripId, {
+      id: e.uid,
+      tripId,
+      entityId: linked?.id ?? override?.entityId,
+      dayKey,
+      startMs: e.startMs,
+      time: e.isAllDay ? undefined : timeRange(e, tz),
+      ...override,
+      ...patch,
+    });
+  };
+
+  const lockSchedule = () => {
+    const calNote = e.description ?? "";
+    const existing = override?.scheduleNote ?? "";
+    const merged =
+      calNote && !existing.startsWith(calNote)
+        ? calNote + (existing ? "\n\n" + existing : "")
+        : existing || calNote;
+    const patch: Partial<Instance> = {
+      scheduleLocked: true,
+      entityInstanceLocked: true,
+    };
+    if (merged) patch.scheduleNote = merged;
+    persist(patch);
+    setScheduleNoteDraft(merged);
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 sm:items-center sm:p-4"
+      onClick={onClose}
+    >
+      <div
+        className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-white p-5 shadow-xl sm:rounded-2xl"
+        onClick={(ev) => ev.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            {orphaned && (
+              <p className="mb-1 text-[11px] font-medium text-slate-400">
+                🗂 Locked · calendar event deleted
+              </p>
+            )}
+            <h2 className="text-lg font-semibold leading-snug">
+              {override?.title || e.summary}
+            </h2>
+            <div className="mt-0.5 flex flex-wrap gap-2 text-xs text-slate-500">
+              <span>{timeRange(e, tz)}</span>
+              {e.location && <span>📍 {e.location}</span>}
+            </div>
+          </div>
+          <button onClick={onClose} className="shrink-0 text-slate-400 hover:text-slate-600">
+            ✕
+          </button>
+        </div>
+
+        {/* ── Schedule section ── */}
+        <div className="space-y-3">
+          {/* Schedule note */}
+          {scheduleLocked ? (
+            <div>
+              <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                Note
+              </p>
+              {canEdit ? (
+                <div className="space-y-1.5">
+                  <textarea
+                    value={scheduleNoteDraft}
+                    onChange={(ev) => setScheduleNoteDraft(ev.target.value)}
+                    rows={4}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-400"
+                    placeholder="Your notes for this event…"
+                  />
+                  {scheduleNoteDraft !== (override?.scheduleNote ?? "") && (
+                    <button
+                      onClick={() => persist({ scheduleNote: scheduleNoteDraft })}
+                      className="rounded-lg bg-ink px-3 py-1 text-xs font-medium text-white"
+                    >
+                      Save note
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <p className="whitespace-pre-line text-sm text-slate-700">
+                  {override?.scheduleNote}
+                </p>
+              )}
+            </div>
+          ) : e.description ? (
+            <div className="rounded-lg bg-slate-50 px-3 py-2">
+              <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                Planning note (from calendar)
+              </p>
+              <p className="whitespace-pre-line text-sm text-slate-600">{e.description}</p>
+              {canEdit && (
+                <p className="mt-2 text-[11px] text-slate-400">
+                  Lock to capture and edit this note in the app.
+                </p>
+              )}
+            </div>
+          ) : null}
+
+          {/* Schedule lock / archive */}
+          {canEdit && (
+            <div className="flex flex-wrap items-center gap-3 text-xs">
+              {scheduleLocked ? (
+                <button
+                  onClick={() => persist({ scheduleLocked: false })}
+                  className="text-amber-600 hover:underline"
+                >
+                  🔒 Unlock schedule
+                </button>
+              ) : (
+                <button onClick={lockSchedule} className="text-slate-500 hover:underline">
+                  🔓 Lock &amp; capture note
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  if (confirm("Archive this event? Editors can restore it.")) {
+                    persist({ removed: true });
+                    onClose();
+                  }
+                }}
+                className="text-rose-400 hover:text-rose-600 hover:underline"
+              >
+                Archive
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* ── Entity instance section (only if linked to an entity) ── */}
+        {linked && (
+          <div className="mt-4 border-t border-slate-100 pt-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => onOpenEntity(linked)}
+                className="flex items-center gap-1.5 font-medium text-indigo-600 hover:underline"
+              >
+                {emojiOf(linked)} {linked.name} →
+              </button>
+              {canEdit && (
+                <button
+                  onClick={() => persist({ entityInstanceLocked: !entityInstanceLocked })}
+                  className={`text-xs ${entityInstanceLocked ? "text-amber-600" : "text-slate-400"} hover:underline`}
+                >
+                  {entityInstanceLocked ? "🔒 Instance locked" : "🔓 Lock instance"}
+                </button>
+              )}
+            </div>
+
+            {/* Entity details (read-only summary) */}
+            {(linked.hours || linked.price || linked.booking) && (
+              <dl className="space-y-0.5 text-xs text-slate-500">
+                {linked.hours && <div>🕑 {linked.hours}</div>}
+                {linked.price && <div>💰 {linked.price}</div>}
+                {linked.booking && <div>🔗 {linked.booking}</div>}
+              </dl>
+            )}
+
+            {/* Entity instance note */}
+            <div>
+              <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                Visit note
+              </p>
+              {canEdit ? (
+                <div className="space-y-1.5">
+                  <textarea
+                    value={entityNoteDraft}
+                    onChange={(ev) => setEntityNoteDraft(ev.target.value)}
+                    rows={3}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-400"
+                    placeholder="Notes about this specific visit…"
+                  />
+                  {entityNoteDraft !== (override?.entityInstanceNote ?? "") && (
+                    <button
+                      onClick={() => persist({ entityInstanceNote: entityNoteDraft })}
+                      className="rounded-lg bg-ink px-3 py-1 text-xs font-medium text-white"
+                    >
+                      Save
+                    </button>
+                  )}
+                </div>
+              ) : override?.entityInstanceNote ? (
+                <p className="whitespace-pre-line text-sm text-slate-700">
+                  {override.entityInstanceNote}
+                </p>
+              ) : (
+                <p className="text-xs text-slate-400">No visit note yet.</p>
+              )}
+            </div>
+
+            {/* Booking */}
+            <div>
+              <button
+                onClick={() => setBookingOpen((o) => !o)}
+                className="text-xs text-slate-400 hover:text-slate-600 hover:underline"
+              >
+                📋 Booking {bookingOpen ? "▲" : "▼"}
+              </button>
+              {bookingOpen && (
+                <BookingForm
+                  override={override}
+                  entityNeedsBooking={entityNeedsBooking}
+                  onPersist={persist}
+                  bookingNoteDraft={bookingNoteDraft}
+                  setBookingNoteDraft={setBookingNoteDraft}
+                  bookingOffsetDraft={bookingOffsetDraft}
+                  setBookingOffsetDraft={setBookingOffsetDraft}
+                  onClose={() => setBookingOpen(false)}
+                />
+              )}
+              {/* Booking badge (always visible if set) */}
+              {effectiveNeedsBooking && (
+                <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                  {override?.booked ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
+                      ✅ Booked
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-700">
+                      📋 Needs booking
+                    </span>
+                  )}
+                  {override?.bookingOffsetDays != null && (
+                    <span className="text-[11px] text-slate-400">
+                      · Book {override.bookingOffsetDays} days before trip
+                    </span>
+                  )}
+                  {override?.bookingNote && (
+                    <span className="text-[11px] italic text-slate-500">{override.bookingNote}</span>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Instance-level comments */}
+            <div className="border-t border-slate-100 pt-3">
+              <Comments instanceId={instanceId} label="Comments on this visit" />
+            </div>
+          </div>
+        )}
+
+        {/* Unlinked event: show instance comments if any */}
+        {!linked && override && (
+          <div className="mt-4 border-t border-slate-100 pt-3">
+            <Comments instanceId={instanceId} />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// --- Booking form (shared between EventPopup and EntityDetail) ---
+
+function BookingForm({
+  override,
+  entityNeedsBooking,
+  onPersist,
+  bookingNoteDraft,
+  setBookingNoteDraft,
+  bookingOffsetDraft,
+  setBookingOffsetDraft,
+  onClose,
+}: {
+  override: Instance | undefined;
+  entityNeedsBooking: boolean;
+  onPersist: (patch: Partial<Instance>) => void;
+  bookingNoteDraft: string;
+  setBookingNoteDraft: (v: string) => void;
+  bookingOffsetDraft: string;
+  setBookingOffsetDraft: (v: string) => void;
+  onClose: () => void;
+}) {
+  const effective =
+    override?.needsBooking === true ? true
+    : override?.needsBooking === false ? false
+    : entityNeedsBooking;
+
+  return (
+    <div className="mt-2 space-y-2 rounded-lg bg-slate-50 p-3">
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        <span className="font-medium text-slate-500">Needs booking:</span>
+        {(
+          [
+            { label: "Yes", value: true as boolean | null },
+            { label: "No", value: false as boolean | null },
+            { label: `Default (${entityNeedsBooking ? "yes" : "no"})`, value: null as boolean | null },
+          ] as const
+        ).map(({ label, value }) => {
+          const active =
+            value === null ? override?.needsBooking == null : override?.needsBooking === value;
+          return (
+            <button
+              key={label}
+              onClick={() => onPersist({ needsBooking: value })}
+              className={`rounded px-2 py-0.5 ${
+                active
+                  ? "bg-slate-800 text-white"
+                  : "border border-slate-300 bg-white text-slate-600 hover:bg-slate-50"
+              }`}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+      {effective && (
+        <>
+          <label className="flex cursor-pointer items-center gap-2 text-xs text-slate-600">
+            <input
+              type="checkbox"
+              checked={override?.booked ?? false}
+              onChange={(ev) => onPersist({ booked: ev.target.checked })}
+              className="rounded"
+            />
+            Mark as booked
+          </label>
+          <div className="flex gap-2">
+            <input
+              value={bookingNoteDraft}
+              onChange={(ev) => setBookingNoteDraft(ev.target.value)}
+              placeholder="Note (platform, phone, Resy…)"
+              className="flex-1 rounded-lg border border-slate-300 px-2 py-1 text-xs outline-none focus:border-slate-400"
+            />
+            <input
+              type="number"
+              min={1}
+              value={bookingOffsetDraft}
+              onChange={(ev) => setBookingOffsetDraft(ev.target.value)}
+              placeholder="Days before"
+              className="w-24 rounded-lg border border-slate-300 px-2 py-1 text-xs outline-none focus:border-slate-400"
+              title="How many days before the trip to make this booking"
+            />
+          </div>
+          <button
+            onClick={() => {
+              onPersist({
+                bookingNote: bookingNoteDraft || undefined,
+                bookingOffsetDays: bookingOffsetDraft ? Number(bookingOffsetDraft) : undefined,
+              });
+              onClose();
+            }}
+            className="rounded-lg bg-ink px-3 py-1 text-xs font-medium text-white"
+          >
+            Save
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
+
+// --- Archived section ---
 
 function ArchivedSection({
   archivedInstances,
@@ -351,7 +627,6 @@ function ArchivedSection({
   isAdmin: boolean;
 }) {
   const [open, setOpen] = useState(false);
-
   return (
     <section>
       <button
@@ -370,12 +645,10 @@ function ArchivedSection({
                 key={i.id}
                 className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
               >
-                <div className="flex-1 min-w-0">
+                <div className="min-w-0 flex-1">
                   <span className="font-medium">{name}</span>
-                  {i.dayKey && (
-                    <span className="ml-2 text-xs text-slate-400">{i.dayKey}</span>
-                  )}
-                  {i.locked && (
+                  {i.dayKey && <span className="ml-2 text-xs text-slate-400">{i.dayKey}</span>}
+                  {i.scheduleLocked && (
                     <span className="ml-2 text-[11px] text-amber-600">🔒 was locked</span>
                   )}
                 </div>
@@ -388,7 +661,7 @@ function ArchivedSection({
                 {isAdmin && (
                   <button
                     onClick={() => {
-                      if (confirm("Permanently delete this record? This cannot be undone."))
+                      if (confirm("Permanently delete? Cannot be undone."))
                         deleteInstanceOverride(tripId, i.id);
                     }}
                     className="text-xs text-rose-500 hover:underline"

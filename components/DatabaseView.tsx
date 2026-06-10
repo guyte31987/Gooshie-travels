@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AppHeader } from "./AppHeader";
 import { EntityForm } from "./EntityForm";
 import { useAuth } from "./AuthProvider";
-import { ENTITY_TABS, buildEntities, buildSeed, type ItinDay } from "@/lib/entities";
+import { ENTITY_TABS, OPERATIONAL_TYPES, buildEntities, buildSeed, type ItinDay } from "@/lib/entities";
 import {
   subscribeEntities,
   deleteEntity,
@@ -24,6 +24,7 @@ export function DatabaseView() {
   const [region, setRegion] = useState("");
   const [type, setType] = useState("");
   const [editing, setEditing] = useState<DBEntity | null | "new">(null);
+  const [showOperational, setShowOperational] = useState(false);
   const [seeding, setSeeding] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -42,6 +43,7 @@ export function DatabaseView() {
   );
 
   const filtered = entities
+    .filter((e) => showOperational || !OPERATIONAL_TYPES.has(e.type))
     .filter((e) => !region || e.generalArea === region)
     .filter((e) => !type || e.type === type)
     .filter(
@@ -135,13 +137,21 @@ export function DatabaseView() {
 
           <div className="mb-3 flex flex-wrap gap-1.5 text-xs">
             <TypeChip active={!type} onClick={() => setType("")}>
-              All <span className="text-slate-400">{entities.length}</span>
+              All <span className="text-slate-400">{filtered.length}</span>
             </TypeChip>
-            {ENTITY_TABS.filter((t) => typeCount(t.type) > 0).map((t) => (
-              <TypeChip key={t.type} active={type === t.type} onClick={() => setType(t.type)}>
-                {t.emoji} {t.label} <span className="text-slate-400">{typeCount(t.type)}</span>
-              </TypeChip>
-            ))}
+            {ENTITY_TABS
+              .filter((t) => (showOperational || !t.operational) && typeCount(t.type) > 0)
+              .map((t) => (
+                <TypeChip key={t.type} active={type === t.type} onClick={() => setType(t.type)}>
+                  {t.emoji} {t.label} <span className="text-slate-400">{typeCount(t.type)}</span>
+                </TypeChip>
+              ))}
+            <button
+              onClick={() => { setShowOperational((v) => !v); if (type && OPERATIONAL_TYPES.has(type as never)) setType(""); }}
+              className="rounded-full px-2.5 py-1 font-medium text-slate-400 bg-slate-50 hover:bg-slate-100"
+            >
+              {showOperational ? "Hide" : "Show"} admin/travel
+            </button>
           </div>
 
           <div className="mb-3 flex items-center gap-2 text-xs text-slate-400">

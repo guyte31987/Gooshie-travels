@@ -7,9 +7,8 @@ import { useTripData } from "./TripData";
 import { useAuth } from "./AuthProvider";
 import { saveInstance, deleteInstanceOverride, type Instance } from "@/lib/db";
 
-/** The shared entity popup, opened from anywhere (Planning, Database, Itinerary,
- * Map). Shows every attribute plus "Appears in" → this trip → each appearance
- * (with its time + capacity), each expandable to its own comments/photos. */
+/** The entity popup — place-level info, general comments, and per-visit appearances.
+ *  Opened from entity name links in EventPopup, Planning, Map, or Database. */
 export function EntityDetail({
   entity,
   tripId,
@@ -32,6 +31,7 @@ export function EntityDetail({
         className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-white p-5 shadow-xl sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Entity header */}
         <div className="mb-3 flex items-start justify-between gap-3">
           <div>
             <div className="flex flex-wrap items-center gap-2">
@@ -54,8 +54,8 @@ export function EntityDetail({
           </button>
         </div>
 
+        {/* Entity notes + details */}
         {entity.notes && <p className="text-sm text-slate-600">{entity.notes}</p>}
-
         <dl className="mt-3 space-y-1 text-xs">
           {entity.hours && <Row label="Hours">{entity.hours}</Row>}
           {entity.address && <Row label="Address">{entity.address}</Row>}
@@ -65,6 +65,12 @@ export function EntityDetail({
           {entity.source && <Row label="Source">{entity.source}</Row>}
         </dl>
 
+        {/* Entity-level comments */}
+        <div className="mt-4 border-t border-slate-100 pt-3">
+          <Comments entityId={entity.id} label="Comments about this place" />
+        </div>
+
+        {/* Appearances in this trip */}
         <div className="mt-4 border-t border-slate-100 pt-3">
           <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
             Appears in
@@ -104,17 +110,21 @@ function Appearance({
   const { isAdmin, role } = useAuth();
   const canEdit = isAdmin || role === "editor";
   const [open, setOpen] = useState(false);
-  const [noteDraft, setNoteDraft] = useState(slot.note ?? "");
-  const [editingNote, setEditingNote] = useState(false);
   const [editingBooking, setEditingBooking] = useState(false);
+  const [bookingNoteDraft, setBookingNoteDraft] = useState("");
+  const [bookingOffsetDraft, setBookingOffsetDraft] = useState("");
 
   const override = slot.uid ? instanceMap.get(slot.uid) : undefined;
 
-  const [bookingNoteDraft, setBookingNoteDraft] = useState(override?.bookingNote ?? "");
-  const [bookingOffsetDraft, setBookingOffsetDraft] = useState(
-    override?.bookingOffsetDays?.toString() ?? ""
-  );
-  const locked = slot.locked || override?.locked;
+  // Initialise drafts from override once available
+  const [draftsInit, setDraftsInit] = useState(false);
+  if (override && !draftsInit) {
+    setBookingNoteDraft(override.bookingNote ?? "");
+    setBookingOffsetDraft(override.bookingOffsetDays?.toString() ?? "");
+    setDraftsInit(true);
+  }
+
+  const entityInstanceLocked = slot.locked || override?.entityInstanceLocked;
   const instanceId = slot.uid
     ? `${tripId}:${slot.uid}`
     : `${tripId}:${entity.id}:${slot.kind}:${slot.dayKey ?? index}`;
@@ -133,17 +143,27 @@ function Appearance({
     });
   };
 
+  const entityNeedsBooking = entity.needsBooking ?? false;
+  const effectiveNeedsBooking =
+    override?.needsBooking === true ? true
+    : override?.needsBooking === false ? false
+    : entityNeedsBooking;
+
   const tone =
     slot.kind === "confirmed"
       ? "bg-emerald-50 text-emerald-700"
       : slot.kind === "planB"
         ? "bg-amber-50 text-amber-700"
         : "bg-indigo-50 text-indigo-700";
-  const word = slot.kind === "confirmed" ? "Confirmed" : slot.kind === "planB" ? "Plan B" : "Planned";
+  const word =
+    slot.kind === "confirmed" ? "Confirmed" : slot.kind === "planB" ? "Plan B" : "Planned";
 
   return (
     <li className="border-b border-slate-100 px-3 py-2 last:border-b-0">
-      <button onClick={() => setOpen((o) => !o)} className="flex w-full items-center gap-2 text-left">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center gap-2 text-left"
+      >
         <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${tone}`}>{word}</span>
         <span className="text-sm font-medium">{slot.dayKey ? dayPart(slot.label) : slot.label}</span>
         {slot.time && (
@@ -151,88 +171,69 @@ function Appearance({
             {slot.time}
           </span>
         )}
-        {locked && <span title="Locked — app-owned">🔒</span>}
+        {entityInstanceLocked && <span title="Instance locked">🔒</span>}
         {slot.mismatch && <span className="text-xs text-rose-600">⚠️ differs from calendar</span>}
         <span className="ml-auto text-slate-300">{open ? "▲" : "▼"}</span>
       </button>
-      {slot.note && <p className="mt-1 text-xs text-slate-500">{slot.note}</p>}
+
+      {/* Entity instance note (read summary) */}
+      {override?.entityInstanceNote && (
+        <p className="mt-1 text-xs text-slate-500">{override.entityInstanceNote}</p>
+      )}
+
       {open && (
-        <div className="mt-2">
+        <div className="mt-2 space-y-2">
           {canEdit && slot.uid && (
-            <div className="mb-2 flex flex-wrap items-center gap-2 text-xs">
+            <div className="flex flex-wrap items-center gap-2 text-xs">
               <button
-                onClick={() => persist({ locked: !locked })}
+                onClick={() => persist({ entityInstanceLocked: !entityInstanceLocked })}
                 className={`rounded border px-2 py-1 font-medium ${
-                  locked
+                  entityInstanceLocked
                     ? "border-amber-300 bg-amber-50 text-amber-700"
                     : "border-slate-300 text-slate-600 hover:bg-slate-50"
                 }`}
               >
-                {locked ? "🔒 Locked — unlock" : "🔓 Lock (app-owned)"}
-              </button>
-              <button
-                onClick={() => setEditingNote((v) => !v)}
-                className="rounded border border-slate-300 px-2 py-1 font-medium text-slate-600 hover:bg-slate-50"
-              >
-                Edit note
+                {entityInstanceLocked ? "🔒 Locked — unlock instance" : "🔓 Lock instance"}
               </button>
               <button
                 onClick={() => {
-                  if (confirm("Remove this occurrence from the trip?")) persist({ removed: true });
+                  if (confirm("Archive this occurrence?")) persist({ removed: true });
                 }}
                 className="rounded border border-rose-200 px-2 py-1 font-medium text-rose-600 hover:bg-rose-50"
               >
-                Remove
+                Archive
               </button>
               {override && (
                 <button
                   onClick={() => deleteInstanceOverride(tripId, slot.uid!)}
                   className="text-slate-400 hover:underline"
-                  title="Discard app overrides and trust the calendar again"
+                  title="Discard all app overrides and trust the calendar again"
                 >
                   reset to calendar
                 </button>
               )}
             </div>
           )}
-          {editingNote && (
-            <div className="mb-2 flex gap-2">
-              <input
-                value={noteDraft}
-                onChange={(e) => setNoteDraft(e.target.value)}
-                placeholder="App note (advice, Plan B…)"
-                className="flex-1 rounded-lg border border-slate-300 px-2 py-1 text-xs outline-none focus:border-slate-400"
-              />
-              <button
-                onClick={() => {
-                  persist({ note: noteDraft });
-                  setEditingNote(false);
-                }}
-                className="rounded-lg bg-ink px-3 py-1 text-xs font-medium text-white"
-              >
-                Save
-              </button>
-            </div>
-          )}
-          {locked && (
-            <p className="mb-2 rounded-lg bg-amber-50 px-2 py-1 text-[11px] text-amber-700">
-              Locked: the app owns this occurrence — re-sync won&apos;t overwrite it.
+
+          {entityInstanceLocked && (
+            <p className="rounded-lg bg-amber-50 px-2 py-1 text-[11px] text-amber-700">
+              Instance locked — entity data for this visit is app-owned.
             </p>
           )}
 
-          {/* Booking section */}
+          {/* Booking */}
           {canEdit && slot.uid && (
-            <div className="mb-2">
+            <div>
               <button
                 onClick={() => setEditingBooking((v) => !v)}
-                className="text-xs text-slate-400 hover:text-slate-600 hover:underline"
+                className="text-xs text-slate-400 hover:underline"
               >
                 📋 Booking
               </button>
               {editingBooking && (
                 <BookingForm
                   override={override}
-                  entityNeedsBooking={entity.needsBooking ?? false}
+                  entityNeedsBooking={entityNeedsBooking}
                   onPersist={persist}
                   bookingNoteDraft={bookingNoteDraft}
                   setBookingNoteDraft={setBookingNoteDraft}
@@ -244,40 +245,29 @@ function Appearance({
             </div>
           )}
 
-          {/* Booking status (read-only) */}
-          {(() => {
-            const entityNeedsBooking = entity.needsBooking ?? false;
-            const effective =
-              override?.needsBooking === true
-                ? true
-                : override?.needsBooking === false
-                  ? false
-                  : entityNeedsBooking;
-            if (!effective) return null;
-            return (
-              <div className="mb-2 flex flex-wrap items-center gap-2">
-                {override?.booked ? (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
-                    ✅ Booked
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-700">
-                    📋 Needs booking
-                  </span>
-                )}
-                {override?.bookingOffsetDays != null && (
-                  <span className="text-[11px] text-slate-400">
-                    · Book {override.bookingOffsetDays} days before trip
-                  </span>
-                )}
-                {override?.bookingNote && (
-                  <span className="text-[11px] italic text-slate-500">{override.bookingNote}</span>
-                )}
-              </div>
-            );
-          })()}
+          {effectiveNeedsBooking && (
+            <div className="flex flex-wrap items-center gap-2">
+              {override?.booked ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
+                  ✅ Booked
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-700">
+                  📋 Needs booking
+                </span>
+              )}
+              {override?.bookingOffsetDays != null && (
+                <span className="text-[11px] text-slate-400">
+                  · {override.bookingOffsetDays} days before trip
+                </span>
+              )}
+            </div>
+          )}
 
-          <Comments instanceId={instanceId} />
+          {/* Entity instance comments */}
+          <div className="border-t border-slate-100 pt-2">
+            <Comments instanceId={instanceId} label="Comments on this visit" />
+          </div>
         </div>
       )}
     </li>
@@ -304,11 +294,9 @@ function BookingForm({
   onClose: () => void;
 }) {
   const effective =
-    override?.needsBooking === true
-      ? true
-      : override?.needsBooking === false
-        ? false
-        : entityNeedsBooking;
+    override?.needsBooking === true ? true
+    : override?.needsBooking === false ? false
+    : entityNeedsBooking;
 
   return (
     <div className="mt-2 space-y-2 rounded-lg bg-slate-50 p-3">
@@ -338,7 +326,6 @@ function BookingForm({
           );
         })}
       </div>
-
       {effective && (
         <>
           <label className="flex cursor-pointer items-center gap-2 text-xs text-slate-600">
@@ -364,7 +351,6 @@ function BookingForm({
               onChange={(ev) => setBookingOffsetDraft(ev.target.value)}
               placeholder="Days before"
               className="w-24 rounded-lg border border-slate-300 px-2 py-1 text-xs outline-none focus:border-slate-400"
-              title="How many days before the trip to make this booking"
             />
           </div>
           <button
@@ -385,7 +371,6 @@ function BookingForm({
   );
 }
 
-/** Strip the trailing ", 6:00 PM" from a slot label (time shown separately). */
 function dayPart(label: string): string {
   return label.replace(/,\s*\d{1,2}:\d{2}\s*[AP]M.*$/i, "");
 }

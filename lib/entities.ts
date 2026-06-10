@@ -16,9 +16,11 @@ export type EntityType =
   | "sight"
   | "hike"
   | "event"
-  | "accommodation";
+  | "accommodation"
+  | "travel"
+  | "admin";
 
-export const ENTITY_TABS: { type: EntityType; label: string; emoji: string }[] = [
+export const ENTITY_TABS: { type: EntityType; label: string; emoji: string; operational?: boolean }[] = [
   { type: "food", label: "Food", emoji: "🍴" },
   { type: "vintage", label: "Vintage", emoji: "👕" },
   { type: "museum", label: "Museums", emoji: "🖼" },
@@ -27,7 +29,12 @@ export const ENTITY_TABS: { type: EntityType; label: string; emoji: string }[] =
   { type: "hike", label: "Hikes", emoji: "🥾" },
   { type: "event", label: "Events", emoji: "🎫" },
   { type: "accommodation", label: "Stays", emoji: "🛏" },
+  { type: "travel", label: "Travel", emoji: "✈️", operational: true },
+  { type: "admin", label: "Admin", emoji: "📋", operational: true },
 ];
+
+/** Types that are trip-operational (not place-based) — hidden by default in Database and Planning. */
+export const OPERATIONAL_TYPES = new Set<EntityType>(["travel", "admin"]);
 
 export type SlotKind = "confirmed" | "planned" | "planB";
 
@@ -143,6 +150,18 @@ export function categorizeEvent(e: ItinEvent): EntityType {
     return "sight";
   if (/\b(dinner|brunch|lunch|breakfast|cafe|coffee|food|bagel|pizza|bites|bbq|deli|snack|eat)\b/.test(t))
     return "food";
+  if (
+    /\b(flight|train|amtrak|greyhound|megabus|ferry|coach|transit|airport|depart|departure|arrival|arrive|car\s+rental|drive\s+to|bus\s+to)\b/.test(
+      t
+    )
+  )
+    return "travel";
+  if (
+    /\b(check.?in|check.?out|insurance|visa|currency|packing|pick.?up|drop.?off|confirmation|reservation|passport|admin|logistics)\b/.test(
+      t
+    )
+  )
+    return "admin";
   return "event";
 }
 
@@ -335,6 +354,7 @@ function toDBEntity(e: Entity): DBEntity {
     notes: e.notes,
     closed: e.closed,
     bestDay: e.bestDay,
+    needsBooking: e.needsBooking,
   };
 }
 
@@ -383,8 +403,8 @@ export function resolveTripEntities(opts: {
   const conf = (e: ItinEvent): TripSlot => {
     const s = confirmedSlot(e, dayKeyOf, tz);
     const ov = overrideBy.get(e.uid);
-    if (ov?.locked) s.locked = true;
-    if (ov?.note) s.note = ov.note;
+    if (ov?.entityInstanceLocked) s.locked = true;
+    if (ov?.entityInstanceNote) s.note = ov.entityInstanceNote;
     return s;
   };
   const isRemoved = (e: ItinEvent) => overrideBy.get(e.uid)?.removed === true;

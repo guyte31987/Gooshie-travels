@@ -2,29 +2,47 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "./AuthProvider";
-import { subscribeComments, addComment, deleteComment, type Comment } from "@/lib/db";
+import {
+  subscribeComments,
+  subscribeEntityComments,
+  addComment,
+  addEntityComment,
+  deleteComment,
+  type Comment,
+} from "@/lib/db";
 
-/** A lightweight comment thread for one instance (appearance). Photos/video
- * attach here too once the Phase-3 media host is wired in. */
-export function Comments({ instanceId }: { instanceId: string }) {
+/** Comment thread for either an entity instance (a specific visit) or a general entity (the place). */
+export function Comments({
+  instanceId,
+  entityId,
+  label,
+}: {
+  /** Pass for entity-instance-level comments (about this specific visit). */
+  instanceId?: string;
+  /** Pass for entity-level comments (about the place in general). */
+  entityId?: string;
+  /** Optional heading shown above the thread. */
+  label?: string;
+}) {
   const { user, isAdmin } = useAuth();
   const [comments, setComments] = useState<Comment[]>([]);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => subscribeComments(instanceId, setComments), [instanceId]);
+  useEffect(() => {
+    if (instanceId) return subscribeComments(instanceId, setComments);
+    if (entityId) return subscribeEntityComments(entityId, setComments);
+  }, [instanceId, entityId]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!text.trim() || !user) return;
     setBusy(true);
+    const name = user.displayName || user.email || "Someone";
+    const email = (user.email || "").toLowerCase();
     try {
-      await addComment(
-        instanceId,
-        text.trim(),
-        user.displayName || user.email || "Someone",
-        (user.email || "").toLowerCase()
-      );
+      if (instanceId) await addComment(instanceId, text.trim(), name, email);
+      else if (entityId) await addEntityComment(entityId, text.trim(), name, email);
       setText("");
     } finally {
       setBusy(false);
@@ -33,6 +51,11 @@ export function Comments({ instanceId }: { instanceId: string }) {
 
   return (
     <div className="mt-2">
+      {label && (
+        <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+          {label}
+        </p>
+      )}
       {comments.length > 0 && (
         <ul className="mb-2 space-y-1.5">
           {comments.map((c) => {
@@ -56,21 +79,23 @@ export function Comments({ instanceId }: { instanceId: string }) {
           })}
         </ul>
       )}
-      <form onSubmit={submit} className="flex gap-2">
-        <input
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="Add a comment…"
-          className="flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm shadow-sm outline-none focus:border-slate-400"
-        />
-        <button
-          type="submit"
-          disabled={busy || !text.trim()}
-          className="rounded-lg bg-ink px-3 py-1.5 text-sm font-medium text-white hover:bg-ink/90 disabled:opacity-40"
-        >
-          Post
-        </button>
-      </form>
+      {user && (
+        <form onSubmit={submit} className="flex gap-2">
+          <input
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="Add a comment…"
+            className="flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm shadow-sm outline-none focus:border-slate-400"
+          />
+          <button
+            type="submit"
+            disabled={busy || !text.trim()}
+            className="rounded-lg bg-ink px-3 py-1.5 text-sm font-medium text-white hover:bg-ink/90 disabled:opacity-40"
+          >
+            Post
+          </button>
+        </form>
+      )}
       <button
         type="button"
         disabled

@@ -95,7 +95,7 @@ export function TripDataProvider({
   const augmentedDays = useMemo(() => {
     const liveUids = new Set(days.flatMap((d) => d.events.map((e) => e.uid)));
     const orphans = instances.filter(
-      (i) => i.locked && !i.removed && i.dayKey && !liveUids.has(i.id)
+      (i) => i.scheduleLocked && !i.removed && i.dayKey && !liveUids.has(i.id)
     );
     if (!orphans.length) return days;
 
