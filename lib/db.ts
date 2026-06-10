@@ -46,6 +46,8 @@ export type DBEntity = {
   notes?: string;
   closed?: boolean;
   bestDay?: string;
+  /** Default booking requirement — instances can override per-occurrence. */
+  needsBooking?: boolean;
 };
 
 export type StoredAppearance = {
@@ -214,6 +216,12 @@ export type Instance = {
   dayKey?: string;
   startMs?: number;
   time?: string;
+  /** Booking state — null means inherit the entity's needsBooking default. */
+  needsBooking?: boolean | null;
+  booked?: boolean;
+  bookingNote?: string;
+  /** "Book this many days before the trip starts." */
+  bookingOffsetDays?: number;
 };
 
 export const subscribeInstances = (tripId: string, cb: (i: Instance[]) => void) =>

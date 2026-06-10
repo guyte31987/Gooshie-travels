@@ -37,6 +37,8 @@ export type TripSlot = {
   label: string;
   /** Time-of-day, when known (e.g. "6:00 PM"). Shown distinctly from the day. */
   time?: string;
+  /** Epoch ms of the event start — stored in lock snapshot so orphan can survive calendar deletion. */
+  startMs?: number;
   note?: string;
   mismatch?: boolean;
   /** Source calendar event uid, for confirmed slots — lets the itinerary link. */
@@ -59,6 +61,8 @@ export type Entity = {
   notes?: string;
   closed?: boolean;
   bestDay?: string;
+  /** Default booking requirement for this place. Instances can override per-occurrence. */
+  needsBooking?: boolean;
   /** True when derived from a calendar event not yet saved in the Database. */
   transient?: boolean;
   slots: TripSlot[];
@@ -76,6 +80,8 @@ export type ItinEvent = {
   isAllDay: boolean;
   allDayStart?: string;
   allDayEnd?: string;
+  /** True when injected from a locked instance whose calendar event was deleted. */
+  orphaned?: boolean;
 };
 export type ItinDay = { dayKey: string; events: ItinEvent[]; basedIn: ItinEvent[] };
 
@@ -188,7 +194,7 @@ function flatten(days: ItinDay[]): { allEvents: ItinEvent[]; dayKeyOf: Map<strin
 function confirmedSlot(e: ItinEvent, dayKeyOf: Map<string, string>, tz: string): TripSlot {
   const dk = dayKeyOf.get(e.uid)!;
   const time = timeOf(e, tz);
-  return { kind: "confirmed", dayKey: dk, label: slotDayLabel(dk, tz, time), time, uid: e.uid };
+  return { kind: "confirmed", dayKey: dk, label: slotDayLabel(dk, tz, time), time, startMs: e.startMs, uid: e.uid };
 }
 
 /** Merge planned slots onto confirmed ones, flagging genuine disagreements. */
@@ -348,7 +354,7 @@ export function buildSeed(built: Entity[]): { entities: DBEntity[]; items: TripI
 }
 
 function dbToEntity(de: DBEntity): Entity {
-  return { ...de, slots: [] };
+  return { ...de, needsBooking: de.needsBooking, slots: [] };
 }
 
 /**
