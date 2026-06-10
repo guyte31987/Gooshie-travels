@@ -18,6 +18,7 @@ const TYPE_COLOR: Record<EntityType, string> = {
   food: "#dc2626",
   vintage: "#0891b2",
   museum: "#7c3aed",
+  club: "#db2777",
   party: "#db2777",
   sight: "#059669",
   hike: "#65a30d",
