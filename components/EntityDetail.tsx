@@ -116,13 +116,11 @@ function Appearance({
 
   const override = slot.uid ? instanceMap.get(slot.uid) : undefined;
 
-  // Initialise drafts from override once available
-  const [draftsInit, setDraftsInit] = useState(false);
-  if (override && !draftsInit) {
-    setBookingNoteDraft(override.bookingNote ?? "");
-    setBookingOffsetDraft(override.bookingOffsetDays?.toString() ?? "");
-    setDraftsInit(true);
-  }
+  const openBookingForm = () => {
+    setBookingNoteDraft(override?.bookingNote ?? "");
+    setBookingOffsetDraft(override?.bookingOffsetDays?.toString() ?? "");
+    setEditingBooking(true);
+  };
 
   const entityInstanceLocked = slot.locked || override?.entityInstanceLocked;
   const instanceId = slot.uid
@@ -225,7 +223,7 @@ function Appearance({
           {canEdit && slot.uid && (
             <div>
               <button
-                onClick={() => setEditingBooking((v) => !v)}
+                onClick={() => editingBooking ? setEditingBooking(false) : openBookingForm()}
                 className="text-xs text-slate-400 hover:underline"
               >
                 📋 Booking

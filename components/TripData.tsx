@@ -104,7 +104,7 @@ export function TripDataProvider({
       const synthetic: ItinEvent = {
         uid: o.id,
         summary: o.title ?? "(locked event)",
-        description: o.note ?? undefined,
+        description: o.scheduleNote ?? undefined,
         startMs: o.startMs,
         isAllDay: !o.startMs,
         orphaned: true,
