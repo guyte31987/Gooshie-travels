@@ -12,7 +12,8 @@ export type EntityType =
   | "food"
   | "vintage"
   | "museum"
-  | "party"
+  | "club"
+  | "party"   // legacy — kept for existing Firestore docs; displayed under Clubs tab
   | "sight"
   | "hike"
   | "event"
@@ -24,7 +25,7 @@ export const ENTITY_TABS: { type: EntityType; label: string; emoji: string; oper
   { type: "food", label: "Food", emoji: "🍴" },
   { type: "vintage", label: "Vintage", emoji: "👕" },
   { type: "museum", label: "Museums", emoji: "🖼" },
-  { type: "party", label: "Parties", emoji: "🎉" },
+  { type: "club", label: "Clubs", emoji: "🎶" },
   { type: "sight", label: "Sights", emoji: "📸" },
   { type: "hike", label: "Hikes", emoji: "🥾" },
   { type: "event", label: "Events", emoji: "🎫" },
@@ -140,7 +141,7 @@ export function categorizeEvent(e: ItinEvent): EntityType {
       t
     )
   )
-    return "party";
+    return "club";
   if (/\b(hike|trail|falls|mountain|greylock|cascade|kaaterskill|ledge)\b/.test(t)) return "hike";
   if (
     /\b(high line|coney|boardwalk|beach|riis|hersheypark|chocolate world|mermaid parade|seneca|banya|spa|water park|storm king)\b/.test(
@@ -569,6 +570,9 @@ export function indexByEventUid(entities: Entity[]): Map<string, { entity: Entit
 export function groupByType(entities: Entity[]): Record<EntityType, Entity[]> {
   const out = {} as Record<EntityType, Entity[]>;
   for (const tab of ENTITY_TABS) out[tab.type] = [];
-  for (const e of entities) (out[e.type] ||= []).push(e);
+  for (const e of entities) {
+    const bucket = (e.type === "party" ? "club" : e.type) as EntityType;
+    (out[bucket] ||= []).push(e);
+  }
   return out;
 }

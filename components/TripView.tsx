@@ -6,6 +6,7 @@ import Link from "next/link";
 import { AppHeader } from "./AppHeader";
 import { Schedule } from "./Schedule";
 import { PlanningTab } from "./PlanningTab";
+import { TripDatabaseTab } from "./TripDatabaseTab";
 import { TripDataProvider } from "./TripData";
 import { getTrip } from "@/lib/trips";
 
@@ -14,7 +15,7 @@ const TripMap = dynamic(() => import("./TripMap").then((m) => m.TripMap), {
   loading: () => <div className="py-12 text-center text-sm text-slate-400">Loading map…</div>,
 });
 
-type Tab = "itinerary" | "planning" | "map";
+type Tab = "itinerary" | "planning" | "database" | "map";
 
 export function TripView({ tripId }: { tripId: string }) {
   const trip = getTrip(tripId);
@@ -43,6 +44,9 @@ export function TripView({ tripId }: { tripId: string }) {
           <TabBtn active={tab === "planning"} onClick={() => setTab("planning")}>
             Planning
           </TabBtn>
+          <TabBtn active={tab === "database"} onClick={() => setTab("database")}>
+            Trip DB
+          </TabBtn>
           <TabBtn active={tab === "map"} onClick={() => setTab("map")}>
             Map
           </TabBtn>
@@ -51,6 +55,7 @@ export function TripView({ tripId }: { tripId: string }) {
         <main>
           {tab === "itinerary" && <Schedule />}
           {tab === "planning" && <PlanningTab />}
+          {tab === "database" && <TripDatabaseTab />}
           {tab === "map" && <TripMap />}
         </main>
       </div>

@@ -226,7 +226,7 @@ function EntityCard({ e, canEdit, tripId }: { e: Entity; canEdit: boolean; tripI
           </div>
           <div className="mt-1.5 flex flex-wrap gap-1">
             {e.slots.length === 0 ? (
-              <span className="text-xs text-slate-300">not in the plan yet</span>
+              <span className="text-xs text-slate-300">not placed yet</span>
             ) : (
               e.slots.map((s, i) => <SlotBadge key={i} s={s} />)
             )}
@@ -263,10 +263,17 @@ function SlotBadge({ s }: { s: TripSlot }) {
     planned: "bg-indigo-50 text-indigo-700",
     planB: "bg-amber-50 text-amber-700",
   };
-  const prefix = s.kind === "confirmed" ? "✅" : s.kind === "planB" ? "🅱" : "📌";
+  let label: string;
+  if (s.kind === "confirmed") {
+    label = `✅ In Schedule · ${s.label}`;
+  } else if (s.kind === "planB") {
+    label = s.dayKey ? `Plan B · ${s.label}` : "Plan B";
+  } else {
+    label = s.dayKey ? `Alt · ${s.label}` : "General Alternative";
+  }
   return (
     <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${styles[s.kind]}`}>
-      {prefix} {s.label}
+      {label}
     </span>
   );
 }

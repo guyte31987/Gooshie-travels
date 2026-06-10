@@ -12,7 +12,7 @@ import {
   subscribeEntities,
   subscribeTripItems,
   subscribeInstances,
-  saveEntity,
+  saveEntityIfNew,
   saveTripItem,
   type DBEntity,
   type TripItem,
@@ -121,7 +121,7 @@ export function TripDataProvider({
         notes: cleanCalendarDescription(e.notes),
         calendarSource: true,
       };
-      saveEntity(dbEntity).then(() =>
+      saveEntityIfNew(dbEntity).then(() =>
         saveTripItem(tripId, { entityId: dbId, added: true })
       );
     }

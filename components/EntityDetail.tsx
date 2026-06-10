@@ -73,7 +73,7 @@ export function EntityDetail({
         {/* Appearances in this trip */}
         <div className="mt-4 border-t border-slate-100 pt-3">
           <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
-            Appears in
+            This trip
           </h3>
           {entity.slots.length === 0 ? (
             <p className="text-sm text-slate-400">Not scheduled or planned for any trip yet.</p>
@@ -154,7 +154,7 @@ function Appearance({
         ? "bg-amber-50 text-amber-700"
         : "bg-indigo-50 text-indigo-700";
   const word =
-    slot.kind === "confirmed" ? "Confirmed" : slot.kind === "planB" ? "Plan B" : "Planned";
+    slot.kind === "confirmed" ? "In Schedule" : slot.kind === "planB" ? "Plan B" : "Alternative";
 
   return (
     <li className="border-b border-slate-100 px-3 py-2 last:border-b-0">

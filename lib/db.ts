@@ -92,6 +92,16 @@ export async function saveEntity(e: DBEntity): Promise<void> {
   await setDoc(doc(requireDb(), "entities", e.id), { ...e, updatedAt: serverTimestamp() }, { merge: true });
 }
 
+/** Saves an entity only if it doesn't already exist — protects manual edits from calendar re-sync. */
+export async function saveEntityIfNew(e: DBEntity): Promise<void> {
+  if (!db) return;
+  const ref = doc(db, "entities", e.id);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) {
+    await setDoc(ref, { ...e, updatedAt: serverTimestamp() });
+  }
+}
+
 export async function deleteEntity(id: string): Promise<void> {
   await deleteDoc(doc(requireDb(), "entities", id));
 }
