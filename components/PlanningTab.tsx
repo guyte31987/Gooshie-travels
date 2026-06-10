@@ -19,6 +19,13 @@ import { exportEntities } from "@/lib/export";
 
 type Tab = EntityType | "bookings";
 
+function slotPriority(e: Entity): number {
+  if (e.slots.some((s) => s.kind === "confirmed")) return 0;
+  if (e.slots.some((s) => s.kind === "planB")) return 1;
+  if (e.slots.some((s) => s.kind === "planned")) return 2;
+  return 3;
+}
+
 export function PlanningTab() {
   const { entities, loading, seeded, tripId } = useTripData();
   const { isAdmin, role } = useAuth();
@@ -55,7 +62,7 @@ export function PlanningTab() {
 
       {loading && tab !== "bookings" ? (
         <p className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-400">
-          Loading entities…
+          Loading…
         </p>
       ) : tab === "bookings" ? (
         <BookingsList />
@@ -105,16 +112,19 @@ function EntityList({
   const [generalArea, setGeneralArea] = useState("");
   const [scheduledOnly, setScheduledOnly] = useState(false);
 
-  const filtered = entities.filter((e) => {
-    if (generalArea && e.generalArea !== generalArea) return false;
-    if (area && e.area !== area) return false;
-    if (scheduledOnly && !e.slots.some((s) => s.kind === "confirmed")) return false;
-    if (q) {
-      const hay = `${e.name} ${e.area ?? ""} ${e.notes ?? ""}`.toLowerCase();
-      if (!hay.includes(q.toLowerCase())) return false;
-    }
-    return true;
-  });
+  const filtered = useMemo(() => {
+    const base = entities.filter((e) => {
+      if (generalArea && e.generalArea !== generalArea) return false;
+      if (area && e.area !== area) return false;
+      if (scheduledOnly && !e.slots.some((s) => s.kind === "confirmed")) return false;
+      if (q) {
+        const hay = `${e.name} ${e.area ?? ""} ${e.notes ?? ""}`.toLowerCase();
+        if (!hay.includes(q.toLowerCase())) return false;
+      }
+      return true;
+    });
+    return [...base].sort((a, b) => slotPriority(a) - slotPriority(b));
+  }, [entities, generalArea, area, scheduledOnly, q]);
 
   return (
     <div>
@@ -133,9 +143,7 @@ function EntityList({
           >
             <option value="">All regions</option>
             {generalAreas.filter(Boolean).map((a) => (
-              <option key={a} value={a}>
-                {a}
-              </option>
+              <option key={a} value={a}>{a}</option>
             ))}
           </select>
         )}
@@ -147,9 +155,7 @@ function EntityList({
           >
             <option value="">All areas</option>
             {areas.filter(Boolean).map((a) => (
-              <option key={a} value={a}>
-                {a}
-              </option>
+              <option key={a} value={a}>{a}</option>
             ))}
           </select>
         )}
@@ -164,16 +170,17 @@ function EntityList({
       </div>
 
       <p className="mb-2 text-xs text-slate-400">
-        Showing {filtered.length} of {entities.length}
+        {filtered.length} of {entities.length}
       </p>
+
       {filtered.length === 0 ? (
         <p className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-400">
           Nothing here yet.
         </p>
       ) : (
-        <ul className="space-y-2">
+        <ul className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">
           {filtered.map((e) => (
-            <EntityCard key={e.id} e={e} canEdit={canEdit} tripId={tripId} />
+            <EntityRow key={e.id} e={e} canEdit={canEdit} tripId={tripId} />
           ))}
         </ul>
       )}
@@ -183,16 +190,13 @@ function EntityList({
           <summary className="cursor-pointer text-xs font-medium text-slate-400">
             Removed from this trip ({removedEntities.length})
           </summary>
-          <ul className="mt-2 space-y-1">
+          <ul className="mt-2 divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">
             {removedEntities.map((d) => (
-              <li
-                key={d.id}
-                className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm"
-              >
+              <li key={d.id} className="flex items-center justify-between px-4 py-2.5 text-sm">
                 <span className="text-slate-500">{d.name}</span>
                 <button
                   onClick={() => saveTripItem(tripId, { entityId: d.id, removed: false, added: false })}
-                  className="rounded border border-slate-300 px-2 py-0.5 text-xs font-medium text-slate-600 hover:bg-white"
+                  className="rounded border border-slate-300 px-2 py-0.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
                 >
                   Add back
                 </button>
@@ -205,28 +209,30 @@ function EntityList({
   );
 }
 
-function EntityCard({ e, canEdit, tripId }: { e: Entity; canEdit: boolean; tripId: string }) {
+function EntityRow({ e, canEdit, tripId }: { e: Entity; canEdit: boolean; tripId: string }) {
   const { tripName } = useTripData();
   const [showDetail, setShowDetail] = useState(false);
+
   return (
-    <li className="rounded-xl border border-slate-200 bg-white shadow-sm">
-      <div className="flex items-start gap-2 p-4">
+    <li>
+      <div className="flex items-start gap-2 px-4 py-3">
         <button onClick={() => setShowDetail(true)} className="min-w-0 flex-1 text-left">
-          <div className="flex flex-wrap items-center gap-2">
-            <h3 className="font-medium">{e.name}</h3>
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+            <span className="font-medium text-sm">{e.name}</span>
             {e.closed && (
-              <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[11px] font-semibold text-rose-700">
+              <span className="rounded-full bg-rose-100 px-1.5 py-0.5 text-[10px] font-semibold text-rose-700">
                 CLOSED
               </span>
             )}
+            {(e.area || e.price) && (
+              <span className="text-xs text-slate-400">
+                {[e.area, e.price].filter(Boolean).join(" · ")}
+              </span>
+            )}
           </div>
-          <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
-            {e.area && <span>{e.area}</span>}
-            {e.price && <span className="font-medium">{e.price}</span>}
-          </div>
-          <div className="mt-1.5 flex flex-wrap gap-1">
+          <div className="mt-1 flex flex-wrap gap-1">
             {e.slots.length === 0 ? (
-              <span className="text-xs text-slate-300">not placed yet</span>
+              <span className="text-[11px] text-slate-300">not placed yet</span>
             ) : (
               e.slots.map((s, i) => <SlotBadge key={i} s={s} />)
             )}
@@ -236,13 +242,12 @@ function EntityCard({ e, canEdit, tripId }: { e: Entity; canEdit: boolean; tripI
           <button
             onClick={() => toggleMembership(tripId, e, true)}
             title="Remove from trip"
-            className="shrink-0 rounded border border-slate-200 px-2 py-1 text-xs text-slate-400 hover:border-rose-200 hover:text-rose-600"
+            className="shrink-0 mt-0.5 text-slate-300 hover:text-rose-500 text-sm leading-none px-1"
           >
             ✕
           </button>
         )}
       </div>
-
       {showDetail && (
         <EntityDetail entity={e} tripId={tripId} tripName={tripName} onClose={() => setShowDetail(false)} />
       )}
@@ -311,13 +316,13 @@ function BookingsList() {
           ))}
         </select>
       </div>
-      <ul className="space-y-2">
+      <ul className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">
         {filtered.map((b, i) => {
           const done = /done|booked/i.test(b.status);
           return (
-            <li key={i} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <li key={i} className="px-4 py-3">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <h3 className="font-medium">{b.task}</h3>
+                <span className="font-medium text-sm">{b.task}</span>
                 <span
                   className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
                     done ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"
@@ -326,8 +331,8 @@ function BookingsList() {
                   {b.status || "—"}
                 </span>
               </div>
-              {b.notes && <p className="mt-1.5 text-sm text-slate-600">{b.notes}</p>}
-              <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-400">
+              {b.notes && <p className="mt-1 text-xs text-slate-500">{b.notes}</p>}
+              <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-slate-400">
                 {b.priority && <span className="font-medium text-slate-500">{b.priority}</span>}
                 {b.deadline && <span>⏰ {b.deadline}</span>}
                 {b.cost && <span>💵 {b.cost}</span>}
