@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   buildEntities,
   resolveTripEntities,
@@ -12,10 +12,13 @@ import {
   subscribeEntities,
   subscribeTripItems,
   subscribeInstances,
+  saveEntity,
+  saveTripItem,
   type DBEntity,
   type TripItem,
   type Instance,
 } from "@/lib/db";
+import { slugId } from "@/lib/slug";
 import { firebaseConfigured } from "@/lib/firebase";
 
 type TripDataValue = {
@@ -80,13 +83,47 @@ export function TripDataProvider({
   }, [tripId]);
 
   const seeded = dbEntities.length > 0;
-  const entities = seeded
-    ? resolveTripEntities({ dbEntities, items, days, tz, tripAreas, instances })
-    : buildEntities(days, tz);
-  const instanceMap = new Map(instances.map((i) => [i.id, i]));
+  const entities = useMemo(
+    () =>
+      seeded
+        ? resolveTripEntities({ dbEntities, items, days, tz, tripAreas, instances })
+        : buildEntities(days, tz),
+    [seeded, dbEntities, items, days, tz, tripAreas, instances]
+  );
+  const instanceMap = useMemo(() => new Map(instances.map((i) => [i.id, i])), [instances]);
 
-  const removedIds = new Set(items.filter((i) => i.removed && !i.added).map((i) => i.entityId));
-  const removedEntities = dbEntities.filter((d) => removedIds.has(d.id));
+  const removedIds = useMemo(
+    () => new Set(items.filter((i) => i.removed && !i.added).map((i) => i.entityId)),
+    [items]
+  );
+  const removedEntities = useMemo(
+    () => dbEntities.filter((d) => removedIds.has(d.id)),
+    [dbEntities, removedIds]
+  );
+
+  // Auto-save any calendar events that have no matching database entity yet.
+  const autoSavedRef = useRef(new Set<string>());
+  useEffect(() => {
+    if (!seeded) return;
+    const transients = entities.filter((e) => e.transient);
+    for (const e of transients) {
+      const dbId = slugId(e.type, e.name);
+      if (autoSavedRef.current.has(dbId)) continue;
+      autoSavedRef.current.add(dbId);
+      const dbEntity: DBEntity = {
+        id: dbId,
+        name: e.name,
+        type: e.type,
+        generalArea: e.generalArea,
+        area: e.area,
+        address: e.address,
+        notes: e.notes,
+      };
+      saveEntity(dbEntity).then(() =>
+        saveTripItem(tripId, { entityId: dbId, added: true })
+      );
+    }
+  }, [entities, seeded, tripId]);
 
   const archivedInstances = useMemo(() => instances.filter((i) => i.removed), [instances]);
 
