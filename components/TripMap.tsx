@@ -32,6 +32,11 @@ const TYPE_COLOR: Record<EntityType, string> = {
 type Point = { id: string; pos: LatLng; e: Entity };
 
 function pointFor(e: Entity): Point | null {
+  // Prefer exact coordinates (from geocoding / Gemini enrichment); otherwise
+  // fall back to the approximate neighborhood centroid.
+  if (typeof e.lat === "number" && typeof e.lng === "number") {
+    return { id: e.id, pos: { lat: e.lat, lng: e.lng }, e };
+  }
   const pos = resolvePoint(e.address, e.id) || resolvePoint(e.area, e.id) || resolvePoint(e.name, e.id);
   return pos ? { id: e.id, pos, e } : null;
 }

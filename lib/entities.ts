@@ -64,6 +64,10 @@ export type Entity = {
   generalArea?: string;
   area?: string;
   address?: string;
+  /** Street-level coordinates. When present the map uses them instead of a neighborhood centroid. */
+  lat?: number;
+  lng?: number;
+  website?: string;
   hours?: string;
   price?: string;
   source?: string;
@@ -422,6 +426,9 @@ function toDBEntity(e: Entity): DBEntity {
     generalArea: e.generalArea,
     area: e.area,
     address: e.address,
+    lat: e.lat,
+    lng: e.lng,
+    website: e.website,
     hours: e.hours,
     price: e.price,
     source: e.source,
@@ -582,9 +589,12 @@ export function buildSyncReport(entities: Entity[]): SyncIssue[] {
       });
     }
 
-    // Mirror the map's resolution order: address → area → name.
+    // Mirror the map's resolution order: exact coords → address → area → name.
     const mappable =
-      resolvePoint(e.address, e.id) || resolvePoint(e.area, e.id) || resolvePoint(e.name, e.id);
+      (typeof e.lat === "number" && typeof e.lng === "number") ||
+      resolvePoint(e.address, e.id) ||
+      resolvePoint(e.area, e.id) ||
+      resolvePoint(e.name, e.id);
     if (isConfirmed && !mappable) {
       issues.push({
         severity: "warning",

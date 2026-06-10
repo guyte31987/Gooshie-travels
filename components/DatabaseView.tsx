@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AppHeader } from "./AppHeader";
 import { EntityDetail } from "./EntityDetail";
 import { EntityForm } from "./EntityForm";
+import { ImportDialog } from "./ImportDialog";
 import { useAuth } from "./AuthProvider";
 import { ENTITY_TABS, OPERATIONAL_TYPES, buildEntities, buildSeed, type ItinDay } from "@/lib/entities";
 import {
@@ -26,6 +27,7 @@ export function DatabaseView() {
   const [type, setType] = useState("");
   const [viewing, setViewing] = useState<DBEntity | null>(null);
   const [editing, setEditing] = useState<DBEntity | null | "new">(null);
+  const [importing, setImporting] = useState(false);
   const [showOperational, setShowOperational] = useState(false);
   const [seeding, setSeeding] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -173,6 +175,13 @@ export function DatabaseView() {
                 {f === "csv" ? "CSV" : f === "excel" ? "Excel" : "Word"}
               </button>
             ))}
+            <span className="ml-2 border-l border-slate-200 pl-3">Enrich:</span>
+            <button
+              onClick={() => setImporting(true)}
+              className="rounded border border-indigo-300 px-2 py-0.5 font-medium text-indigo-600 hover:bg-indigo-50"
+            >
+              Import CSV
+            </button>
           </div>
 
           <p className="mb-2 text-xs text-slate-400">
@@ -245,6 +254,8 @@ export function DatabaseView() {
           onClose={() => setEditing(null)}
         />
       )}
+
+      {importing && <ImportDialog entities={entities} onClose={() => setImporting(false)} />}
     </div>
   );
 }

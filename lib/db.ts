@@ -39,6 +39,10 @@ export type DBEntity = {
   generalArea?: string;
   area?: string;
   address?: string;
+  /** Street-level coordinates (from geocoding / Gemini enrichment). Falls back to neighborhood centroid when absent. */
+  lat?: number;
+  lng?: number;
+  website?: string;
   hours?: string;
   price?: string;
   source?: string;

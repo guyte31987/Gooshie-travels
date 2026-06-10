@@ -54,13 +54,18 @@ export function exportWord<T>(data: T[], cols: Column<T>[], filename: string, ti
   download(new Blob([html], { type: "application/msword" }), `${filename}.doc`);
 }
 
-// Standard column set for exporting entities.
+// Standard column set for exporting entities. `id` is first so the CSV can be
+// enriched (e.g. by Gemini) and re-imported, matched back by this stable key.
 export const ENTITY_COLUMNS: Column<Entity>[] = [
+  { header: "id", get: (e) => e.id },
   { header: "Name", get: (e) => e.name },
   { header: "Type", get: (e) => e.type },
   { header: "Region", get: (e) => e.generalArea ?? "" },
   { header: "Area", get: (e) => e.area ?? "" },
   { header: "Address", get: (e) => e.address ?? "" },
+  { header: "Lat", get: (e) => (typeof e.lat === "number" ? String(e.lat) : "") },
+  { header: "Lng", get: (e) => (typeof e.lng === "number" ? String(e.lng) : "") },
+  { header: "Website", get: (e) => e.website ?? "" },
   { header: "Hours", get: (e) => e.hours ?? "" },
   { header: "Price", get: (e) => e.price ?? "" },
   { header: "Booking", get: (e) => e.booking ?? "" },
