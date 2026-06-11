@@ -20,6 +20,8 @@ import {
   subscribeEntities,
   deleteEntity,
   saveEntity,
+  bulkUpdateEntities,
+  bulkDeleteEntities,
   seedDatabase,
   seedEntitiesIfNew,
   getAreas,
@@ -44,6 +46,9 @@ export function DatabaseView() {
   const [backfilling, setBackfilling] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   useEffect(() => {
     const unsub = subscribeEntities((e) => {
@@ -115,6 +120,56 @@ export function DatabaseView() {
     }
   };
 
+  // --- batch selection -------------------------------------------------------
+
+  const toggleSel = (id: string) =>
+    setSelected((s) => {
+      const n = new Set(s);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+  const exitSelect = () => {
+    setSelectMode(false);
+    setSelected(new Set());
+  };
+  const allFilteredSelected = filtered.length > 0 && filtered.every((e) => selected.has(e.id));
+  const toggleAllFiltered = () =>
+    setSelected(allFilteredSelected ? new Set() : new Set(filtered.map((e) => e.id)));
+
+  const bulkPark = async (t: EntityType) => {
+    if (!selected.size) return;
+    const n = selected.size;
+    setBulkBusy(true);
+    setError(null);
+    try {
+      await bulkUpdateEntities([...selected], { type: t });
+      setNotice(`Parked ${n} ${n === 1 ? "entity" : "entities"} as ${t}.`);
+      exitSelect();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Bulk update failed.");
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const bulkDelete = async () => {
+    if (!selected.size) return;
+    const n = selected.size;
+    if (!confirm(`Delete ${n} ${n === 1 ? "entity" : "entities"} from the database? This cannot be undone.`)) return;
+    setBulkBusy(true);
+    setError(null);
+    try {
+      await bulkDeleteEntities([...selected]);
+      setNotice(`Deleted ${n} ${n === 1 ? "entity" : "entities"}.`);
+      exitSelect();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Bulk delete failed.");
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
   return (
     <div className="mx-auto min-h-screen max-w-2xl px-4 pb-16">
       <AppHeader title="Database" subtitle="Master catalog of all entities" backHref="/" />
@@ -167,6 +222,16 @@ export function DatabaseView() {
               className="rounded-lg bg-ink px-3 py-2 text-sm font-medium text-white hover:bg-ink/90"
             >
               + Add
+            </button>
+            <button
+              onClick={() => (selectMode ? exitSelect() : setSelectMode(true))}
+              className={`rounded-lg border px-3 py-2 text-sm font-medium ${
+                selectMode
+                  ? "border-ink bg-ink text-white"
+                  : "border-slate-300 text-slate-600 hover:bg-slate-50"
+              }`}
+            >
+              {selectMode ? "Done" : "Select"}
             </button>
             {isAdmin && (
               <button
@@ -232,14 +297,34 @@ export function DatabaseView() {
             </button>
           </div>
 
-          <p className="mb-2 text-xs text-slate-400">
-            {filtered.length} of {entities.length} entities
-          </p>
+          <div className="mb-2 flex items-center justify-between text-xs text-slate-400">
+            <span>
+              {filtered.length} of {entities.length} entities
+            </span>
+            {selectMode && filtered.length > 0 && (
+              <button onClick={toggleAllFiltered} className="font-medium text-ink hover:underline">
+                {allFilteredSelected ? "Clear all" : `Select all ${filtered.length}`}
+              </button>
+            )}
+          </div>
           <ul className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">
             {filtered.map((e) => (
-              <li key={e.id} className="flex items-start gap-2 px-4 py-3">
+              <li
+                key={e.id}
+                className={`flex items-start gap-2 px-4 py-3 ${
+                  selectMode && selected.has(e.id) ? "bg-indigo-50" : ""
+                }`}
+              >
+                {selectMode && (
+                  <input
+                    type="checkbox"
+                    checked={selected.has(e.id)}
+                    onChange={() => toggleSel(e.id)}
+                    className="mt-1 h-4 w-4 shrink-0 accent-ink"
+                  />
+                )}
                 <button
-                  onClick={() => setViewing(e)}
+                  onClick={() => (selectMode ? toggleSel(e.id) : setViewing(e))}
                   className="min-w-0 flex-1 text-left"
                 >
                   <div className="flex flex-wrap items-center gap-2">
@@ -266,29 +351,67 @@ export function DatabaseView() {
                     {e.hours && <span>🕑 {e.hours}</span>}
                   </div>
                 </button>
-                <div className="flex shrink-0 gap-1 mt-0.5">
-                  {isAdmin && !PARKED_TYPES.has(e.type) && (
-                    <ParkSelect onPark={(t) => saveEntity({ ...e, type: t })} />
-                  )}
-                  <button
-                    onClick={() => setEditing(e)}
-                    className="rounded border border-slate-300 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (confirm(`Delete ${e.name} from the database?`)) deleteEntity(e.id);
-                    }}
-                    className="rounded border border-rose-200 px-2 py-1 text-xs font-medium text-rose-600 hover:bg-rose-50"
-                  >
-                    Del
-                  </button>
-                </div>
+                {!selectMode && (
+                  <div className="flex shrink-0 gap-1 mt-0.5">
+                    {isAdmin && !PARKED_TYPES.has(e.type) && (
+                      <ParkSelect onPark={(t) => saveEntity({ ...e, type: t })} />
+                    )}
+                    <button
+                      onClick={() => setEditing(e)}
+                      className="rounded border border-slate-300 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (confirm(`Delete ${e.name} from the database?`)) deleteEntity(e.id);
+                      }}
+                      className="rounded border border-rose-200 px-2 py-1 text-xs font-medium text-rose-600 hover:bg-rose-50"
+                    >
+                      Del
+                    </button>
+                  </div>
+                )}
               </li>
             ))}
           </ul>
         </>
+      )}
+
+      {/* Batch action bar — sticky at the bottom, thumb-friendly on mobile */}
+      {selectMode && selected.size > 0 && (
+        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white/95 px-4 py-3 shadow-[0_-2px_10px_rgba(0,0,0,0.06)] backdrop-blur">
+          <div className="mx-auto flex max-w-2xl flex-wrap items-center gap-2">
+            <span className="text-sm font-medium text-slate-700">{selected.size} selected</span>
+            {isAdmin && (
+              <select
+                value=""
+                onChange={(e) => { if (e.target.value) bulkPark(e.target.value as EntityType); }}
+                disabled={bulkBusy}
+                title="File the selected entities into a logistics/misc bucket"
+                className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+              >
+                <option value="">Park…</option>
+                <option value="travel">✈️ Travel</option>
+                <option value="admin">📋 Admin</option>
+                <option value="uncategorised">❓ Misc</option>
+              </select>
+            )}
+            <button
+              onClick={bulkDelete}
+              disabled={bulkBusy}
+              className="rounded-lg border border-rose-200 bg-white px-3 py-1.5 text-sm font-medium text-rose-600 hover:bg-rose-50 disabled:opacity-50"
+            >
+              {bulkBusy ? "Working…" : "Delete"}
+            </button>
+            <button
+              onClick={exitSelect}
+              className="ml-auto rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-500 hover:bg-slate-50"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
       )}
 
       {viewing && (

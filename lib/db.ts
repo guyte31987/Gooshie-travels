@@ -22,7 +22,7 @@ import {
   type Firestore,
 } from "firebase/firestore";
 import { db } from "./firebase";
-import type { EntityType } from "./entities";
+import type { EntityType, ItinDay } from "./entities";
 import { DEFAULT_GENERAL_AREAS } from "./areas";
 
 export type Trip = {
@@ -112,6 +112,27 @@ export async function deleteEntity(id: string): Promise<void> {
   await deleteDoc(doc(requireDb(), "entities", id));
 }
 
+/** Bulk-set a single field on many entities (e.g. parking a selection into a bucket type). */
+export async function bulkUpdateEntities(ids: string[], patch: Partial<DBEntity>): Promise<void> {
+  const database = requireDb();
+  for (let i = 0; i < ids.length; i += 400) {
+    const batch = writeBatch(database);
+    for (const id of ids.slice(i, i + 400))
+      batch.set(doc(database, "entities", id), { ...patch, updatedAt: serverTimestamp() }, { merge: true });
+    await batch.commit();
+  }
+}
+
+/** Bulk-delete many entities in one go (batched to respect Firestore's 500-op limit). */
+export async function bulkDeleteEntities(ids: string[]): Promise<void> {
+  const database = requireDb();
+  for (let i = 0; i < ids.length; i += 400) {
+    const batch = writeBatch(database);
+    for (const id of ids.slice(i, i + 400)) batch.delete(doc(database, "entities", id));
+    await batch.commit();
+  }
+}
+
 /**
  * Create-if-new for a batch of entities. Used to back-fill curated seed lists
  * (clubs, museums, hikes…) into an already-seeded Database without overwriting
@@ -178,6 +199,22 @@ export async function getItineraryCache(tripId: string): Promise<ItineraryCache 
 
 export async function saveItineraryCache(tripId: string, cache: ItineraryCache): Promise<void> {
   await setDoc(doc(requireDb(), "tripItineraries", tripId), cache);
+}
+
+// --- calendar baseline (for the "what changed since last sync" report) ------
+// A snapshot of the calendar as the admin last acknowledged it. Re-syncing diffs
+// the fresh pull against this; "Mark as seen" overwrites it with the current pull.
+
+export type CalendarBaseline = { days: ItinDay[]; syncedAt: string };
+
+export async function getCalendarBaseline(): Promise<CalendarBaseline | null> {
+  if (!db) return null;
+  const snap = await getDoc(doc(db, "meta", "calendarBaseline"));
+  return snap.exists() ? (snap.data() as CalendarBaseline) : null;
+}
+
+export async function saveCalendarBaseline(b: CalendarBaseline): Promise<void> {
+  await setDoc(doc(requireDb(), "meta", "calendarBaseline"), b);
 }
 
 // --- managed general areas --------------------------------------------------

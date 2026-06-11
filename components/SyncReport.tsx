@@ -16,10 +16,14 @@ import {
   saveTripItem,
   subscribeDismissedIssues,
   setDismissedIssues,
+  getCalendarBaseline,
+  saveCalendarBaseline,
+  type CalendarBaseline,
   type DBEntity,
   type TripItem,
 } from "@/lib/db";
 import { buildSyncDiff, cleanCalendarDescription, type SyncCalEvent, type SyncItem } from "@/lib/sync";
+import { diffCalendars } from "@/lib/calendar-diff";
 import { suggestGeneralArea } from "@/lib/areas";
 import { slugId } from "@/lib/slug";
 import { TRIPS } from "@/lib/trips";
@@ -42,6 +46,8 @@ export function SyncReport() {
   const [eventCount, setEventCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [dismissed, setDismissed] = useState<string[]>([]);
+  const [baseline, setBaseline] = useState<CalendarBaseline | null>(null);
+  const [markingSeen, setMarkingSeen] = useState(false);
   const [processed, setProcessed] = useState<Map<string, string>>(new Map());
   const [saving, setSaving] = useState<Set<string>>(new Set());
 
@@ -57,6 +63,7 @@ export function SyncReport() {
     const u1 = subscribeEntities(setDbEntities);
     const u2 = subscribeTripItems(TRIP.id, setItems);
     const u3 = subscribeDismissedIssues(setDismissed);
+    getCalendarBaseline().then(setBaseline).catch(() => {});
     return () => { u1(); u2(); u3(); };
   }, []);
 
@@ -85,6 +92,23 @@ export function SyncReport() {
       : [],
     [snapshot]
   );
+
+  const calendarChanges = useMemo(() => {
+    if (!snapshot || !baseline) return [];
+    return diffCalendars(baseline.days, snapshot.days, snapshot.tz);
+  }, [snapshot, baseline]);
+
+  const markSeen = async () => {
+    if (!snapshot) return;
+    setMarkingSeen(true);
+    try {
+      const next: CalendarBaseline = { days: snapshot.days, syncedAt: syncedAt ?? new Date().toISOString() };
+      await saveCalendarBaseline(next);
+      setBaseline(next);
+    } finally {
+      setMarkingSeen(false);
+    }
+  };
 
   const planIssues = useMemo(() => {
     if (!snapshot) return [];
@@ -223,6 +247,60 @@ export function SyncReport() {
 
       {loading && !snapshot && (
         <p className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-400">Building sync report…</p>
+      )}
+
+      {/* CALENDAR CHANGES SINCE LAST SYNC */}
+      {snapshot && (
+        <Section
+          title={baseline ? `Calendar changes since last sync (${calendarChanges.length})` : "Calendar changes"}
+          tone="indigo"
+          action={
+            <button
+              onClick={markSeen}
+              disabled={markingSeen}
+              className="rounded-lg bg-indigo-600 px-3 py-1 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+            >
+              {markingSeen ? "Saving…" : baseline ? "Mark all as seen" : "Set baseline"}
+            </button>
+          }
+        >
+          {!baseline ? (
+            <p className="text-xs text-slate-500">
+              No baseline yet. Click <strong>Set baseline</strong> to remember the calendar as it is now —
+              future re-syncs will then show exactly what changed (added, removed, moved, edited).
+            </p>
+          ) : calendarChanges.length === 0 ? (
+            <p className="text-xs text-slate-400">
+              No calendar changes since {new Date(baseline.syncedAt).toLocaleString()}.
+            </p>
+          ) : (
+            <ul className="space-y-1.5">
+              {calendarChanges.map((c) => (
+                <li
+                  key={`${c.kind}:${c.uid}`}
+                  className="rounded-lg border border-slate-200 bg-white p-2.5 text-sm"
+                >
+                  <div className="flex flex-wrap items-center gap-2">
+                    <ChangeBadge kind={c.kind} />
+                    <span className="font-medium">{c.summary}</span>
+                    <span className="text-xs text-slate-400">{c.dayKey}</span>
+                  </div>
+                  {c.kind === "changed" && (
+                    <ul className="mt-1 space-y-0.5 pl-1 text-xs text-slate-500">
+                      {c.fields.map((f) => (
+                        <li key={f.label}>
+                          <span className="font-medium text-slate-600">{f.label}:</span>{" "}
+                          <span className="text-rose-500 line-through">{f.from}</span> →{" "}
+                          <span className="text-emerald-600">{f.to}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </Section>
       )}
 
       {/* NEW FROM CALENDAR */}
@@ -526,6 +604,7 @@ export function SyncReport() {
 // --- sub-components ----------------------------------------------------------
 
 const TONE_STYLES: Record<string, string> = {
+  indigo: "border-indigo-200 bg-indigo-50",
   sky: "border-sky-200 bg-sky-50",
   amber: "border-amber-200 bg-amber-50",
   violet: "border-violet-200 bg-violet-50",
@@ -553,6 +632,16 @@ function Section({
       {children}
     </section>
   );
+}
+
+function ChangeBadge({ kind }: { kind: "added" | "removed" | "changed" }) {
+  const map = {
+    added: { label: "Added", cls: "bg-emerald-100 text-emerald-700" },
+    removed: { label: "Removed", cls: "bg-rose-100 text-rose-700" },
+    changed: { label: "Changed", cls: "bg-amber-100 text-amber-700" },
+  } as const;
+  const { label, cls } = map[kind];
+  return <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${cls}`}>{label}</span>;
 }
 
 function TypeSelect({ value, onChange }: { value: EntityType; onChange: (t: EntityType) => void }) {
