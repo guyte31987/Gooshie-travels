@@ -1,7 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import type { DBEntity } from "@/lib/db";
+import { useEffect, useMemo, useState } from "react";
+import {
+  getImportLog,
+  saveImportLog,
+  type DBEntity,
+  type ImportLog,
+} from "@/lib/db";
 import { parseCsv, planImport, applyImport, type ImportPreview } from "@/lib/import";
 
 export function ImportDialog({
@@ -13,7 +18,13 @@ export function ImportDialog({
 }) {
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
-  const [done, setDone] = useState<number | null>(null);
+  const [done, setDone] = useState<ImportLog | null>(null);
+  const [lastLog, setLastLog] = useState<ImportLog | null>(null);
+
+  // Surface the previous import so the result is reviewable after the dialog closed.
+  useEffect(() => {
+    getImportLog().then(setLastLog).catch(() => {});
+  }, []);
 
   const preview: ImportPreview | null = useMemo(() => {
     if (!text.trim()) return null;
@@ -35,7 +46,17 @@ export function ImportDialog({
     setBusy(true);
     try {
       await applyImport(preview.patches);
-      setDone(preview.patches.length);
+      const log: ImportLog = {
+        at: new Date().toISOString(),
+        updated: preview.patches.length,
+        noChange: preview.noChange,
+        unmatched: preview.unmatched.length,
+        skippedNoId: preview.skipped,
+        flagged: preview.flagged.slice(0, 100).map((f) => ({ name: f.name, field: f.field, value: f.value })),
+        samples: preview.patches.slice(0, 100).map((p) => ({ name: p.name, fields: p.changes.map((c) => c.field) })),
+      };
+      await saveImportLog(log);
+      setDone(log);
     } finally {
       setBusy(false);
     }
@@ -54,8 +75,16 @@ export function ImportDialog({
         {done !== null ? (
           <div className="space-y-4">
             <div className="rounded-lg bg-emerald-50 p-4 text-sm text-emerald-800">
-              ✅ Updated {done} {done === 1 ? "entity" : "entities"}.
+              ✅ Updated {done.updated} {done.updated === 1 ? "entity" : "entities"}.
+              {done.noChange > 0 && <span className="text-emerald-600"> · {done.noChange} unchanged</span>}
             </div>
+            {done.flagged.length > 0 && <FlaggedBlock flagged={done.flagged} />}
+            {done.unmatched > 0 && (
+              <p className="text-xs text-amber-700">
+                {done.unmatched} CSV {done.unmatched === 1 ? "row had an id" : "rows had ids"} not found in the
+                database (ignored).
+              </p>
+            )}
             <button
               onClick={onClose}
               className="w-full rounded-lg bg-ink px-4 py-2 text-sm font-medium text-white hover:bg-ink/90"
@@ -70,6 +99,22 @@ export function ImportDialog({
               <code className="rounded bg-slate-100 px-1">id</code> column. Geo, address, hours,
               price, website and booking are overwritten; notes are only filled when empty.
             </p>
+
+            {/* Previous import — reviewable history */}
+            {lastLog && !text.trim() && (
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs">
+                <p className="font-medium text-slate-600">
+                  Last import · {new Date(lastLog.at).toLocaleString()}
+                </p>
+                <p className="mt-0.5 text-slate-500">
+                  {lastLog.updated} updated · {lastLog.noChange} unchanged
+                  {lastLog.unmatched > 0 && ` · ${lastLog.unmatched} unmatched`}
+                  {lastLog.flagged.length > 0 && (
+                    <span className="text-amber-700"> · {lastLog.flagged.length} flagged</span>
+                  )}
+                </p>
+              </div>
+            )}
 
             <input
               type="file"
@@ -91,6 +136,9 @@ export function ImportDialog({
                 <div className="flex flex-wrap gap-x-4 gap-y-1 font-medium text-slate-600">
                   <span className="text-emerald-700">{preview.patches.length} to update</span>
                   <span>{preview.noChange} unchanged</span>
+                  {preview.flagged.length > 0 && (
+                    <span className="text-amber-700">{preview.flagged.length} flagged (unsure)</span>
+                  )}
                   {preview.unmatched.length > 0 && (
                     <span className="text-amber-700">{preview.unmatched.length} unmatched id</span>
                   )}
@@ -100,20 +148,35 @@ export function ImportDialog({
                 </div>
 
                 {preview.patches.length > 0 && (
-                  <ul className="mt-2 max-h-48 space-y-1.5 overflow-y-auto">
+                  <ul className="mt-2 max-h-64 space-y-2 overflow-y-auto">
                     {preview.patches.slice(0, 60).map((p) => (
                       <li key={p.id} className="border-t border-slate-200 pt-1.5">
                         <span className="font-medium text-slate-700">{p.name}</span>
-                        <span className="text-slate-400">
-                          {" "}
-                          — {p.changes.map((c) => c.field).join(", ")}
-                        </span>
+                        <ul className="mt-0.5 space-y-0.5 pl-1 text-slate-500">
+                          {p.changes.map((c) => (
+                            <li key={c.field}>
+                              <span className="font-medium text-slate-600">{c.field}:</span>{" "}
+                              {c.from ? (
+                                <span className="text-rose-400 line-through">{trunc(c.from)}</span>
+                              ) : (
+                                <span className="italic text-slate-300">empty</span>
+                              )}{" "}
+                              → <span className="text-emerald-600">{trunc(c.to)}</span>
+                            </li>
+                          ))}
+                        </ul>
                       </li>
                     ))}
                     {preview.patches.length > 60 && (
                       <li className="text-slate-400">…and {preview.patches.length - 60} more</li>
                     )}
                   </ul>
+                )}
+
+                {preview.flagged.length > 0 && (
+                  <div className="mt-2 border-t border-slate-200 pt-1.5">
+                    <FlaggedBlock flagged={preview.flagged} />
+                  </div>
                 )}
 
                 {preview.unmatched.length > 0 && (
@@ -143,3 +206,26 @@ export function ImportDialog({
     </div>
   );
 }
+
+/** The "source was unsure" list — placeholder cells (N/A, unknown…) that were ignored. */
+function FlaggedBlock({ flagged }: { flagged: { name: string; field: string; value: string }[] }) {
+  return (
+    <div className="rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-xs">
+      <p className="font-medium text-amber-800">
+        ⚠️ {flagged.length} {flagged.length === 1 ? "cell" : "cells"} looked unsure (e.g. “N/A”) and were
+        ignored — fill these in by hand if you have them:
+      </p>
+      <ul className="mt-1 max-h-40 space-y-0.5 overflow-y-auto text-amber-700">
+        {flagged.slice(0, 40).map((f, i) => (
+          <li key={`${f.name}-${f.field}-${i}`}>
+            <span className="font-medium">{f.name}</span> — {f.field}:{" "}
+            <span className="italic">“{f.value}”</span>
+          </li>
+        ))}
+        {flagged.length > 40 && <li>…and {flagged.length - 40} more</li>}
+      </ul>
+    </div>
+  );
+}
+
+const trunc = (s: string, n = 48) => (s.length > n ? `${s.slice(0, n)}…` : s);

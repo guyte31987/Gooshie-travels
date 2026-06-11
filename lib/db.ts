@@ -217,6 +217,29 @@ export async function saveCalendarBaseline(b: CalendarBaseline): Promise<void> {
   await setDoc(doc(requireDb(), "meta", "calendarBaseline"), b);
 }
 
+// --- last CSV import log (so the result is reviewable after the dialog closes) -
+
+export type ImportLogChange = { name: string; fields: string[] };
+export type ImportLog = {
+  at: string;
+  updated: number;
+  noChange: number;
+  unmatched: number;
+  skippedNoId: number;
+  flagged: { name: string; field: string; value: string }[];
+  samples: ImportLogChange[];
+};
+
+export async function getImportLog(): Promise<ImportLog | null> {
+  if (!db) return null;
+  const snap = await getDoc(doc(db, "meta", "lastImport"));
+  return snap.exists() ? (snap.data() as ImportLog) : null;
+}
+
+export async function saveImportLog(log: ImportLog): Promise<void> {
+  await setDoc(doc(requireDb(), "meta", "lastImport"), log);
+}
+
 // --- managed general areas --------------------------------------------------
 
 export async function getAreas(): Promise<string[]> {

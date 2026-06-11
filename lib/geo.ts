@@ -113,3 +113,24 @@ export function resolvePoint(text: string | undefined, seed = ""): LatLng | null
 
 /** Center + zoom that frames the NYC core (where most pins live). */
 export const NYC_CENTER: LatLng = { lat: 40.715, lng: -73.95 };
+
+/**
+ * A Google Maps search/pin URL for an entity. Prefers exact coordinates, then a
+ * full street address, then the name + neighborhood as a search query. Returns
+ * null only when there's nothing locatable at all.
+ */
+export function googleMapsUrl(opts: {
+  name?: string;
+  address?: string;
+  area?: string;
+  lat?: number;
+  lng?: number;
+}): string | null {
+  const base = "https://www.google.com/maps/search/?api=1&query=";
+  if (typeof opts.lat === "number" && typeof opts.lng === "number") {
+    return `${base}${opts.lat},${opts.lng}`;
+  }
+  if (opts.address && opts.address.trim()) return `${base}${encodeURIComponent(opts.address.trim())}`;
+  const q = [opts.name, opts.area].filter(Boolean).join(" ").trim();
+  return q ? `${base}${encodeURIComponent(q)}` : null;
+}

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ENTITY_TABS, type Entity, type TripSlot } from "@/lib/entities";
+import { googleMapsUrl } from "@/lib/geo";
 import { Comments } from "./Comments";
 import { EntityForm } from "./EntityForm";
 import { useTripData, useOptionalTripData } from "./TripData";
@@ -32,6 +33,13 @@ export function EntityDetail({
   const parentEntity = entity.parentId
     ? (tripData?.entities ?? []).find((e) => e.id === entity.parentId)
     : undefined;
+  const mapsHref = googleMapsUrl({
+    name: entity.name,
+    address: entity.address,
+    area: entity.area ?? entity.generalArea,
+    lat: entity.lat,
+    lng: entity.lng,
+  });
 
   return (
     <>
@@ -80,7 +88,45 @@ export function EntityDetail({
         {entity.notes && <p className="text-sm text-slate-600">{entity.notes}</p>}
         <dl className="mt-3 space-y-1 text-xs">
           {entity.hours && <Row label="Hours">{entity.hours}</Row>}
-          {entity.address && <Row label="Address">{entity.address}</Row>}
+          {entity.address && (
+            <Row label="Address">
+              {entity.address}
+              {mapsHref && (
+                <a
+                  href={mapsHref}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="ml-2 font-medium text-indigo-600 hover:underline"
+                >
+                  Google Maps ↗
+                </a>
+              )}
+            </Row>
+          )}
+          {!entity.address && mapsHref && (
+            <Row label="Map">
+              <a
+                href={mapsHref}
+                target="_blank"
+                rel="noreferrer"
+                className="font-medium text-indigo-600 hover:underline"
+              >
+                Open in Google Maps ↗
+              </a>
+            </Row>
+          )}
+          {entity.website && (
+            <Row label="Website">
+              <a
+                href={entity.website}
+                target="_blank"
+                rel="noreferrer"
+                className="break-all font-medium text-indigo-600 hover:underline"
+              >
+                {entity.website.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")} ↗
+              </a>
+            </Row>
+          )}
           {entity.price && <Row label="Price">{entity.price}</Row>}
           {entity.booking && <Row label="Booking">{entity.booking}</Row>}
           {entity.bestDay && <Row label="Best day">{entity.bestDay}</Row>}

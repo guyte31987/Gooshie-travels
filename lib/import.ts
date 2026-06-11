@@ -60,6 +60,7 @@ const FIELD_MAP: Record<string, { key: keyof DBEntity; policy: Policy; numeric?:
 };
 
 export type ImportChange = { field: string; from: string; to: string };
+export type ImportFlag = { id: string; name: string; field: string; value: string };
 export type ImportPatch = {
   id: string;
   name: string;
@@ -71,20 +72,30 @@ export type ImportPreview = {
   unmatched: string[]; // ids present in the CSV but not in the Database
   skipped: number;     // data rows with no id cell
   noChange: number;    // matched rows that would change nothing
+  flagged: ImportFlag[]; // cells that looked like "N/A"/unknown placeholders (ignored)
 };
+
+// Values that mean "I don't actually know" — Gemini (or a human) sometimes writes
+// these instead of leaving a cell blank. Treat them like a blank (never written)
+// but surface them so the admin can see what the source was unsure about.
+const PLACEHOLDER =
+  /^(n\/?a|na|none|unknown|undefined|null|nil|tbd|tba|not\s+(available|found|applicable|listed|known)|no\s+(website|address|info|data|hours)|[-—–?.]+)$/i;
+
+const isPlaceholder = (v: string) => PLACEHOLDER.test(v.trim());
 
 /**
  * Diff a parsed CSV against the current Database without writing anything.
  * Returns the per-entity patches so the UI can preview before applying.
  */
 export function planImport(rows: string[][], existing: DBEntity[]): ImportPreview {
-  if (rows.length < 2) return { patches: [], unmatched: [], skipped: 0, noChange: 0 };
+  if (rows.length < 2) return { patches: [], unmatched: [], skipped: 0, noChange: 0, flagged: [] };
   const [header, ...body] = rows;
   const cols = header.map((h) => h.trim().toLowerCase());
   const idCol = cols.indexOf("id");
   const byId = new Map(existing.map((e) => [e.id, e]));
   const patches: ImportPatch[] = [];
   const unmatched: string[] = [];
+  const flagged: ImportFlag[] = [];
   let skipped = 0;
   let noChange = 0;
 
@@ -102,6 +113,7 @@ export function planImport(rows: string[][], existing: DBEntity[]): ImportPrevie
       if (!map) return;
       const raw = (r[idx] ?? "").trim();
       if (raw === "") return; // a blank cell never clears existing data
+      if (isPlaceholder(raw)) { flagged.push({ id, name: ent.name, field: col, value: raw }); return; }
       const cur = ent[map.key];
       const curStr = cur == null ? "" : String(cur).trim();
       if (map.policy === "fillBlank" && curStr !== "") return; // protect manual curation
@@ -122,7 +134,7 @@ export function planImport(rows: string[][], existing: DBEntity[]): ImportPrevie
     else noChange++;
   }
 
-  return { patches, unmatched, skipped, noChange };
+  return { patches, unmatched, skipped, noChange, flagged };
 }
 
 /** Write the planned patches to Firestore (merge — only the changed fields). */
