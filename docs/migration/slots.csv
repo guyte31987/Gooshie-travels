@@ -1,0 +1,53 @@
+SlotID,Day,Start,End,Label
+thu18-arrival,2026-06-18,20:00,23:00,Arrival
+fri19-met,2026-06-19,10:00,13:00,Met morning
+fri19-seneca,2026-06-19,13:30,14:00,Seneca Village
+fri19-studio,2026-06-19,14:00,17:00,Studio Museum
+fri19-dinner,2026-06-19,18:00,20:00,Pre-FIST dinner
+fri19-nap,2026-06-19,20:00,22:30,Pre-FIST nap
+fri19-fist,2026-06-19,23:00,,FIST anniversary
+sat20-brunch,2026-06-20,11:00,12:30,Pre-parade brunch
+sat20-parade,2026-06-20,13:00,16:00,Mermaid Parade
+sat20-banya,2026-06-20,16:15,20:30,Banya + dinner
+sat20-comedy,2026-06-20,20:45,21:45,Comedy (maybe)
+sat20-bong,2026-06-20,22:00,23:00,Late dinner
+sun21-crossfit,2026-06-21,09:00,10:00,Crossfit (maybe)
+sun21-newmuseum,2026-06-21,11:00,13:00,New Museum
+sun21-brunch,2026-06-21,13:00,14:30,Russ & Daughters
+sun21-mistersunday,2026-06-21,15:00,21:00,Mister Sunday
+mon22-rental,2026-06-22,07:00,09:00,Rental car + drive
+mon22-coffee,2026-06-22,09:00,10:00,Breakfast en route
+mon22-stormking,2026-06-22,10:00,13:00,Storm King Art Center
+mon22-lunch,2026-06-22,13:00,14:00,Lunch en route
+mon22-sktrail,2026-06-22,14:00,16:00,Storm King Mountain hike
+mon22-dia,2026-06-22,16:00,17:00,Dia Beacon (maybe)
+mon22-kaaterskill,2026-06-22,17:30,18:30,Kaaterskill Falls (optional)
+mon22-debs,2026-06-22,18:30,20:30,Lil' Deb's dinner
+tue23-greylock,2026-06-23,08:00,14:00,Mount Greylock hike
+tue23-clark,2026-06-23,15:00,17:00,Clark Art (if energy)
+tue23-dinner,2026-06-23,19:00,21:00,Berkshires dinner
+wed24-hike,2026-06-24,08:00,12:00,Cascade Falls half-hike
+wed24-massmoca,2026-06-24,13:00,16:00,MASS MoCA
+wed24-dinner,2026-06-24,17:00,19:00,Return dinner
+thu25-chocworld,2026-06-25,09:00,10:30,Chocolate World
+thu25-coasters-am,2026-06-25,11:00,12:15,Hersheypark AM coasters
+thu25-lunch,2026-06-25,12:15,13:00,Hersheypark lunch
+thu25-coasters-pm,2026-06-25,13:00,15:45,Hersheypark PM thrills
+thu25-waterpark,2026-06-25,16:00,19:00,Boardwalk water park
+thu25-drive,2026-06-25,19:00,22:30,Drive to NYC (Philly detour?)
+thu25-latedinner,2026-06-25,22:30,23:30,Late return dinner
+fri26-cloisters,2026-06-26,10:00,13:00,Met Cloisters
+fri26-lunch,2026-06-26,13:00,14:00,Lunch en route south
+fri26-highline,2026-06-26,14:30,17:30,The High Line
+fri26-vintage,2026-06-26,18:00,19:00,Vintage shopping
+fri26-dragmarch,2026-06-26,19:30,21:00,NYC Drag March
+fri26-joespub,2026-06-26,21:00,22:00,2Scoops at Joe's Pub
+fri26-parties,2026-06-26,22:00,,Pride party marathon
+sat27-brunch,2026-06-27,11:00,12:30,Pre-beach brunch
+sat27-riis,2026-06-27,13:00,17:00,Jacob Riis beach
+sat27-ladyland,2026-06-27,19:00,23:59,Ladyland Festival
+sun28-pride,2026-06-28,11:30,17:00,Pride March + Finale
+stay-bklyn,2026-06-19,,,Stay: BKLYN House Hotel (Jun 19-23)
+stay-williamstown,2026-06-22,,,Stay: Williamstown Airbnb (Jun 22-25)
+stay-cottage,2026-06-24,,,Stay: Cottage Inn Grantville (Jun 24-26)
+stay-hotel1200,2026-06-25,,,Stay: Hotel 1200 (Jun 25-29)
