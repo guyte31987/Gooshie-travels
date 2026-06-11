@@ -316,7 +316,7 @@ function normLoose(s: string): string {
  * extracted cleanly. "Go to Met Cloisters" → "Met Cloisters".
  */
 const PLACE_PREFIX_RE =
-  /^(?:go(?:ing)?(?:\s+to)?|visit(?:ing)?|see(?:ing)?|tour(?:ing)?|explore(?:ing)?|check(?:ing)?\s+(?:in|out)(?:\s+(?:at|to))?|head(?:ing)?\s+to|get(?:ting)?\s+to|travel(?:ing)?\s+to|drive\s+to|walk(?:ing)?\s+to|fly(?:ing)?\s+to|(?:dinner|lunch|breakfast|brunch|drinks?|coffee)\s+(?:at|@)|meet(?:ing)?(?:\s+(?:at|@))?)\s+/i;
+  /^(?:go(?:ing)?(?:\s+to)?|visit(?:ing)?|see(?:ing)?|tour(?:ing)?|explore(?:ing)?|check(?:ing)?\s+(?:in|out)(?:\s+(?:at|to))?|head(?:ing)?\s+to|get(?:ting)?\s+to|travel(?:ing)?\s+to|drive\s+to|walk(?:ing)?\s+to|fly(?:ing)?\s+to|grab\s+(?:\w+\s+)?(?:at|@)|(?:grab\s+)?(?:dinner|lunch|breakfast|brunch|drinks?|coffee|food|meal|snacks?)\s+(?:at|@)|meet(?:ing)?(?:\s+(?:at|@))?)\s+/i;
 
 export function extractPlaceName(summary: string): string {
   return cleanName(summary).replace(PLACE_PREFIX_RE, "").trim();

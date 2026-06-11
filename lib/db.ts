@@ -435,7 +435,8 @@ export async function setDismissedIssues(keys: string[]): Promise<void> {
 export async function runDeduplicationMigration(): Promise<{ deleted: number; fixed: number }> {
   if (!db) return { deleted: 0, fixed: 0 };
 
-  // Verbose calendar-title duplicates that shadow real seed entities.
+  // Verbose calendar-title duplicates that shadow real seed entities,
+  // plus "Grab X at Y" entities saved before the name extractor was fixed.
   const toDelete = [
     slugId("museum", "Met Cloisters & Fort Tryon Walk"),
     slugId("museum", "MASS MoCA Exhibition"),
@@ -447,6 +448,9 @@ export async function runDeduplicationMigration(): Promise<{ deleted: number; fi
     slugId("sight", "Coney Island Mermaid Parade"),
     slugId("club", "Bushwick Comedy Club, 259 Melrose St or BCC at Eris Bar"),
     slugId("club", "LadyLand Festival"),
+    // "Grab X at Y" entities saved before extractPlaceName handled this pattern
+    slugId("food", "Grab Coffee at Cornwall Coffee Co. & Mercantile"),
+    slugId("food", "Grab food at Downstate Newburgh"),
   ];
 
   // Entities saved with wrong types by the old (less accurate) categorizer.
@@ -459,17 +463,24 @@ export async function runDeduplicationMigration(): Promise<{ deleted: number; fi
     { id: slugId("event", "Mermaid Parade"), type: "sight" },
   ];
 
-  const batch = writeBatch(db);
+  // Fetch toFix docs first — batch.update() throws on non-existent documents.
+  const database = requireDb();
+  const fixRefs = toFix.map(({ id }) => doc(database, "entities", id));
+  const fixSnaps = await Promise.all(fixRefs.map((r) => getDoc(r)));
+
+  const batch = writeBatch(database);
   let deleted = 0;
   let fixed = 0;
 
   for (const id of toDelete) {
-    batch.delete(doc(db, "entities", id));
+    batch.delete(doc(database, "entities", id));
     deleted++;
   }
-  for (const { id, type } of toFix) {
-    batch.update(doc(db, "entities", id), { type, updatedAt: serverTimestamp() });
-    fixed++;
+  for (let i = 0; i < toFix.length; i++) {
+    if (fixSnaps[i].exists()) {
+      batch.update(fixRefs[i], { type: toFix[i].type, updatedAt: serverTimestamp() });
+      fixed++;
+    }
   }
 
   await batch.commit();
