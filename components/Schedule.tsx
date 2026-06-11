@@ -290,6 +290,12 @@ function EventPopup({
     });
   };
 
+  // Posting a comment is an investment too — lock the occurrence so a later
+  // calendar deletion doesn't strand the thread.
+  const lockOnComment = () => {
+    if (!override?.scheduleLocked) persist({ scheduleLocked: true, title: override?.title ?? e.summary });
+  };
+
   const lockSchedule = () => {
     const calNote = e.description ?? "";
     const existing = override?.scheduleNote ?? "";
@@ -519,7 +525,7 @@ function EventPopup({
 
             {/* Instance-level comments */}
             <div className="border-t border-slate-100 pt-3">
-              <Comments instanceId={instanceId} label="Comments on this visit" />
+              <Comments instanceId={instanceId} label="Comments on this visit" onPosted={lockOnComment} />
             </div>
           </div>
         )}
@@ -527,7 +533,7 @@ function EventPopup({
         {/* Unlinked event: show instance comments if any */}
         {!linked && override && (
           <div className="mt-4 border-t border-slate-100 pt-3">
-            <Comments instanceId={instanceId} />
+            <Comments instanceId={instanceId} onPosted={lockOnComment} />
           </div>
         )}
       </div>

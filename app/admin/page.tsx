@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
 import { AdminPanel } from "@/components/AdminPanel";
 import { SyncReport } from "@/components/SyncReport";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 type AdminTab = "access" | "sync";
 
@@ -48,7 +49,13 @@ export default function AdminPage() {
         </TabBtn>
       </nav>
 
-      {tab === "access" ? <AdminPanel /> : <SyncReport />}
+      {tab === "access" ? (
+        <AdminPanel />
+      ) : (
+        <ErrorBoundary label="The Sync report">
+          <SyncReport />
+        </ErrorBoundary>
+      )}
     </div>
   );
 }

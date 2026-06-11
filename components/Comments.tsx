@@ -16,6 +16,7 @@ export function Comments({
   instanceId,
   entityId,
   label,
+  onPosted,
 }: {
   /** Pass for entity-instance-level comments (about this specific visit). */
   instanceId?: string;
@@ -23,6 +24,8 @@ export function Comments({
   entityId?: string;
   /** Optional heading shown above the thread. */
   label?: string;
+  /** Called after a comment is successfully posted (e.g. to lock the occurrence so it survives calendar deletion). */
+  onPosted?: () => void;
 }) {
   const { user, isAdmin } = useAuth();
   const [comments, setComments] = useState<Comment[]>([]);
@@ -44,6 +47,7 @@ export function Comments({
       if (instanceId) await addComment(instanceId, text.trim(), name, email);
       else if (entityId) await addEntityComment(entityId, text.trim(), name, email);
       setText("");
+      onPosted?.();
     } finally {
       setBusy(false);
     }
