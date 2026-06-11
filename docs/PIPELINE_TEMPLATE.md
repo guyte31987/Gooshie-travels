@@ -163,11 +163,11 @@ Instance (Plan B never exports):
 
 - **UID** — stable, derived from `tripId + SlotID + EntityID` so re-exports
   update the same event rather than duplicating.
-- **STATUS** — `CONFIRMED` for confirmed, `TENTATIVE` for planned (so planned
-  items still render, visibly distinct).
-- **SUMMARY** — a fixed, machine-clean format: just `{Entity Name}` — no verbs,
-  no "or", no decoration. The whole reason the old parser hurt was free-text
-  titles; we now own this format, so keep it plain.
+- **STATUS** — `CONFIRMED` for confirmed, `TENTATIVE` for planned.
+- **SUMMARY** — a fixed, machine-clean format: just `{Entity Name}` for
+  confirmed, and `[Plan] {Entity Name}` for planned. The `[Plan]` prefix is a
+  visible label you can find and **colour by hand** in Google (since ICS can't
+  set colour). No verbs, no "or", no other decoration — we own this format.
 - **DTSTART / DTEND** — from the Slot's `Day` + `Start` / `End` (all-day when
   `Start` blank).
 - **LOCATION** — the entity's `Address`.
@@ -177,9 +177,8 @@ Because we generate every field, the calendar is lossless and never needs to be
 read back.
 
 > **Colour note:** per-event colour can't be set via an ICS import (Google
-> ignores it). `TENTATIVE` status is what visually separates planned from
-> confirmed. If you later want true colour separation, the move is a second
-> calendar feed for tentative items — not something ICS can do per-event.
+> ignores it). Planned events instead carry a `[Plan]` prefix in the title so
+> you can spot them and colour them by hand in Google.
 
 ---
 
