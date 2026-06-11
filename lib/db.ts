@@ -481,7 +481,8 @@ export async function runDeduplicationMigration(): Promise<{ deleted: number; fi
     { id: slugId("sight", "Rental Car Pickup & Storm King Drive"), type: "travel" },
     { id: slugId("food", "Casual Lunch en Route South"), type: "travel" },
     { id: slugId("travel", "Casual Lunch en Route South"), type: "travel" },
-    { id: slugId("event", "Ladyland"), type: "party" },
+    // Ladyland is a standalone festival, not a club party → event.
+    { id: slugId("party", "Ladyland"), type: "event" },
     { id: slugId("event", "Mermaid Parade"), type: "sight" },
   ];
 

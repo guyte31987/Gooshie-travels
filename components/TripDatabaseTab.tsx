@@ -27,10 +27,30 @@ export function TripDatabaseTab() {
   const grouped = useMemo(() => groupByType(entities), [entities]);
   const visibleTabs = ENTITY_TABS.filter((t) => showOperational || !t.operational);
 
-  const listed =
+  // Parties (and any entity with a parentId pointing to a present entity) are
+  // shown nested inside their parent's card — never as a standalone top-level card.
+  const childrenByParent = useMemo(() => {
+    const ids = new Set(entities.map((e) => e.id));
+    const m = new Map<string, Entity[]>();
+    for (const e of entities) {
+      if (e.parentId && ids.has(e.parentId)) {
+        const arr = m.get(e.parentId) ?? [];
+        arr.push(e);
+        m.set(e.parentId, arr);
+      }
+    }
+    return m;
+  }, [entities]);
+  const childIds = useMemo(() => {
+    const ids = new Set(entities.map((e) => e.id));
+    return new Set(entities.filter((e) => e.parentId && ids.has(e.parentId)).map((e) => e.id));
+  }, [entities]);
+
+  const listed = (
     tab === "all"
       ? entities.filter((e) => showOperational || !OPERATIONAL_TYPES.has(e.type))
-      : (grouped[tab as EntityType] ?? []);
+      : (grouped[tab as EntityType] ?? [])
+  ).filter((e) => !childIds.has(e.id));
 
   return (
     <div>
@@ -61,7 +81,7 @@ export function TripDatabaseTab() {
           Nothing here yet.
         </p>
       ) : (
-        <DBEntityList entities={listed} canEdit={canEdit && seeded} tripId={tripId} />
+        <DBEntityList entities={listed} canEdit={canEdit && seeded} tripId={tripId} childrenByParent={childrenByParent} />
       )}
     </div>
   );
@@ -71,10 +91,12 @@ function DBEntityList({
   entities,
   canEdit,
   tripId,
+  childrenByParent,
 }: {
   entities: Entity[];
   canEdit: boolean;
   tripId: string;
+  childrenByParent: Map<string, Entity[]>;
 }) {
   const areas = useMemo(() => distinct(entities, (e) => e.area ?? ""), [entities]);
   const generalAreas = useMemo(() => distinct(entities, (e) => e.generalArea ?? ""), [entities]);
@@ -86,7 +108,9 @@ function DBEntityList({
     if (generalArea && e.generalArea !== generalArea) return false;
     if (area && e.area !== area) return false;
     if (q) {
-      const hay = `${e.name} ${e.area ?? ""} ${e.notes ?? ""}`.toLowerCase();
+      const kids = childrenByParent.get(e.id) ?? [];
+      // Include nested party names so searching "FIST" surfaces its club card.
+      const hay = `${e.name} ${e.area ?? ""} ${e.notes ?? ""} ${kids.map((k) => k.name).join(" ")}`.toLowerCase();
       if (!hay.includes(q.toLowerCase())) return false;
     }
     return true;
@@ -132,14 +156,30 @@ function DBEntityList({
       </p>
       <ul className="space-y-2">
         {filtered.map((e) => (
-          <DBEntityCard key={e.id} e={e} canEdit={canEdit} tripId={tripId} />
+          <DBEntityCard
+            key={e.id}
+            e={e}
+            canEdit={canEdit}
+            tripId={tripId}
+            children={childrenByParent.get(e.id) ?? []}
+          />
         ))}
       </ul>
     </div>
   );
 }
 
-function DBEntityCard({ e, canEdit, tripId }: { e: Entity; canEdit: boolean; tripId: string }) {
+function DBEntityCard({
+  e,
+  canEdit,
+  tripId,
+  children = [],
+}: {
+  e: Entity;
+  canEdit: boolean;
+  tripId: string;
+  children?: Entity[];
+}) {
   const { tripName } = useTripData();
   const [showDetail, setShowDetail] = useState(false);
   const typeTab = ENTITY_TABS.find((t) => t.type === e.type || (e.type === "party" && t.type === "club"));
@@ -214,6 +254,45 @@ function DBEntityCard({ e, canEdit, tripId }: { e: Entity; canEdit: boolean; tri
         )}
       </div>
 
+      {/* Nested parties hosted at this venue */}
+      {children.length > 0 && (
+        <ul className="border-t border-slate-100 bg-slate-50/60 px-4 py-2">
+          {children.map((c) => (
+            <NestedPartyRow key={c.id} e={c} tripId={tripId} tripName={tripName} />
+          ))}
+        </ul>
+      )}
+
+      {showDetail && (
+        <EntityDetail entity={e} tripId={tripId} tripName={tripName} onClose={() => setShowDetail(false)} />
+      )}
+    </li>
+  );
+}
+
+/** Compact row for a party shown nested inside its host venue's card. */
+function NestedPartyRow({ e, tripId, tripName }: { e: Entity; tripId: string; tripName: string }) {
+  const [showDetail, setShowDetail] = useState(false);
+  const confirmedCount = e.slots.filter((s) => s.kind === "confirmed").length;
+  const plannedCount = e.slots.filter((s) => s.kind !== "confirmed").length;
+  return (
+    <li className="flex items-center gap-2 py-1.5">
+      <span className="text-slate-300">↳</span>
+      <button onClick={() => setShowDetail(true)} className="min-w-0 flex-1 text-left">
+        <span className="text-sm font-medium text-slate-700">🎉 {e.name}</span>
+        <span className="ml-2 inline-flex flex-wrap gap-1.5 text-[11px] align-middle">
+          {confirmedCount > 0 && (
+            <span className="rounded-full bg-emerald-50 px-2 py-0.5 font-medium text-emerald-700">
+              ✅ {confirmedCount}
+            </span>
+          )}
+          {plannedCount > 0 && (
+            <span className="rounded-full bg-indigo-50 px-2 py-0.5 font-medium text-indigo-700">
+              📌 {plannedCount}
+            </span>
+          )}
+        </span>
+      </button>
       {showDetail && (
         <EntityDetail entity={e} tripId={tripId} tripName={tripName} onClose={() => setShowDetail(false)} />
       )}
