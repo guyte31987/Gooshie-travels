@@ -35,7 +35,7 @@ export type SyncItem =
   | { status: "new"; event: SyncCalEvent }
   | { status: "fuzzy"; event: SyncCalEvent; candidate: DBEntity; score: number }
   | { status: "type_changed"; entity: DBEntity; calType: EntityType; event: SyncCalEvent }
-  | { status: "orphaned"; entity: DBEntity };
+  | { status: "orphaned"; entity: DBEntity; expected: boolean };
 
 // --- matching helpers --------------------------------------------------------
 
@@ -155,13 +155,18 @@ export function buildSyncDiff(opts: {
     }
   }
 
-  // Phase 3: trip entities with no calendar match → orphaned
+  // Phase 3: trip entities with no calendar match → orphaned.
+  // `expected` = we'd genuinely expect a calendar event for this (it was either
+  // explicitly added to the trip, or auto-imported from the calendar before).
+  // The opposite — a curated place that's only in the trip because its area
+  // matches — is just a candidate you haven't scheduled yet, not a problem.
   for (const de of dbEntities) {
     if (matchedEntityIds.has(de.id)) continue;
     const item = itemBy.get(de.id);
     const inByArea = de.generalArea ? areaSet.has(de.generalArea) : false;
     if (item?.added || (inByArea && !item?.removed)) {
-      result.push({ status: "orphaned", entity: de });
+      const expected = !!(item?.added || de.calendarSource);
+      result.push({ status: "orphaned", entity: de, expected });
     }
   }
 

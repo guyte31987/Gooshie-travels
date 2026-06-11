@@ -191,6 +191,15 @@ export function SyncReport() {
     }
   };
 
+  // Bulk: keep every entity in a group (just clears them from this report — no
+  // data change) or remove them all from the trip in one go.
+  const keepAll = (entityIds: string[]) =>
+    setProcessed((p) => { const n = new Map(p); for (const id of entityIds) n.set(id, "kept"); return n; });
+
+  const removeAll = async (entityIds: string[]) => {
+    for (const id of entityIds) await removeOrphaned(id);
+  };
+
   // --- filtered diff sections ------------------------------------------------
 
   const visible = (key: string) => !processed.has(key);
@@ -198,6 +207,10 @@ export function SyncReport() {
   const fuzzyItems = diff.filter((i): i is Extract<SyncItem, { status: "fuzzy" }> => i.status === "fuzzy" && visible(i.event.uid));
   const typeChangedItems = diff.filter((i): i is Extract<SyncItem, { status: "type_changed" }> => i.status === "type_changed" && visible(i.entity.id));
   const orphanedItems = diff.filter((i): i is Extract<SyncItem, { status: "orphaned" }> => i.status === "orphaned" && visible(i.entity.id));
+  // Split orphans: genuine ones (added or auto-imported, but no calendar event)
+  // vs candidate places that merely live in a trip area and aren't scheduled yet.
+  const genuineOrphans = orphanedItems.filter((i) => i.expected);
+  const candidatePlaces = orphanedItems.filter((i) => !i.expected);
   const matchedItems = diff.filter((i): i is Extract<SyncItem, { status: "matched" }> => i.status === "matched");
 
   const saveAllNew = async () => {
@@ -235,7 +248,7 @@ export function SyncReport() {
             { n: newItems.length, label: "new", tone: newItems.length ? "text-sky-600" : "text-slate-300" },
             { n: fuzzyItems.length, label: "possible match", tone: fuzzyItems.length ? "text-amber-600" : "text-slate-300" },
             { n: typeChangedItems.length, label: "type mismatch", tone: typeChangedItems.length ? "text-violet-600" : "text-slate-300" },
-            { n: orphanedItems.length, label: "orphaned", tone: orphanedItems.length ? "text-rose-500" : "text-slate-300" },
+            { n: genuineOrphans.length, label: "missing", tone: genuineOrphans.length ? "text-rose-500" : "text-slate-300" },
           ].map(({ n, label, tone }) => (
             <div key={label} className="rounded-xl border border-slate-200 bg-white py-2">
               <div className={`text-2xl font-semibold ${tone}`}>{n}</div>
@@ -463,15 +476,15 @@ export function SyncReport() {
                     </div>
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    {isAutoImported && (
-                      <button
-                        onClick={() => updateType(item.entity, item.calType)}
-                        disabled={isSaving(item.entity.id)}
-                        className="rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-violet-700 disabled:opacity-50"
-                      >
-                        {isSaving(item.entity.id) ? "…" : `Update to ${item.calType}`}
-                      </button>
-                    )}
+                    {/* Update is available on every row now — a curated entity can
+                        have a genuinely wrong type too (e.g. Hersheypark as sight). */}
+                    <button
+                      onClick={() => updateType(item.entity, item.calType)}
+                      disabled={isSaving(item.entity.id)}
+                      className="rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-violet-700 disabled:opacity-50"
+                    >
+                      {isSaving(item.entity.id) ? "…" : `Update to ${item.calType}`}
+                    </button>
                     <button
                       onClick={() => mark(item.entity.id, "kept")}
                       className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
@@ -498,42 +511,56 @@ export function SyncReport() {
         </Section>
       )}
 
-      {/* ORPHANED */}
-      {orphanedItems.length > 0 && (
-        <Section title={`Orphaned in trip (${orphanedItems.length})`} tone="rose">
+      {/* ORPHANED — genuine (added or auto-imported, but missing from calendar) */}
+      {genuineOrphans.length > 0 && (
+        <Section
+          title={`Missing from calendar (${genuineOrphans.length})`}
+          tone="rose"
+          action={<BulkOrphanActions items={genuineOrphans} onKeepAll={keepAll} onRemoveAll={removeAll} />}
+        >
           <p className="mb-3 text-xs text-slate-400">
-            These entities are part of this trip but have no matching calendar event. They might be planned-but-not-confirmed, or removed from the calendar.
+            You added these to the trip (or they were auto-imported from the calendar), but no calendar event
+            matches them now. They may have been removed from the calendar, or are still planned-but-not-confirmed.
           </p>
           <ul className="space-y-2">
-            {orphanedItems.map((item) => (
-              <li key={item.entity.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-rose-200 bg-rose-50 p-3">
-                <div className="flex-1 text-sm">
-                  <span className="font-medium">{item.entity.name}</span>
-                  <div className="mt-0.5 text-xs text-slate-500">
-                    {item.entity.type}
-                    {item.entity.generalArea && ` · ${item.entity.generalArea}`}
-                    {item.entity.calendarSource && " · auto-imported"}
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => mark(item.entity.id, "kept")}
-                    className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
-                  >
-                    Keep in trip
-                  </button>
-                  <button
-                    onClick={() => removeOrphaned(item.entity.id)}
-                    disabled={isSaving(item.entity.id)}
-                    className="rounded-lg border border-rose-200 bg-white px-3 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50 disabled:opacity-50"
-                  >
-                    {isSaving(item.entity.id) ? "…" : "Remove from trip"}
-                  </button>
-                </div>
-              </li>
+            {genuineOrphans.map((item) => (
+              <OrphanRow
+                key={item.entity.id}
+                item={item}
+                saving={isSaving(item.entity.id)}
+                onKeep={() => mark(item.entity.id, "kept")}
+                onRemove={() => removeOrphaned(item.entity.id)}
+              />
             ))}
           </ul>
         </Section>
+      )}
+
+      {/* CANDIDATE PLACES — in a trip area but never scheduled */}
+      {candidatePlaces.length > 0 && (
+        <details className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <summary className="cursor-pointer text-sm font-semibold text-slate-700">
+            🍴 Candidate places not yet scheduled ({candidatePlaces.length})
+          </summary>
+          <p className="mb-3 mt-2 text-xs text-slate-400">
+            Curated options (restaurants, shops, stays…) that belong to a trip area but aren&apos;t on the
+            calendar. This is normal — it&apos;s your shortlist. Keep them as options, or remove any you&apos;ve ruled out.
+          </p>
+          <div className="mb-3">
+            <BulkOrphanActions items={candidatePlaces} onKeepAll={keepAll} onRemoveAll={removeAll} />
+          </div>
+          <ul className="space-y-2">
+            {candidatePlaces.map((item) => (
+              <OrphanRow
+                key={item.entity.id}
+                item={item}
+                saving={isSaving(item.entity.id)}
+                onKeep={() => mark(item.entity.id, "kept")}
+                onRemove={() => removeOrphaned(item.entity.id)}
+              />
+            ))}
+          </ul>
+        </details>
       )}
 
       {/* PLAN ISSUES */}
@@ -633,6 +660,76 @@ function Section({
       </div>
       {children}
     </section>
+  );
+}
+
+function OrphanRow({
+  item,
+  saving,
+  onKeep,
+  onRemove,
+}: {
+  item: Extract<SyncItem, { status: "orphaned" }>;
+  saving: boolean;
+  onKeep: () => void;
+  onRemove: () => void;
+}) {
+  return (
+    <li className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white p-3">
+      <div className="flex-1 text-sm">
+        <span className="font-medium">{item.entity.name}</span>
+        <div className="mt-0.5 text-xs text-slate-500">
+          {item.entity.type}
+          {item.entity.generalArea && ` · ${item.entity.generalArea}`}
+          {item.entity.calendarSource && " · auto-imported"}
+        </div>
+      </div>
+      <div className="flex gap-2">
+        <button
+          onClick={onKeep}
+          className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
+        >
+          Keep
+        </button>
+        <button
+          onClick={onRemove}
+          disabled={saving}
+          className="rounded-lg border border-rose-200 bg-white px-3 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50 disabled:opacity-50"
+        >
+          {saving ? "…" : "Remove from trip"}
+        </button>
+      </div>
+    </li>
+  );
+}
+
+function BulkOrphanActions({
+  items,
+  onKeepAll,
+  onRemoveAll,
+}: {
+  items: Extract<SyncItem, { status: "orphaned" }>[];
+  onKeepAll: (ids: string[]) => void;
+  onRemoveAll: (ids: string[]) => void;
+}) {
+  const ids = items.map((i) => i.entity.id);
+  return (
+    <div className="flex gap-2">
+      <button
+        onClick={() => onKeepAll(ids)}
+        className="rounded-lg border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"
+      >
+        Keep all ({ids.length})
+      </button>
+      <button
+        onClick={() => {
+          if (confirm(`Remove all ${ids.length} from this trip? They stay in your database.`)) onRemoveAll(ids);
+        }}
+        className="rounded-lg border border-rose-200 bg-white px-3 py-1 text-xs font-medium text-rose-600 hover:bg-rose-50"
+      >
+        Remove all
+      </button>
+    </div>
   );
 }
 
