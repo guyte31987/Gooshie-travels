@@ -4,9 +4,65 @@
 // calendar, Planned/Plan B from the lists). The calendar is the master for the
 // schedule, so planned slots that disagree with a confirmed one are flagged.
 
-import { restaurants, vintage, type Restaurant, type VintageShop } from "./planning";
+import {
+  restaurants,
+  vintage,
+  museums,
+  clubs,
+  spas,
+  sights,
+  hikes,
+  attractions,
+  events,
+  type Restaurant,
+  type VintageShop,
+  type SeedPlace,
+} from "./planning";
 import { suggestGeneralArea } from "./areas";
 import { slugId } from "./slug";
+
+/** Curated place lists, each tagged with the EntityType its file represents. */
+const SEED_GROUPS: { type: EntityType; places: SeedPlace[] }[] = [
+  { type: "museum", places: museums },
+  { type: "club", places: clubs },
+  { type: "spa", places: spas },
+  { type: "sight", places: sights },
+  { type: "hike", places: hikes },
+  { type: "attraction", places: attractions },
+  { type: "event", places: events },
+];
+
+/** Build a plain Entity (no slots) from a curated seed place. Parties get a parentId. */
+function seedToEntity(p: SeedPlace, groupType: EntityType, tz: string): Entity {
+  const type = p.type ?? groupType;
+  return {
+    id: slugId(type, p.name),
+    name: p.name,
+    type,
+    generalArea: suggestGeneralArea(p.generalArea, p.area, p.address, p.name),
+    area: p.area,
+    address: p.address,
+    website: p.website,
+    hours: p.hours,
+    price: p.price,
+    booking: p.booking,
+    notes: p.notes,
+    bestDay: p.bestDay,
+    parentId: p.parent ? slugId("club", p.parent) : undefined,
+    slots: parsePlannedSlots(p.bestDay ?? "", tz),
+  };
+}
+
+/**
+ * The curated places (clubs, museums, sights, hikes, spas, attractions, events)
+ * as Database-ready entities — for seeding a fresh DB or back-filling an existing
+ * one without clobbering manual edits (create-if-new at the call site).
+ */
+export function buildCuratedSeedEntities(): DBEntity[] {
+  const out: DBEntity[] = [];
+  for (const g of SEED_GROUPS) for (const p of g.places) out.push(toDBEntity(seedToEntity(p, g.type, "UTC")));
+  return out;
+}
 
 export type EntityType =
   | "food"
@@ -16,11 +72,13 @@ export type EntityType =
   | "party"   // legacy — kept for existing Firestore docs; displayed under Clubs tab
   | "spa"
   | "sight"
+  | "attraction"
   | "hike"
   | "event"
   | "accommodation"
   | "travel"
-  | "admin";
+  | "admin"
+  | "uncategorised";
 
 export const ENTITY_TABS: { type: EntityType; label: string; emoji: string; operational?: boolean }[] = [
   { type: "food", label: "Food", emoji: "🍴" },
@@ -29,11 +87,13 @@ export const ENTITY_TABS: { type: EntityType; label: string; emoji: string; oper
   { type: "club", label: "Clubs", emoji: "🎶" },
   { type: "spa", label: "Spa", emoji: "🧖" },
   { type: "sight", label: "Sights", emoji: "📸" },
+  { type: "attraction", label: "Attractions", emoji: "🎢" },
   { type: "hike", label: "Hikes", emoji: "🥾" },
   { type: "event", label: "Events", emoji: "🎫" },
   { type: "accommodation", label: "Stays", emoji: "🛏" },
   { type: "travel", label: "Travel", emoji: "✈️", operational: true },
   { type: "admin", label: "Admin", emoji: "📋", operational: true },
+  { type: "uncategorised", label: "Uncategorised", emoji: "❓" },
 ];
 
 /** Types that are trip-operational (not place-based) — hidden by default in Database and Planning. */
@@ -155,15 +215,13 @@ export function categorizeEvent(e: ItinEvent): EntityType {
     )
   )
     return "club";
-  if (/\b(hike|trail|falls|mountain|greylock|cascade|kaaterskill|ledge)\b/.test(t)) return "hike";
+  if (/\b(hike|trail|falls|mountain|greylock|cascade|kaaterskill)\b/.test(t)) return "hike";
   // spa/banya before general sights so they don't land in the wrong bucket
   if (/\b(banya|spa|bathhouse|sauna|hammam|onsen)\b/.test(t)) return "spa";
-  if (
-    /\b(high line|coney|boardwalk|beach|riis|hersheypark|chocolate world|mermaid parade|seneca|water park|storm king)\b/.test(
-      t
-    )
-  )
-    return "sight";
+  // fun attractions (theme/amusement/water parks) — distinct from museums and sights
+  if (/\b(hersheypark|chocolate world|theme park|amusement park|water park|roller coaster|luna park|six flags)\b/.test(t))
+    return "attraction";
+  if (/\b(high line|coney|boardwalk|beach|riis|mermaid parade)\b/.test(t)) return "sight";
   // travel & admin checked before food — "Rental Car Pickup", "Return", "En Route" etc.
   if (
     /\b(flight|train|amtrak|greyhound|megabus|ferry|coach|transit|airport|depart|departure|arrival|arrive|car\s+rental|rental\s+car|drive\s+to|bus\s+to|en\s+route|return\s+to|heading\s+to)\b/.test(
@@ -179,7 +237,9 @@ export function categorizeEvent(e: ItinEvent): EntityType {
     return "admin";
   if (/\b(dinner|brunch|lunch|breakfast|cafe|coffee|food|bagel|pizza|bites|bbq|deli|snack|eat)\b/.test(t))
     return "food";
-  return "event";
+  // genuine one-off events (festivals, parades) are seeded/curated as "event";
+  // anything the classifier can't place falls through to the explicit catch-all.
+  return "uncategorised";
 }
 
 const TRIP_DAYS = /\b(1[89]|2[0-8])\b/g; // June 18–28
@@ -314,6 +374,16 @@ export function buildEntities(days: ItinDay[], tz: string): Entity[] {
       bestDay: v.bestDay,
       slots: attachSlots(parsePlannedSlots(v.bestDay, tz), confirmed.map(conf)),
     });
+  }
+
+  // 2.5) Curated places (clubs, museums, sights, hikes, spas, attractions, events)
+  for (const g of SEED_GROUPS) {
+    for (const p of g.places) {
+      const base = seedToEntity(p, g.type, tz);
+      const confirmed = allEvents.filter((e) => matchesEntity(base.name, e));
+      confirmed.forEach((e) => matchedUids.add(e.uid));
+      entities.push({ ...base, slots: attachSlots(base.slots, confirmed.map(conf)) });
+    }
   }
 
   // 3) Accommodation entities (multi-day stays), deduped by name
@@ -606,12 +676,12 @@ export function buildSyncReport(entities: Entity[]): SyncIssue[] {
       });
     }
 
-    if (e.type === "event" && isConfirmed) {
+    if (e.type === "uncategorised" && isConfirmed) {
       issues.push({
         severity: "info",
-        kind: "Uncategorized",
+        kind: "Uncategorised",
         entity: e.name,
-        detail: `Only landed in the generic "Events" bucket — you may want to recategorize it.`,
+        detail: `The classifier couldn't place this — it landed in the catch-all. You may want to recategorise it.`,
       });
     }
   }

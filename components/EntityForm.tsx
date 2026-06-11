@@ -35,7 +35,7 @@ export function EntityForm({
 
   useEffect(() => {
     const unsub = subscribeEntities((all) =>
-      setClubEntities(all.filter((e) => e.type === "club" || e.type === "party"))
+      setClubEntities(all.filter((e) => e.type === "club"))
     );
     return unsub;
   }, []);

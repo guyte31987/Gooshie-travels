@@ -1,0 +1,55 @@
+[
+  {
+    "name": "House of Yes",
+    "area": "Bushwick",
+    "notes": "Immersive queer performance + dance venue. Themed nights, dress codes, consent-forward."
+  },
+  {
+    "name": "3 Dollar Bill",
+    "area": "East Williamsburg",
+    "notes": "Large queer venue — indoor club + outdoor yard. Hub for Pride-weekend parties."
+  },
+  {
+    "name": "Nowadays",
+    "area": "Ridgewood",
+    "notes": "Outdoor garden + indoor club on the Brooklyn/Queens line. Daytime and marathon parties."
+  },
+  {
+    "name": "Basement",
+    "area": "Ridgewood",
+    "notes": "Serious techno room beneath Nowadays-adjacent Knockdown Center area. Strict no-phones."
+  },
+  {
+    "name": "Sultan Room",
+    "area": "Bushwick",
+    "notes": "Intimate venue + rooftop (Turk's Inn). Eclectic bookings."
+  },
+  {
+    "name": "FIST",
+    "type": "party",
+    "parent": "Basement",
+    "area": "Ridgewood",
+    "notes": "Hard techno party at Basement."
+  },
+  {
+    "name": "Pure Honey",
+    "type": "party",
+    "parent": "House of Yes",
+    "area": "Bushwick",
+    "notes": "Queer party at House of Yes."
+  },
+  {
+    "name": "Mister Sunday: Soul Summit",
+    "type": "party",
+    "parent": "Nowadays",
+    "area": "Ridgewood",
+    "notes": "Daytime outdoor dance party at Nowadays (Mister Sunday / Soul Summit — same daytime party in this plan)."
+  },
+  {
+    "name": "Black Market Marathon",
+    "type": "party",
+    "parent": "3 Dollar Bill",
+    "area": "East Williamsburg",
+    "notes": "Pride-weekend marathon party at 3 Dollar Bill (3DB)."
+  }
+]

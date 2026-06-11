@@ -1,6 +1,13 @@
 import restaurantsData from "@/data/restaurants.json";
 import vintageData from "@/data/vintage.json";
 import bookingsData from "@/data/bookings.json";
+import museumsData from "@/data/museums.json";
+import clubsData from "@/data/clubs.json";
+import spasData from "@/data/spas.json";
+import sightsData from "@/data/sights.json";
+import hikesData from "@/data/hikes.json";
+import attractionsData from "@/data/attractions.json";
+import eventsData from "@/data/events.json";
 
 export type Restaurant = {
   name: string;
@@ -38,9 +45,40 @@ export type Booking = {
   notes: string;
 };
 
+/**
+ * A curated place seeded from a hand-maintained JSON list (the same way
+ * restaurants/vintage are). One shape for every non-food/vintage category; the
+ * category comes from which file it lives in, except parties which carry an
+ * explicit `type` + `parent` (the club venue they belong to).
+ */
+export type SeedPlace = {
+  name: string;
+  /** Overrides the file's default type — used for parties inside clubs.json. */
+  type?: "party";
+  /** Parent venue NAME (a club). Resolved to a parentId at build time. */
+  parent?: string;
+  area?: string;
+  generalArea?: string;
+  address?: string;
+  website?: string;
+  hours?: string;
+  price?: string;
+  booking?: string;
+  bestDay?: string;
+  notes?: string;
+};
+
 export const restaurants = restaurantsData as Restaurant[];
 export const vintage = vintageData as VintageShop[];
 export const bookings = bookingsData as Booking[];
+
+export const museums = museumsData as SeedPlace[];
+export const clubs = clubsData as SeedPlace[];
+export const spas = spasData as SeedPlace[];
+export const sights = sightsData as SeedPlace[];
+export const hikes = hikesData as SeedPlace[];
+export const attractions = attractionsData as SeedPlace[];
+export const events = eventsData as SeedPlace[];
 
 /** Distinct, sorted values of a string field — handy for filter dropdowns. */
 export function distinct<T>(items: T[], pick: (t: T) => string): string[] {

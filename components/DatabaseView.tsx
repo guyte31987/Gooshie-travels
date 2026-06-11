@@ -6,11 +6,19 @@ import { EntityDetail } from "./EntityDetail";
 import { EntityForm } from "./EntityForm";
 import { ImportDialog } from "./ImportDialog";
 import { useAuth } from "./AuthProvider";
-import { ENTITY_TABS, OPERATIONAL_TYPES, buildEntities, buildSeed, type ItinDay } from "@/lib/entities";
+import {
+  ENTITY_TABS,
+  OPERATIONAL_TYPES,
+  buildEntities,
+  buildSeed,
+  buildCuratedSeedEntities,
+  type ItinDay,
+} from "@/lib/entities";
 import {
   subscribeEntities,
   deleteEntity,
   seedDatabase,
+  seedEntitiesIfNew,
   getAreas,
   type DBEntity,
 } from "@/lib/db";
@@ -30,6 +38,8 @@ export function DatabaseView() {
   const [importing, setImporting] = useState(false);
   const [showOperational, setShowOperational] = useState(false);
   const [seeding, setSeeding] = useState(false);
+  const [backfilling, setBackfilling] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -81,6 +91,24 @@ export function DatabaseView() {
       setError(e instanceof Error ? e.message : "Seed failed — see console.");
     } finally {
       setSeeding(false);
+    }
+  };
+
+  const backfillCurated = async () => {
+    setBackfilling(true);
+    setNotice(null);
+    setError(null);
+    try {
+      const created = await seedEntitiesIfNew(buildCuratedSeedEntities());
+      setNotice(
+        created > 0
+          ? `Added ${created} curated ${created === 1 ? "place" : "places"}. Export → enrich → import to fill addresses & coordinates.`
+          : "All curated places are already in the database."
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Back-fill failed — see console.");
+    } finally {
+      setBackfilling(false);
     }
   };
 
@@ -137,7 +165,24 @@ export function DatabaseView() {
             >
               + Add
             </button>
+            {isAdmin && (
+              <button
+                onClick={backfillCurated}
+                disabled={backfilling}
+                title="Add the curated clubs, museums, sights, hikes, spas & attractions (only creates ones not already present)"
+                className="rounded-lg border border-indigo-300 px-3 py-2 text-sm font-medium text-indigo-600 hover:bg-indigo-50 disabled:opacity-50"
+              >
+                {backfilling ? "Adding…" : "Add curated places"}
+              </button>
+            )}
           </div>
+
+          {notice && (
+            <p className="mb-3 rounded-lg bg-emerald-50 p-2 text-xs text-emerald-800">{notice}</p>
+          )}
+          {error && (
+            <p className="mb-3 rounded-lg bg-rose-100 p-2 text-xs text-rose-700">{error}</p>
+          )}
 
           <div className="mb-3 flex flex-wrap gap-1.5 text-xs">
             <TypeChip active={!type} onClick={() => setType("")}>

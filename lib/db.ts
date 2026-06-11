@@ -112,6 +112,25 @@ export async function deleteEntity(id: string): Promise<void> {
   await deleteDoc(doc(requireDb(), "entities", id));
 }
 
+/**
+ * Create-if-new for a batch of entities. Used to back-fill curated seed lists
+ * (clubs, museums, hikes…) into an already-seeded Database without overwriting
+ * any entity an admin has hand-edited. Returns how many were newly created.
+ */
+export async function seedEntitiesIfNew(entities: DBEntity[]): Promise<number> {
+  if (!db) return 0;
+  let created = 0;
+  for (const e of entities) {
+    const ref = doc(db, "entities", e.id);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) {
+      await setDoc(ref, { ...e, calendarSource: false, updatedAt: serverTimestamp() });
+      created++;
+    }
+  }
+  return created;
+}
+
 // --- trips ------------------------------------------------------------------
 
 export const subscribeTrips = (cb: (t: Trip[]) => void) => subColl<Trip>("trips", cb);

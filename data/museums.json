@@ -1,0 +1,42 @@
+[
+  {
+    "name": "Met Fifth Avenue",
+    "area": "Upper East Side",
+    "notes": "The encyclopedic Met. A full day; arrive early. Pair with Central Park."
+  },
+  {
+    "name": "Met Cloisters",
+    "area": "Fort Tryon Park",
+    "notes": "Medieval art in a reconstructed monastery overlooking the Hudson. Uptown, quiet, magical."
+  },
+  {
+    "name": "Studio Museum in Harlem",
+    "area": "Harlem",
+    "notes": "Leading museum of art by artists of African descent."
+  },
+  {
+    "name": "New Museum",
+    "area": "Lower East Side",
+    "notes": "Contemporary art on the Bowery."
+  },
+  {
+    "name": "Dia Beacon",
+    "area": "Beacon",
+    "notes": "Vast minimalist/land-art galleries in a former Nabisco box-printing factory. Day trip up the Hudson."
+  },
+  {
+    "name": "Clark Art Institute",
+    "area": "Williamstown",
+    "notes": "Impressionist collection + Tadao Ando galleries and hilltop trails. Berkshires."
+  },
+  {
+    "name": "Mass MoCA",
+    "area": "North Adams",
+    "notes": "Massachusetts Museum of Contemporary Art — huge converted mill campus. Berkshires."
+  },
+  {
+    "name": "Storm King Art Center",
+    "area": "New Windsor",
+    "notes": "500-acre outdoor sculpture park. NOT the same as Storm King Mountain (the hike). Rent a bike on site."
+  }
+]

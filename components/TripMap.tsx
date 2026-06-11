@@ -22,11 +22,13 @@ const TYPE_COLOR: Record<EntityType, string> = {
   party: "#db2777",
   spa: "#0d9488",
   sight: "#059669",
+  attraction: "#ea580c",
   hike: "#65a30d",
   event: "#64748b",
   accommodation: "#4338ca",
   travel: "#0284c7",
   admin: "#94a3b8",
+  uncategorised: "#a8a29e",
 };
 
 type Point = { id: string; pos: LatLng; e: Entity };
