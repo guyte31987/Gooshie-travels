@@ -95,7 +95,8 @@ function subColl<T>(path: string, cb: (rows: T[]) => void): () => void {
 
 // --- entities (the Database) ------------------------------------------------
 
-export const subscribeEntities = (cb: (e: DBEntity[]) => void) => subColl<DBEntity>("entities", cb);
+export const subscribeEntities = (cb: (e: DBEntity[]) => void) =>
+  subColl<DBEntity>("entities", (rows) => cb(rows.filter((e) => e.name)));
 
 export async function saveEntity(e: DBEntity): Promise<void> {
   await setDoc(doc(requireDb(), "entities", e.id), { ...e, updatedAt: serverTimestamp() }, { merge: true });
@@ -464,18 +465,27 @@ export async function runDeduplicationMigration(): Promise<{ deleted: number; fi
   ];
 
   const database = requireDb();
+
+  // Partial stubs created by a previous bad migration run (set+merge on non-existent docs).
+  const stubsToDelete = toFix.map(({ id }) => id);
+
+  // Fetch toFix docs to check existence — update() throws on missing docs.
+  const fixRefs = toFix.map(({ id }) => doc(database, "entities", id));
+  const fixSnaps = await Promise.all(fixRefs.map((r) => getDoc(r)));
+
   const batch = writeBatch(database);
   let deleted = 0;
   let fixed = 0;
 
-  for (const id of toDelete) {
+  for (const id of [...toDelete, ...stubsToDelete]) {
     batch.delete(doc(database, "entities", id));
     deleted++;
   }
-  for (const { id, type } of toFix) {
-    // set+merge never throws "not-found" unlike update()
-    batch.set(doc(database, "entities", id), { type, updatedAt: serverTimestamp() }, { merge: true });
-    fixed++;
+  for (let i = 0; i < toFix.length; i++) {
+    if (fixSnaps[i].exists() && fixSnaps[i].data()?.name) {
+      batch.update(fixRefs[i], { type: toFix[i].type, updatedAt: serverTimestamp() });
+      fixed++;
+    }
   }
 
   await batch.commit();
