@@ -8,6 +8,7 @@ import { useAuth } from "./AuthProvider";
 import { dayHeading } from "@/lib/ics";
 import { indexByEventUid, ENTITY_TABS, type Entity, type ItinEvent } from "@/lib/entities";
 import { saveInstance, deleteInstanceOverride, type Instance } from "@/lib/db";
+import { cleanCalendarDescription } from "@/lib/sync";
 
 function timeRange(e: ItinEvent, tz: string): string {
   if (e.isAllDay || typeof e.startMs !== "number") return "All day";
@@ -145,6 +146,12 @@ function EventCard({
   const orphaned = !!e.orphaned;
   const scheduleLocked = override?.scheduleLocked;
 
+  // One-line preview of the note. Once locked the app-owned note wins; otherwise
+  // mirror the live calendar description (cleaned of boilerplate/links).
+  const notePreview = (
+    cleanCalendarDescription(scheduleLocked ? override?.scheduleNote : e.description) ?? ""
+  ).trim();
+
   const entityNeedsBooking = linked?.needsBooking ?? false;
   const effectiveNeedsBooking =
     override?.needsBooking === true ? true
@@ -176,6 +183,10 @@ function EventCard({
       </div>
 
       {e.location && <p className="mt-1 truncate text-sm text-slate-500">📍 {e.location}</p>}
+
+      {notePreview && (
+        <p className="mt-1 line-clamp-1 text-xs text-slate-400">📝 {notePreview}</p>
+      )}
 
       {/* Entity link — tapping stops propagation so it opens EntityDetail directly */}
       {linked && (
@@ -256,6 +267,16 @@ function EventPopup({
   const instanceId = `${tripId}:${e.uid}`;
 
   const persist = (patch: Partial<Instance>) => {
+    // Investing in an occurrence (a note, a booking) auto-locks it so it survives
+    // a later calendar deletion — only locked instances are re-injected as orphans.
+    const INVEST_KEYS: (keyof Instance)[] = [
+      "scheduleNote",
+      "entityInstanceNote",
+      "booked",
+      "bookingNote",
+      "bookingOffsetDays",
+    ];
+    const autoLock = patch.scheduleLocked === undefined && INVEST_KEYS.some((k) => k in patch);
     saveInstance(tripId, {
       id: e.uid,
       tripId,
@@ -265,6 +286,7 @@ function EventPopup({
       time: e.isAllDay ? undefined : timeRange(e, tz),
       ...override,
       ...patch,
+      ...(autoLock ? { scheduleLocked: true, title: override?.title ?? e.summary } : {}),
     });
   };
 
