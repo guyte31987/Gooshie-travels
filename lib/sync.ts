@@ -7,6 +7,10 @@ import type { DBEntity, TripItem } from "./db";
 import type { ItinDay, EntityType } from "./entities";
 import { extractPlaceName, categorizeEvent, PARKED_TYPES } from "./entities";
 
+// Only logistics types (travel/admin) are blocked from matching place-type entities.
+// Uncategorised events can match anything; travel/admin events can match their own kind.
+const LOGISTICS = new Set<EntityType>(["travel", "admin"]);
+
 // --- internal normalizer (mirrors matchesEntity logic in entities.ts) --------
 
 function norm(s: string): string {
@@ -33,7 +37,7 @@ export type SyncCalEvent = {
 export type SyncItem =
   | { status: "matched"; entity: DBEntity; events: SyncCalEvent[] }
   | { status: "new"; event: SyncCalEvent }
-  | { status: "fuzzy"; event: SyncCalEvent; candidate: DBEntity; score: number }
+  | { status: "fuzzy"; event: SyncCalEvent; candidate: DBEntity; score: number; contained?: boolean }
   | { status: "type_changed"; entity: DBEntity; calType: EntityType; event: SyncCalEvent }
   | { status: "orphaned"; entity: DBEntity; expected: boolean };
 
@@ -112,11 +116,11 @@ export function buildSyncDiff(opts: {
     const inByArea = de.generalArea ? areaSet.has(de.generalArea) : false;
     if (!(item?.added || (inByArea && !item?.removed))) continue;
 
-    // Exclude logistics-classified events (travel/admin) from matching against
-    // place entities. "Pre-FIST Nap Window" categorises as admin; we don't want
-    // FIST (club) to match it and get flagged as a type mismatch.
+    // Only block logistics events (travel/admin) from matching place-type entities.
+    // Uncategorised events can still match anything; travel/admin events can match
+    // travel/admin DB entities (their own kind).
     const matched = allEvents.filter(
-      (e) => !PARKED_TYPES.has(e.type) && entityMatchesEvent(de.name, e)
+      (e) => !(LOGISTICS.has(e.type) && !PARKED_TYPES.has(de.type)) && entityMatchesEvent(de.name, e)
     );
     if (!matched.length) continue;
 
@@ -146,9 +150,22 @@ export function buildSyncDiff(opts: {
     let best: { entity: DBEntity; score: number } | null = null;
     for (const de of dbEntities) {
       const score = fuzzyScore(e.extractedName, de.name);
-      if (score >= 0.5 && (!best || score > best.score)) best = { entity: de, score };
+      if (score > 0.5 && (!best || score > best.score)) best = { entity: de, score };
     }
-    if (best) {
+    // Containment: entity name is a substring of the extracted event name.
+    // "Met Cloisters" inside "Met Cloisters & Fort Tryon Walk" → near-certain match.
+    let contained: DBEntity | null = null;
+    const normExtracted = norm(e.extractedName);
+    for (const de of dbEntities) {
+      const dn = norm(de.name);
+      if (dn.length >= 7 && normExtracted.includes(dn) && normExtracted !== dn) {
+        contained = de;
+        break;
+      }
+    }
+    if (contained) {
+      result.push({ status: "fuzzy", event: e, candidate: contained, score: 1.0, contained: true });
+    } else if (best) {
       result.push({ status: "fuzzy", event: e, candidate: best.entity, score: best.score });
     } else {
       result.push({ status: "new", event: e });

@@ -392,10 +392,17 @@ export function SyncReport() {
           </p>
           <ul className="space-y-2">
             {fuzzyItems.map((item) => (
-              <li key={item.event.uid} className="rounded-xl border border-amber-200 bg-amber-50 p-3">
+              <li key={item.event.uid} className={`rounded-xl border p-3 ${item.contained ? "border-indigo-200 bg-indigo-50" : "border-amber-200 bg-amber-50"}`}>
                 <div className="mb-2 flex flex-wrap gap-x-6 gap-y-1 text-sm">
                   <div>
-                    <span className="text-xs font-medium text-slate-400 uppercase tracking-wide">Calendar</span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-xs font-medium text-slate-400 uppercase tracking-wide">
+                        {item.contained ? "Calendar (visit to known venue)" : "Calendar"}
+                      </span>
+                      {item.contained && (
+                        <span className="rounded-full bg-indigo-100 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-700">📍 Venue match</span>
+                      )}
+                    </div>
                     <div className="font-medium">{item.event.extractedName}</div>
                     <div className="text-xs text-slate-500">{item.event.type}{item.event.dayKey && ` · ${item.event.dayKey}`}</div>
                   </div>
@@ -406,16 +413,16 @@ export function SyncReport() {
                     <div className="text-xs text-slate-500">{item.candidate.type}{item.candidate.generalArea && ` · ${item.candidate.generalArea}`}</div>
                   </div>
                   <div className="text-xs text-slate-400 self-end">
-                    {Math.round(item.score * 100)}% word overlap
+                    {item.contained ? "name contained in event" : `${Math.round(item.score * 100)}% word overlap`}
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <button
                     onClick={() => linkFuzzy(item.event, item.candidate.id)}
                     disabled={isSaving(item.event.uid)}
-                    className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-700 disabled:opacity-50"
+                    className={`rounded-lg px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50 ${item.contained ? "bg-indigo-600 hover:bg-indigo-700" : "bg-amber-600 hover:bg-amber-700"}`}
                   >
-                    {isSaving(item.event.uid) ? "…" : `Link to "${item.candidate.name}"`}
+                    {isSaving(item.event.uid) ? "…" : item.contained ? `Link — this is a visit to "${item.candidate.name}"` : `Link to "${item.candidate.name}"`}
                   </button>
                   <button
                     onClick={() => saveNew(item.event)}

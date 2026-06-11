@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ENTITY_TABS, type Entity, type TripSlot } from "@/lib/entities";
 import { googleMapsUrl, externalUrl, instagramUrl, instagramHandle } from "@/lib/geo";
 import { Comments } from "./Comments";
 import { EntityForm } from "./EntityForm";
 import { useTripData, useOptionalTripData } from "./TripData";
 import { useAuth } from "./AuthProvider";
-import { saveInstance, deleteInstanceOverride, type Instance } from "@/lib/db";
+import { saveInstance, deleteInstanceOverride, type Instance, type DBEntity } from "@/lib/db";
 
 /** The entity popup — place-level info, general comments, and per-visit appearances.
  *  Opened from entity name links in EventPopup, Planning, Map, or Database. */
@@ -15,11 +15,13 @@ export function EntityDetail({
   entity,
   tripId = "",
   tripName = "",
+  allDbEntities,
   onClose,
 }: {
   entity: Entity;
   tripId?: string;
   tripName?: string;
+  allDbEntities?: DBEntity[];
   onClose: () => void;
 }) {
   const type = ENTITY_TABS.find((t) => t.type === entity.type || (entity.type === "party" && t.type === "club"));
@@ -27,11 +29,16 @@ export function EntityDetail({
   const canEdit = isAdmin || authRole === "editor";
   const [editing, setEditing] = useState(false);
   const tripData = useOptionalTripData();
-  const childEntities = (tripData?.entities ?? []).filter(
-    (e) => e.parentId === entity.id
+  // When opened from the GDB (no TripData context), fall back to the raw DB
+  // entity list for child/parent resolution so "Events at this venue" still shows.
+  const fallbackEntities: Entity[] = useMemo(
+    () => (allDbEntities ?? []).map((de) => ({ ...de, slots: [] as TripSlot[] })),
+    [allDbEntities]
   );
+  const lookupEntities = tripData?.entities ?? fallbackEntities;
+  const childEntities = lookupEntities.filter((e) => e.parentId === entity.id);
   const parentEntity = entity.parentId
-    ? (tripData?.entities ?? []).find((e) => e.id === entity.parentId)
+    ? lookupEntities.find((e) => e.id === entity.parentId)
     : undefined;
   const mapsHref = googleMapsUrl({
     name: entity.name,

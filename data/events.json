@@ -1,11 +1,13 @@
 [
   {
     "name": "Mermaid Parade",
+    "type": "sight",
     "area": "Coney Island",
     "notes": "Annual summer-solstice art parade. One-off, date-fixed — watch from the boardwalk."
   },
   {
     "name": "Ladyland",
+    "type": "party",
     "area": "East Williamsburg",
     "notes": "Queer music festival (Avant Gardner / Brooklyn Mirage). One-off, ticketed."
   }

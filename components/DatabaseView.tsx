@@ -24,6 +24,7 @@ import {
   bulkDeleteEntities,
   seedDatabase,
   seedEntitiesIfNew,
+  runDeduplicationMigration,
   getAreas,
   type DBEntity,
 } from "@/lib/db";
@@ -44,6 +45,7 @@ export function DatabaseView() {
   const [showOperational, setShowOperational] = useState(false);
   const [seeding, setSeeding] = useState(false);
   const [backfilling, setBackfilling] = useState(false);
+  const [migrating, setMigrating] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectMode, setSelectMode] = useState(false);
@@ -251,6 +253,26 @@ export function DatabaseView() {
                 {backfilling ? "Adding…" : "Add curated places"}
               </button>
             )}
+            {isAdmin && (
+              <button
+                onClick={async () => {
+                  if (!confirm("Delete verbose duplicate entities and fix known wrong types? This runs once.")) return;
+                  setMigrating(true);
+                  try {
+                    const { deleted, fixed } = await runDeduplicationMigration();
+                    setNotice(`Migration done: ${deleted} duplicates removed, ${fixed} types fixed.`);
+                  } catch (e) {
+                    setError(String(e));
+                  } finally {
+                    setMigrating(false);
+                  }
+                }}
+                disabled={migrating}
+                className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-100 disabled:opacity-50"
+              >
+                {migrating ? "Running…" : "🧹 Clean duplicates"}
+              </button>
+            )}
           </div>
 
           {notice && (
@@ -425,6 +447,7 @@ export function DatabaseView() {
       {viewing && (
         <EntityDetail
           entity={{ ...viewing, slots: [] }}
+          allDbEntities={entities}
           onClose={() => setViewing(null)}
         />
       )}

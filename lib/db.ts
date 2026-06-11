@@ -24,6 +24,7 @@ import {
 import { db } from "./firebase";
 import type { EntityType, ItinDay } from "./entities";
 import { DEFAULT_GENERAL_AREAS } from "./areas";
+import { slugId } from "./slug";
 
 export type Trip = {
   id: string;
@@ -424,4 +425,53 @@ export function subscribeDismissedIssues(cb: (keys: string[]) => void): () => vo
 
 export async function setDismissedIssues(keys: string[]): Promise<void> {
   await setDoc(doc(requireDb(), "meta", "dismissedIssues"), { keys });
+}
+
+/**
+ * One-time migration: delete known verbose duplicate entities (auto-saved
+ * calendar event titles that shadow real seed entities) and fix known wrong
+ * entity types created when the categorizer was less accurate.
+ */
+export async function runDeduplicationMigration(): Promise<{ deleted: number; fixed: number }> {
+  if (!db) return { deleted: 0, fixed: 0 };
+
+  // Verbose calendar-title duplicates that shadow real seed entities.
+  const toDelete = [
+    slugId("museum", "Met Cloisters & Fort Tryon Walk"),
+    slugId("museum", "MASS MoCA Exhibition"),
+    slugId("museum", "New Museum LES & Gallery Walk"),
+    slugId("club", "FIST 10 Year Anniversary @ Basement"),
+    slugId("club", "Mister Sunday: Soul Summit Takeover"),
+    slugId("club", "Sultan Rooms or Pure Honey Pride & & 3DB Black Market Marathon"),
+    slugId("sight", "Jacob Riis Park Queer Beach"),
+    slugId("sight", "Coney Island Mermaid Parade"),
+    slugId("club", "Bushwick Comedy Club, 259 Melrose St or BCC at Eris Bar"),
+    slugId("club", "LadyLand Festival"),
+  ];
+
+  // Entities saved with wrong types by the old (less accurate) categorizer.
+  const toFix: { id: string; type: EntityType }[] = [
+    { id: slugId("party", "Pre-FIST Dedicated Nap Window"), type: "admin" },
+    { id: slugId("sight", "Hersheypark Morning Coaster Block"), type: "attraction" },
+    { id: slugId("sight", "Rental Car Pickup & Storm King Drive"), type: "travel" },
+    { id: slugId("food", "Casual Lunch en Route South"), type: "travel" },
+    { id: slugId("event", "Ladyland"), type: "party" },
+    { id: slugId("event", "Mermaid Parade"), type: "sight" },
+  ];
+
+  const batch = writeBatch(db);
+  let deleted = 0;
+  let fixed = 0;
+
+  for (const id of toDelete) {
+    batch.delete(doc(db, "entities", id));
+    deleted++;
+  }
+  for (const { id, type } of toFix) {
+    batch.update(doc(db, "entities", id), { type, updatedAt: serverTimestamp() });
+    fixed++;
+  }
+
+  await batch.commit();
+  return { deleted, fixed };
 }

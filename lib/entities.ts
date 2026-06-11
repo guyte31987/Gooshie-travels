@@ -132,6 +132,8 @@ export type TripSlot = {
   uid?: string;
   /** App-owned (locked) — the calendar no longer overrides this occurrence. */
   locked?: boolean;
+  /** Original calendar event title for confirmed slots — lets the UI show context like "Met Cloisters & Fort Tryon Walk". */
+  eventSummary?: string;
 };
 
 export type Entity = {
@@ -220,7 +222,8 @@ function timeOf(e: ItinEvent, tz: string): string | undefined {
  * description naming "Trail House Kitchen", a party titled "Soul Summit").
  */
 export function categorizeEvent(e: ItinEvent): EntityType {
-  const t = `${e.summary} ${e.location ?? ""}`.toLowerCase();
+  const summaryClean = e.summary.replace(/\([^)]*\)/g, " ").replace(/\b(pre|post)-\w+/gi, " ").trim();
+  const t = `${summaryClean} ${e.location ?? ""}`.toLowerCase();
   // Logistics "glue" first — drives, transfers, naps, packing. These words rarely
   // appear in genuine place names, so catching them up front keeps planning blocks
   // ("Drive north…", "Pre-FIST nap window") out of the food/sight/hike buckets and
@@ -344,7 +347,7 @@ function flatten(days: ItinDay[]): { allEvents: ItinEvent[]; dayKeyOf: Map<strin
 function confirmedSlot(e: ItinEvent, dayKeyOf: Map<string, string>, tz: string): TripSlot {
   const dk = dayKeyOf.get(e.uid)!;
   const time = timeOf(e, tz);
-  return { kind: "confirmed", dayKey: dk, label: slotDayLabel(dk, tz, time), time, startMs: e.startMs, uid: e.uid };
+  return { kind: "confirmed", dayKey: dk, label: slotDayLabel(dk, tz, time), time, startMs: e.startMs, uid: e.uid, eventSummary: e.summary };
 }
 
 /** Merge planned slots onto confirmed ones, flagging genuine disagreements. */

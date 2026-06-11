@@ -245,6 +245,14 @@ function EntityRow({ e, canEdit, tripId }: { e: Entity; canEdit: boolean; tripId
               e.slots.map((s, i) => <SlotBadge key={i} s={s} />)
             )}
           </div>
+          {e.slots
+            .filter(s => s.kind === "confirmed" && s.eventSummary && s.eventSummary !== e.name)
+            .map((s, i) => (
+              <div key={i} className="mt-0.5 text-[11px] text-slate-400 italic">
+                {highlightEntityName(s.eventSummary!, e.name)}
+              </div>
+            ))
+          }
         </button>
         {canEdit && (
           <div className="flex shrink-0 items-center gap-1 mt-0.5">
@@ -276,6 +284,21 @@ function EntityRow({ e, canEdit, tripId }: { e: Entity; canEdit: boolean; tripId
         />
       )}
     </li>
+  );
+}
+
+/** Renders the calendar event summary with the entity name portion in a slightly
+ *  bolder colour so it's obvious this event IS about this entity. */
+function highlightEntityName(summary: string, entityName: string): React.ReactNode {
+  const lower = summary.toLowerCase();
+  const idx = lower.indexOf(entityName.toLowerCase());
+  if (idx < 0) return summary;
+  return (
+    <>
+      {summary.slice(0, idx)}
+      <span className="text-slate-600 not-italic font-medium">{summary.slice(idx, idx + entityName.length)}</span>
+      {summary.slice(idx + entityName.length)}
+    </>
   );
 }
 
