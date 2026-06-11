@@ -9,14 +9,17 @@ import { useAuth } from "./AuthProvider";
 import {
   ENTITY_TABS,
   OPERATIONAL_TYPES,
+  PARKED_TYPES,
   buildEntities,
   buildSeed,
   buildCuratedSeedEntities,
+  type EntityType,
   type ItinDay,
 } from "@/lib/entities";
 import {
   subscribeEntities,
   deleteEntity,
+  saveEntity,
   seedDatabase,
   seedEntitiesIfNew,
   getAreas,
@@ -264,6 +267,9 @@ export function DatabaseView() {
                   </div>
                 </button>
                 <div className="flex shrink-0 gap-1 mt-0.5">
+                  {isAdmin && !PARKED_TYPES.has(e.type) && (
+                    <ParkSelect onPark={(t) => saveEntity({ ...e, type: t })} />
+                  )}
                   <button
                     onClick={() => setEditing(e)}
                     className="rounded border border-slate-300 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"
@@ -302,6 +308,29 @@ export function DatabaseView() {
 
       {importing && <ImportDialog entities={entities} onClose={() => setImporting(false)} />}
     </div>
+  );
+}
+
+/**
+ * Compact "park this somewhere harmless" control. Files a noisy logistics entity
+ * into a bucket type (Travel / Admin / Misc) so the calendar sync stops flagging
+ * it — without deleting it from the DB or touching the calendar.
+ */
+function ParkSelect({ onPark }: { onPark: (t: EntityType) => void }) {
+  return (
+    <select
+      value=""
+      onChange={(e) => {
+        if (e.target.value) onPark(e.target.value as EntityType);
+      }}
+      title="Park this as a logistics/misc bucket so the calendar sync stops flagging it"
+      className="rounded border border-slate-300 px-1.5 py-1 text-xs font-medium text-slate-500 hover:bg-slate-50"
+    >
+      <option value="">Park…</option>
+      <option value="travel">✈️ Travel</option>
+      <option value="admin">📋 Admin</option>
+      <option value="uncategorised">❓ Misc</option>
+    </select>
   );
 }
 

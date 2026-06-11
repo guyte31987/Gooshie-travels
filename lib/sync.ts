@@ -5,7 +5,7 @@
 
 import type { DBEntity, TripItem } from "./db";
 import type { ItinDay, EntityType } from "./entities";
-import { extractPlaceName, categorizeEvent } from "./entities";
+import { extractPlaceName, categorizeEvent, PARKED_TYPES } from "./entities";
 
 // --- internal normalizer (mirrors matchesEntity logic in entities.ts) --------
 
@@ -107,8 +107,10 @@ export function buildSyncDiff(opts: {
     matched.forEach((e) => matchedUids.add(e.uid));
     matchedEntityIds.add(de.id);
 
+    // A deliberately parked entity (Travel / Admin / Misc) overrides the parser's
+    // guess — don't nag about a "mismatch" the admin already resolved on purpose.
     const calType = matched[0].type;
-    if (calType !== de.type) {
+    if (calType !== de.type && !PARKED_TYPES.has(de.type)) {
       result.push({ status: "type_changed", entity: de, calType, event: matched[0] });
     } else {
       result.push({ status: "matched", entity: de, events: matched });

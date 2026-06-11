@@ -107,6 +107,14 @@ export const ENTITY_TABS: { type: EntityType; label: string; emoji: string; oper
 /** Types that are trip-operational (not place-based) — hidden by default in Database and Planning. */
 export const OPERATIONAL_TYPES = new Set<EntityType>(["travel", "admin"]);
 
+/**
+ * Catch-all "bucket" types for logistics / glue calendar events (drives,
+ * check-ins, nap windows). An entity deliberately filed under one of these is a
+ * parking spot — the calendar sync treats its type as intentional and never
+ * flags it as a mismatch, so noise blocks can be kept without nagging forever.
+ */
+export const PARKED_TYPES = new Set<EntityType>(["travel", "admin", "uncategorised"]);
+
 export type SlotKind = "confirmed" | "planned" | "planB";
 
 export type TripSlot = {
@@ -211,6 +219,14 @@ function timeOf(e: ItinEvent, tz: string): string | undefined {
  */
 export function categorizeEvent(e: ItinEvent): EntityType {
   const t = `${e.summary} ${e.location ?? ""}`.toLowerCase();
+  // Logistics "glue" first — drives, transfers, naps, packing. These words rarely
+  // appear in genuine place names, so catching them up front keeps planning blocks
+  // ("Drive north…", "Pre-FIST nap window") out of the food/sight/hike buckets and
+  // straight into the Travel/Admin parking spots where they belong.
+  if (/\b(en\s?route|road\s?trip|detour|transfer|layover|drop.?off|drive|driving)\b/.test(t))
+    return "travel";
+  if (/\b(nap|rest\s+window|downtime|decompress|packing|pack\s+up|recover|buffer|wind.?down)\b/.test(t))
+    return "admin";
   if (
     /\b(museum|moca|cloisters|gallery|art center|art institute|studio museum|new museum|dia beacon|clark art|storm king art)\b/.test(
       t

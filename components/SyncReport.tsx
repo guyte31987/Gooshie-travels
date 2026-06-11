@@ -145,6 +145,18 @@ export function SyncReport() {
     }
   };
 
+  // Park a noisy entity into a bucket (Travel / Admin / Misc). Identical write to
+  // updateType, but framed as "stop flagging this" rather than "fix the type".
+  const parkEntity = async (entity: DBEntity, bucket: EntityType) => {
+    addSaving(entity.id);
+    try {
+      await saveEntity({ ...entity, type: bucket });
+      mark(entity.id, "parked");
+    } finally {
+      doneSaving(entity.id);
+    }
+  };
+
   const removeOrphaned = async (entityId: string) => {
     addSaving(entityId);
     try {
@@ -386,6 +398,18 @@ export function SyncReport() {
                     >
                       {isAutoImported ? `Keep ${item.entity.type}` : "Dismiss"}
                     </button>
+                    <select
+                      value=""
+                      onChange={(e) => { if (e.target.value) parkEntity(item.entity, e.target.value as EntityType); }}
+                      disabled={isSaving(item.entity.id)}
+                      title="Keep this but file it as a logistics/misc bucket so the sync stops flagging it"
+                      className="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-50 disabled:opacity-50"
+                    >
+                      <option value="">Park…</option>
+                      <option value="travel">✈️ Travel</option>
+                      <option value="admin">📋 Admin</option>
+                      <option value="uncategorised">❓ Misc</option>
+                    </select>
                   </div>
                 </li>
               );
