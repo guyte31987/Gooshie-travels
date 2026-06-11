@@ -9,6 +9,7 @@ import {
   vintage,
   museums,
   clubs,
+  bars,
   spas,
   sights,
   hikes,
@@ -26,6 +27,7 @@ import { slugId } from "./slug";
 const SEED_GROUPS: { type: EntityType; places: SeedPlace[] }[] = [
   { type: "museum", places: museums },
   { type: "club", places: clubs },
+  { type: "bar", places: bars },
   { type: "spa", places: spas },
   { type: "sight", places: sights },
   { type: "hike", places: hikes },
@@ -72,7 +74,8 @@ export type EntityType =
   | "museum"
   | "club"
   | "party"   // legacy — kept for existing Firestore docs; displayed under Clubs tab
-  | "spa"
+  | "bar"
+  | "spa"     // labelled "Wellness" in the UI; key kept as "spa" for stored docs
   | "sight"
   | "attraction"
   | "hike"
@@ -88,7 +91,8 @@ export const ENTITY_TABS: { type: EntityType; label: string; emoji: string; oper
   { type: "vintage", label: "Vintage", emoji: "👕" },
   { type: "museum", label: "Museums", emoji: "🖼" },
   { type: "club", label: "Clubs", emoji: "🎶" },
-  { type: "spa", label: "Spa", emoji: "🧖" },
+  { type: "bar", label: "Bars", emoji: "🍸" },
+  { type: "spa", label: "Wellness", emoji: "🧖" },
   { type: "sight", label: "Sights", emoji: "📸" },
   { type: "attraction", label: "Attractions", emoji: "🎢" },
   { type: "hike", label: "Hikes", emoji: "🥾" },
@@ -246,6 +250,9 @@ export function categorizeEvent(e: ItinEvent): EntityType {
     )
   )
     return "admin";
+  // bars/nightlife drinks — before food so "cocktails at X" doesn't read as a meal
+  if (/\b(cocktail|wine bar|natural wine|dive bar|speakeasy|taproom|brewery|beer garden|mezcal|aperitivo|\bbar\b)\b/.test(t))
+    return "bar";
   if (/\b(dinner|brunch|lunch|breakfast|cafe|coffee|food|bagel|pizza|bites|bbq|deli|snack|eat)\b/.test(t))
     return "food";
   // genuine one-off events (festivals, parades) are seeded/curated as "event";

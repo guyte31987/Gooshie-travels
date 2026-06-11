@@ -3,6 +3,7 @@ import vintageData from "@/data/vintage.json";
 import bookingsData from "@/data/bookings.json";
 import museumsData from "@/data/museums.json";
 import clubsData from "@/data/clubs.json";
+import barsData from "@/data/bars.json";
 import spasData from "@/data/spas.json";
 import sightsData from "@/data/sights.json";
 import hikesData from "@/data/hikes.json";
@@ -75,6 +76,7 @@ export const bookings = bookingsData as Booking[];
 
 export const museums = museumsData as SeedPlace[];
 export const clubs = clubsData as SeedPlace[];
+export const bars = barsData as SeedPlace[];
 export const spas = spasData as SeedPlace[];
 export const sights = sightsData as SeedPlace[];
 export const hikes = hikesData as SeedPlace[];
