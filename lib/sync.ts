@@ -47,6 +47,17 @@ function entityMatchesEvent(entityName: string, e: SyncCalEvent): boolean {
   return n.length >= 7 && norm(e.summary).includes(n);
 }
 
+/**
+ * party is a legacy synonym of club in this app (kept for stored Firestore docs).
+ * The calendar parser always emits "club", so treat the pair as equivalent to
+ * avoid false type-mismatch flags on every party-typed entity.
+ */
+function entityTypesEquivalent(a: EntityType, b: EntityType): boolean {
+  if (a === b) return true;
+  const canonical = (t: EntityType) => (t === "party" ? "club" : t);
+  return canonical(a) === canonical(b);
+}
+
 function fuzzyScore(a: string, b: string): number {
   const wa = norm(a).split(" ").filter((w) => w.length > 3);
   const wb = norm(b).split(" ").filter((w) => w.length > 3);
@@ -101,7 +112,12 @@ export function buildSyncDiff(opts: {
     const inByArea = de.generalArea ? areaSet.has(de.generalArea) : false;
     if (!(item?.added || (inByArea && !item?.removed))) continue;
 
-    const matched = allEvents.filter((e) => entityMatchesEvent(de.name, e));
+    // Exclude logistics-classified events (travel/admin) from matching against
+    // place entities. "Pre-FIST Nap Window" categorises as admin; we don't want
+    // FIST (club) to match it and get flagged as a type mismatch.
+    const matched = allEvents.filter(
+      (e) => !PARKED_TYPES.has(e.type) && entityMatchesEvent(de.name, e)
+    );
     if (!matched.length) continue;
 
     matched.forEach((e) => matchedUids.add(e.uid));
@@ -109,8 +125,15 @@ export function buildSyncDiff(opts: {
 
     // A deliberately parked entity (Travel / Admin / Misc) overrides the parser's
     // guess — don't nag about a "mismatch" the admin already resolved on purpose.
+    // Also skip when:
+    //  • calType is "uncategorised" — parser gave up, so trust the DB type.
+    //  • types are synonyms (party ↔ club).
     const calType = matched[0].type;
-    if (calType !== de.type && !PARKED_TYPES.has(de.type)) {
+    const isMismatch =
+      !entityTypesEquivalent(calType, de.type) &&
+      !PARKED_TYPES.has(de.type) &&
+      calType !== "uncategorised";
+    if (isMismatch) {
       result.push({ status: "type_changed", entity: de, calType, event: matched[0] });
     } else {
       result.push({ status: "matched", entity: de, events: matched });

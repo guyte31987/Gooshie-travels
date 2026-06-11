@@ -428,8 +428,10 @@ export function SyncReport() {
       {typeChangedItems.length > 0 && (
         <Section title={`Type mismatch (${typeChangedItems.length})`} tone="violet">
           <p className="mb-3 text-xs text-slate-400">
-            The parser guessed a different type from the calendar event title. Manually-curated entities
-            (no "from calendar" badge) are shown here for awareness only — the DB type is almost always correct.
+            The keyword parser inferred a different type from the calendar event title than what&apos;s stored in the DB.
+            Violet rows were auto-imported from the calendar and may genuinely need fixing — use{" "}
+            <strong>Update to X</strong> or <strong>Park</strong> (for logistics blocks like drives/check-ins).
+            Grey rows were manually curated and are almost certainly correct — hit <strong>Dismiss</strong> to clear them.
           </p>
           <ul className="space-y-2">
             {typeChangedItems.map((item) => {
