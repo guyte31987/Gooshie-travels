@@ -13,6 +13,7 @@ import {
   sights,
   hikes,
   attractions,
+  shows,
   events,
   type Restaurant,
   type VintageShop,
@@ -29,6 +30,7 @@ const SEED_GROUPS: { type: EntityType; places: SeedPlace[] }[] = [
   { type: "sight", places: sights },
   { type: "hike", places: hikes },
   { type: "attraction", places: attractions },
+  { type: "show", places: shows },
   { type: "event", places: events },
 ];
 
@@ -74,6 +76,7 @@ export type EntityType =
   | "sight"
   | "attraction"
   | "hike"
+  | "show"
   | "event"
   | "accommodation"
   | "travel"
@@ -89,6 +92,7 @@ export const ENTITY_TABS: { type: EntityType; label: string; emoji: string; oper
   { type: "sight", label: "Sights", emoji: "📸" },
   { type: "attraction", label: "Attractions", emoji: "🎢" },
   { type: "hike", label: "Hikes", emoji: "🥾" },
+  { type: "show", label: "Shows", emoji: "🎭" },
   { type: "event", label: "Events", emoji: "🎫" },
   { type: "accommodation", label: "Stays", emoji: "🛏" },
   { type: "travel", label: "Travel", emoji: "✈️", operational: true },
@@ -210,11 +214,18 @@ export function categorizeEvent(e: ItinEvent): EntityType {
   )
     return "museum";
   if (
-    /\b(fist|basement|house of yes|\bhoy\b|3db|3 dollar bill|nowadays|mister sunday|soul summit|pure honey|ladyland|drag|pride|club|festival|blessed madonna|comedy|joe.s pub|sultan)\b/.test(
+    /\b(fist|basement|house of yes|\bhoy\b|3db|3 dollar bill|nowadays|mister sunday|soul summit|pure honey|ladyland|drag|pride|club|festival|blessed madonna|sultan)\b/.test(
       t
     )
   )
     return "club";
+  // ticketed performances: theatre, comedy, screenings, concerts (e.g. "… at Joe's Pub")
+  if (
+    /\b(theatre|theater|broadway|playhouse|opera|ballet|cabaret|symphony|orchestra|screening|cinema|movie|matinee|joe.?s pub|comedy|stand-?up|live music|concert|gig|recital|show)\b/.test(
+      t
+    )
+  )
+    return "show";
   if (/\b(hike|trail|falls|mountain|greylock|cascade|kaaterskill)\b/.test(t)) return "hike";
   // spa/banya before general sights so they don't land in the wrong bucket
   if (/\b(banya|spa|bathhouse|sauna|hammam|onsen)\b/.test(t)) return "spa";

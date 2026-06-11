@@ -24,6 +24,7 @@ const TYPE_COLOR: Record<EntityType, string> = {
   sight: "#059669",
   attraction: "#ea580c",
   hike: "#65a30d",
+  show: "#c026d3",
   event: "#64748b",
   accommodation: "#4338ca",
   travel: "#0284c7",

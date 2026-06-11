@@ -7,6 +7,7 @@ import spasData from "@/data/spas.json";
 import sightsData from "@/data/sights.json";
 import hikesData from "@/data/hikes.json";
 import attractionsData from "@/data/attractions.json";
+import showsData from "@/data/shows.json";
 import eventsData from "@/data/events.json";
 
 export type Restaurant = {
@@ -78,6 +79,7 @@ export const spas = spasData as SeedPlace[];
 export const sights = sightsData as SeedPlace[];
 export const hikes = hikesData as SeedPlace[];
 export const attractions = attractionsData as SeedPlace[];
+export const shows = showsData as SeedPlace[];
 export const events = eventsData as SeedPlace[];
 
 /** Distinct, sorted values of a string field — handy for filter dropdowns. */
