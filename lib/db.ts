@@ -436,30 +436,51 @@ export async function setDismissedIssues(keys: string[]): Promise<void> {
 export async function runDeduplicationMigration(): Promise<{ deleted: number; fixed: number }> {
   if (!db) return { deleted: 0, fixed: 0 };
 
-  // Verbose calendar-title duplicates that shadow real seed entities,
-  // plus "Grab X at Y" entities saved before the name extractor was fixed.
-  const toDelete = [
-    slugId("museum", "Met Cloisters & Fort Tryon Walk"),
-    slugId("museum", "MASS MoCA Exhibition"),
-    slugId("museum", "New Museum LES & Gallery Walk"),
-    slugId("club", "FIST 10 Year Anniversary @ Basement"),
-    slugId("club", "Mister Sunday: Soul Summit Takeover"),
-    slugId("club", "Sultan Rooms or Pure Honey Pride & & 3DB Black Market Marathon"),
-    slugId("sight", "Jacob Riis Park Queer Beach"),
-    slugId("sight", "Coney Island Mermaid Parade"),
-    slugId("club", "Bushwick Comedy Club, 259 Melrose St or BCC at Eris Bar"),
-    slugId("club", "LadyLand Festival"),
-    // "Grab X at Y" entities saved before extractPlaceName handled this pattern
-    slugId("food", "Grab Coffee at Cornwall Coffee Co. & Mercantile"),
-    slugId("food", "Grab food at Downstate Newburgh"),
+  // batch.delete on a non-existent doc is a silent no-op, so we can safely try every
+  // plausible type prefix for each verbose entity. The auto-saver used whatever type
+  // categorizeEvent returned at the time — which may differ from what we'd expect now.
+  const ids = (...names: string[]) =>
+    (types: EntityType[], ...extra: string[]) =>
+      [...types, ...extra as EntityType[]].flatMap((t) =>
+        names.map((n) => slugId(t, n))
+      );
+
+  const PLACE_TYPES: EntityType[] = ["club", "party", "event", "sight", "attraction", "museum"];
+  const FOOD_TYPES: EntityType[] = ["food", "uncategorised"];
+
+  const toDelete: string[] = [
+    // Museums with verbose calendar titles
+    ...ids("Met Cloisters & Fort Tryon Walk")(["museum", "sight", "attraction"]),
+    ...ids("MASS MoCA Exhibition")(["museum", "sight", "attraction"]),
+    ...ids("New Museum LES & Gallery Walk")(["museum", "sight", "attraction"]),
+    // Club/party events with verbose calendar titles
+    ...ids("FIST 10 Year Anniversary @ Basement")(PLACE_TYPES),
+    ...ids("Mister Sunday: Soul Summit Takeover")(PLACE_TYPES),
+    ...ids(
+      "Sultan Rooms or Pure Honey Pride & & 3DB Black Market Marathon",
+      "Sultan Rooms or Pure Honey Pride and and 3DB Black Market Marathon",
+    )(PLACE_TYPES),
+    ...ids("LadyLand Festival", "Ladyland Festival")(PLACE_TYPES),
+    ...ids(
+      "Bushwick Comedy Club, 259 Melrose St or BCC at Eris Bar",
+      "Bushwick Comedy Club 259 Melrose St or BCC at Eris Bar",
+    )(PLACE_TYPES),
+    // Sights with verbose titles
+    ...ids("Jacob Riis Park Queer Beach")(["sight", "attraction", "hike"]),
+    ...ids("Coney Island Mermaid Parade")(["sight", "event", "party", "attraction"]),
+    // Food entities with "Grab X at" prefix (before extractPlaceName was fixed)
+    ...ids("Grab Coffee at Cornwall Coffee Co. & Mercantile")(FOOD_TYPES),
+    ...ids("Grab food at Downstate Newburgh")(FOOD_TYPES),
   ];
 
   // Entities saved with wrong types by the old (less accurate) categorizer.
   const toFix: { id: string; type: EntityType }[] = [
     { id: slugId("party", "Pre-FIST Dedicated Nap Window"), type: "admin" },
+    { id: slugId("admin", "Pre-FIST Dedicated Nap Window"), type: "admin" },
     { id: slugId("sight", "Hersheypark Morning Coaster Block"), type: "attraction" },
     { id: slugId("sight", "Rental Car Pickup & Storm King Drive"), type: "travel" },
     { id: slugId("food", "Casual Lunch en Route South"), type: "travel" },
+    { id: slugId("travel", "Casual Lunch en Route South"), type: "travel" },
     { id: slugId("event", "Ladyland"), type: "party" },
     { id: slugId("event", "Mermaid Parade"), type: "sight" },
   ];
