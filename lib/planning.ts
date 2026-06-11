@@ -63,6 +63,7 @@ export type SeedPlace = {
   generalArea?: string;
   address?: string;
   website?: string;
+  instagram?: string;
   hours?: string;
   price?: string;
   booking?: string;

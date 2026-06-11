@@ -66,6 +66,7 @@ export const ENTITY_COLUMNS: Column<Entity>[] = [
   { header: "Lat", get: (e) => (typeof e.lat === "number" ? String(e.lat) : "") },
   { header: "Lng", get: (e) => (typeof e.lng === "number" ? String(e.lng) : "") },
   { header: "Website", get: (e) => e.website ?? "" },
+  { header: "Instagram", get: (e) => e.instagram ?? "" },
   { header: "Hours", get: (e) => e.hours ?? "" },
   { header: "Price", get: (e) => e.price ?? "" },
   { header: "Booking", get: (e) => e.booking ?? "" },

@@ -40,6 +40,15 @@ export function EntityDetail({
     lat: entity.lat,
     lng: entity.lng,
   });
+  const igRaw = entity.instagram?.trim() ?? "";
+  const igHandle = igRaw
+    .replace(/^https?:\/\/(www\.)?instagr(am\.com|\.am)\//i, "")
+    .replace(/^@/, "")
+    .replace(/\/.*$/, "");
+  const instagramHandle = igHandle ? `@${igHandle}` : igRaw;
+  const instagramHref = /^https?:\/\//i.test(igRaw)
+    ? igRaw
+    : `https://instagram.com/${igHandle || igRaw.replace(/^@/, "")}`;
 
   return (
     <>
@@ -127,6 +136,18 @@ export function EntityDetail({
               </a>
             </Row>
           )}
+          {entity.instagram && (
+            <Row label="Instagram">
+              <a
+                href={instagramHref}
+                target="_blank"
+                rel="noreferrer"
+                className="break-all font-medium text-indigo-600 hover:underline"
+              >
+                {instagramHandle} ↗
+              </a>
+            </Row>
+          )}
           {entity.price && <Row label="Price">{entity.price}</Row>}
           {entity.booking && <Row label="Booking">{entity.booking}</Row>}
           {entity.bestDay && <Row label="Best day">{entity.bestDay}</Row>}
@@ -201,7 +222,7 @@ export function EntityDetail({
 
     {editing && (
       <EntityForm
-        entity={{ id: entity.id, name: entity.name, type: entity.type, generalArea: entity.generalArea, area: entity.area, address: entity.address, hours: entity.hours, price: entity.price, source: entity.source, booking: entity.booking, notes: entity.notes, closed: entity.closed, bestDay: entity.bestDay, needsBooking: entity.needsBooking }}
+        entity={{ id: entity.id, name: entity.name, type: entity.type, generalArea: entity.generalArea, area: entity.area, address: entity.address, website: entity.website, instagram: entity.instagram, lat: entity.lat, lng: entity.lng, hours: entity.hours, price: entity.price, source: entity.source, booking: entity.booking, notes: entity.notes, closed: entity.closed, bestDay: entity.bestDay, needsBooking: entity.needsBooking }}
         onClose={() => setEditing(false)}
       />
     )}

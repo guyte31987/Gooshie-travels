@@ -47,6 +47,7 @@ function seedToEntity(p: SeedPlace, groupType: EntityType, tz: string): Entity {
     area: p.area,
     address: p.address,
     website: p.website,
+    instagram: p.instagram,
     hours: p.hours,
     price: p.price,
     booking: p.booking,
@@ -144,6 +145,7 @@ export type Entity = {
   lat?: number;
   lng?: number;
   website?: string;
+  instagram?: string;
   hours?: string;
   price?: string;
   source?: string;
@@ -535,6 +537,7 @@ function toDBEntity(e: Entity): DBEntity {
     lat: e.lat,
     lng: e.lng,
     website: e.website,
+    instagram: e.instagram,
     hours: e.hours,
     price: e.price,
     source: e.source,

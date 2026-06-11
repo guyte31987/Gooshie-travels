@@ -9,6 +9,7 @@ const FIELDS: { key: keyof DBEntity; label: string; textarea?: boolean }[] = [
   { key: "area", label: "Area / neighborhood" },
   { key: "address", label: "Address" },
   { key: "website", label: "Website" },
+  { key: "instagram", label: "Instagram" },
   { key: "hours", label: "Hours" },
   { key: "price", label: "Price" },
   { key: "source", label: "Source" },

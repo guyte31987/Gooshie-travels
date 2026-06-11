@@ -53,6 +53,7 @@ const FIELD_MAP: Record<string, { key: keyof DBEntity; policy: Policy; numeric?:
   lat: { key: "lat", policy: "overwrite", numeric: true },
   lng: { key: "lng", policy: "overwrite", numeric: true },
   website: { key: "website", policy: "overwrite" },
+  instagram: { key: "instagram", policy: "overwrite" },
   hours: { key: "hours", policy: "overwrite" },
   price: { key: "price", policy: "overwrite" },
   booking: { key: "booking", policy: "overwrite" },
@@ -82,6 +83,10 @@ const PLACEHOLDER =
   /^(n\/?a|na|none|unknown|undefined|null|nil|tbd|tba|not\s+(available|found|applicable|listed|known)|no\s+(website|address|info|data|hours)|[-—–?.]+)$/i;
 
 const isPlaceholder = (v: string) => PLACEHOLDER.test(v.trim());
+
+// An unambiguous Instagram link — used to lift a handle that landed in the
+// Website column over into the dedicated instagram field.
+const isInstagramUrl = (v: string) => /(?:^|\/\/|\.)instagr(?:am\.com|\.am)\//i.test(v.trim());
 
 /**
  * Diff a parsed CSV against the current Database without writing anything.
@@ -114,7 +119,13 @@ export function planImport(rows: string[][], existing: DBEntity[]): ImportPrevie
       const raw = (r[idx] ?? "").trim();
       if (raw === "") return; // a blank cell never clears existing data
       if (isPlaceholder(raw)) { flagged.push({ id, name: ent.name, field: col, value: raw }); return; }
-      const cur = ent[map.key];
+
+      // Re-route an Instagram link that was dropped into the Website column.
+      let key = map.key;
+      let label = col;
+      if (key === "website" && isInstagramUrl(raw)) { key = "instagram"; label = "instagram"; }
+
+      const cur = ent[key];
       const curStr = cur == null ? "" : String(cur).trim();
       if (map.policy === "fillBlank" && curStr !== "") return; // protect manual curation
 
@@ -126,8 +137,8 @@ export function planImport(rows: string[][], existing: DBEntity[]): ImportPrevie
       }
       if (curStr === String(value)) return; // unchanged
 
-      (patch as Record<string, unknown>)[map.key] = value;
-      changes.push({ field: col, from: curStr, to: String(value) });
+      (patch as Record<string, unknown>)[key] = value;
+      changes.push({ field: label, from: curStr, to: String(value) });
     });
 
     if (changes.length) patches.push({ id, name: ent.name, changes, patch });

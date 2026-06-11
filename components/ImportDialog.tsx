@@ -97,7 +97,8 @@ export function ImportDialog({
             <p className="text-xs text-slate-500">
               Paste (or upload) the CSV you exported and filled in. Rows are matched back by the{" "}
               <code className="rounded bg-slate-100 px-1">id</code> column. Geo, address, hours,
-              price, website and booking are overwritten; notes are only filled when empty.
+              price, website, instagram and booking are overwritten; notes are only filled when
+              empty. An Instagram link in the Website column is moved to Instagram automatically.
             </p>
 
             {/* Previous import — reviewable history */}

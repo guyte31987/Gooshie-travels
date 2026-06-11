@@ -43,6 +43,8 @@ export type DBEntity = {
   lat?: number;
   lng?: number;
   website?: string;
+  /** Instagram profile URL or @handle (kept separate from the main website). */
+  instagram?: string;
   hours?: string;
   price?: string;
   source?: string;
