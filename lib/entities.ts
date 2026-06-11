@@ -405,9 +405,11 @@ export function buildEntities(days: ItinDay[], tz: string): Entity[] {
       id: "cal:" + group.type + ":" + norm(group.name),
       name: group.name,
       type: group.type,
-      generalArea: suggestGeneralArea(first.location) ?? suggestGeneralArea(group.name),
-      address: first.location,
-      notes: first.description,
+      // `first` is undefined for "or" alternative groups (they carry only a
+      // Plan B slot, no event of their own) — fall back to the place name.
+      generalArea: suggestGeneralArea(first?.location) ?? suggestGeneralArea(group.name),
+      address: first?.location,
+      notes: first?.description,
       slots: [...group.events.map(conf), ...group.altSlots],
     });
   }
@@ -593,9 +595,10 @@ export function resolveTripEntities(opts: {
       id: "new:" + group.type + ":" + norm(group.name),
       name: group.name,
       type: group.type,
-      generalArea: suggestGeneralArea(first.location) ?? suggestGeneralArea(group.name),
-      address: first.location,
-      notes: first.description,
+      // `first` is undefined for "or" alternative groups (Plan B only, no event).
+      generalArea: suggestGeneralArea(first?.location) ?? suggestGeneralArea(group.name),
+      address: first?.location,
+      notes: first?.description,
       transient: true,
       slots: [...group.events.map(conf), ...group.altSlots],
     });
