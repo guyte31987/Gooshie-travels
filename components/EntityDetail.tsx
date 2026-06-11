@@ -1,13 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ENTITY_TABS, type Entity, type TripSlot } from "@/lib/entities";
 import { googleMapsUrl, externalUrl, instagramUrl, instagramHandle } from "@/lib/geo";
 import { Comments } from "./Comments";
 import { EntityForm } from "./EntityForm";
-import { useTripData, useOptionalTripData } from "./TripData";
+import { useTripData, useOptionalTripData, TripDataProvider } from "./TripData";
 import { useAuth } from "./AuthProvider";
 import { saveInstance, deleteInstanceOverride, type Instance, type DBEntity } from "@/lib/db";
+import { TRIPS } from "@/lib/trips";
 
 /** The entity popup — place-level info, general comments, and per-visit appearances.
  *  Opened from entity name links in EventPopup, Planning, Map, or Database. */
@@ -195,28 +196,30 @@ export function EntityDetail({
           <Comments entityId={entity.id} label="Comments about this place" />
         </div>
 
-        {/* Appearances in this trip */}
-        {tripId && (
+        {/* Appearances — single trip when opened inside a trip, all trips from the GDB. */}
         <div className="mt-4 border-t border-slate-100 pt-3">
           <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
-            This trip
+            {tripId ? "This trip" : "Across trips"}
           </h3>
-          {entity.slots.length === 0 ? (
-            <p className="text-sm text-slate-400">Not scheduled or planned yet.</p>
-          ) : (
-            <div className="rounded-xl border border-slate-200">
-              <div className="border-b border-slate-100 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-600">
-                {tripName}
+          {tripId ? (
+            entity.slots.length === 0 ? (
+              <p className="text-sm text-slate-400">Not scheduled or planned yet.</p>
+            ) : (
+              <div className="rounded-xl border border-slate-200">
+                <div className="border-b border-slate-100 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-600">
+                  {tripName}
+                </div>
+                <ul>
+                  {entity.slots.map((s, i) => (
+                    <Appearance key={i} slot={s} entity={entity} tripId={tripId} index={i} />
+                  ))}
+                </ul>
               </div>
-              <ul>
-                {entity.slots.map((s, i) => (
-                  <Appearance key={i} slot={s} entity={entity} tripId={tripId} index={i} />
-                ))}
-              </ul>
-            </div>
+            )
+          ) : (
+            <AllTripsAppearances entityId={entity.id} />
           )}
         </div>
-        )}
       </div>
     </div>
 
@@ -227,6 +230,66 @@ export function EntityDetail({
       />
     )}
     </>
+  );
+}
+
+/** GDB view: resolve this entity's slots in every trip and list them grouped by trip.
+ *  Each trip gets its own TripDataProvider so Appearance's instanceMap is correctly scoped. */
+function AllTripsAppearances({ entityId }: { entityId: string }) {
+  // Track which trips reported slots so we can show an empty state when none do.
+  const [withSlots, setWithSlots] = useState<Set<string>>(new Set());
+  const report = (tid: string, has: boolean) =>
+    setWithSlots((prev) => {
+      const had = prev.has(tid);
+      if (has === had) return prev;
+      const next = new Set(prev);
+      if (has) next.add(tid);
+      else next.delete(tid);
+      return next;
+    });
+
+  return (
+    <div className="space-y-3">
+      {TRIPS.map((t) => (
+        <TripDataProvider key={t.id} tripId={t.id} tripName={t.name} tripAreas={t.areas}>
+          <TripAppearances entityId={entityId} tripName={t.name} onResult={report} />
+        </TripDataProvider>
+      ))}
+      {withSlots.size === 0 && (
+        <p className="text-sm text-slate-400">Not scheduled or planned in any trip yet.</p>
+      )}
+    </div>
+  );
+}
+
+/** One trip's appearances for an entity. Renders nothing when the entity has no slots there. */
+function TripAppearances({
+  entityId,
+  tripName,
+  onResult,
+}: {
+  entityId: string;
+  tripName: string;
+  onResult: (tripId: string, hasSlots: boolean) => void;
+}) {
+  const { entities, tripId, loading } = useTripData();
+  const entity = entities.find((e) => e.id === entityId);
+  const hasSlots = !!entity && entity.slots.length > 0;
+  useEffect(() => {
+    if (!loading) onResult(tripId, hasSlots);
+  }, [loading, hasSlots, tripId]);
+  if (!hasSlots) return null;
+  return (
+    <div className="rounded-xl border border-slate-200">
+      <div className="border-b border-slate-100 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-600">
+        {tripName}
+      </div>
+      <ul>
+        {entity!.slots.map((s, i) => (
+          <Appearance key={i} slot={s} entity={entity!} tripId={tripId} index={i} />
+        ))}
+      </ul>
+    </div>
   );
 }
 
