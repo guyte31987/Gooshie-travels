@@ -113,19 +113,39 @@ function EntityList({
   const [generalArea, setGeneralArea] = useState("");
   const [scheduledOnly, setScheduledOnly] = useState(false);
 
+  // Parties nest inside their host club — never shown as their own top-level row.
+  const childrenByParent = useMemo(() => {
+    const ids = new Set(entities.map((e) => e.id));
+    const m = new Map<string, Entity[]>();
+    for (const e of entities) {
+      if (e.parentId && ids.has(e.parentId)) {
+        const arr = m.get(e.parentId) ?? [];
+        arr.push(e);
+        m.set(e.parentId, arr);
+      }
+    }
+    return m;
+  }, [entities]);
+  const childIds = useMemo(() => {
+    const ids = new Set(entities.map((e) => e.id));
+    return new Set(entities.filter((e) => e.parentId && ids.has(e.parentId)).map((e) => e.id));
+  }, [entities]);
+
   const filtered = useMemo(() => {
     const base = entities.filter((e) => {
+      if (childIds.has(e.id)) return false; // parties show nested, not top-level
       if (generalArea && e.generalArea !== generalArea) return false;
       if (area && e.area !== area) return false;
       if (scheduledOnly && !e.slots.some((s) => s.kind === "confirmed")) return false;
       if (q) {
-        const hay = `${e.name} ${e.area ?? ""} ${e.notes ?? ""}`.toLowerCase();
+        const kids = childrenByParent.get(e.id) ?? [];
+        const hay = `${e.name} ${e.area ?? ""} ${e.notes ?? ""} ${kids.map((k) => k.name).join(" ")}`.toLowerCase();
         if (!hay.includes(q.toLowerCase())) return false;
       }
       return true;
     });
     return [...base].sort((a, b) => slotPriority(a) - slotPriority(b));
-  }, [entities, generalArea, area, scheduledOnly, q]);
+  }, [entities, generalArea, area, scheduledOnly, q, childIds, childrenByParent]);
 
   return (
     <div>
@@ -181,7 +201,13 @@ function EntityList({
       ) : (
         <ul className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">
           {filtered.map((e) => (
-            <EntityRow key={e.id} e={e} canEdit={canEdit} tripId={tripId} />
+            <EntityRow
+              key={e.id}
+              e={e}
+              canEdit={canEdit}
+              tripId={tripId}
+              nestedChildren={childrenByParent.get(e.id) ?? []}
+            />
           ))}
         </ul>
       )}
@@ -210,7 +236,17 @@ function EntityList({
   );
 }
 
-function EntityRow({ e, canEdit, tripId }: { e: Entity; canEdit: boolean; tripId: string }) {
+function EntityRow({
+  e,
+  canEdit,
+  tripId,
+  nestedChildren = [],
+}: {
+  e: Entity;
+  canEdit: boolean;
+  tripId: string;
+  nestedChildren?: Entity[];
+}) {
   const { tripName, entities } = useTripData();
   const parentEntity = e.parentId ? entities.find((ent) => ent.id === e.parentId) : undefined;
   const [showDetail, setShowDetail] = useState(false);
@@ -267,6 +303,74 @@ function EntityRow({ e, canEdit, tripId }: { e: Entity; canEdit: boolean; tripId
                 onClick={() => toggleMembership(tripId, e, true)}
                 title="Remove from trip"
                 className="text-slate-300 hover:text-rose-500 text-sm leading-none px-1"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+      {/* Parties hosted at this venue, nested */}
+      {nestedChildren.length > 0 && (
+        <ul className="border-t border-slate-100 bg-slate-50/60 pl-4">
+          {nestedChildren.map((c) => (
+            <NestedPartyRow key={c.id} e={c} canEdit={canEdit} tripId={tripId} />
+          ))}
+        </ul>
+      )}
+      {showDetail && (
+        <EntityDetail entity={e} tripId={tripId} tripName={tripName} onClose={() => setShowDetail(false)} />
+      )}
+      {showEdit && (
+        <EntityForm
+          entity={{ id: e.id, name: e.name, type: e.type, generalArea: e.generalArea, area: e.area, address: e.address, hours: e.hours, price: e.price, source: e.source, booking: e.booking, notes: e.notes, closed: e.closed, bestDay: e.bestDay, needsBooking: e.needsBooking }}
+          onClose={() => setShowEdit(false)}
+        />
+      )}
+    </li>
+  );
+}
+
+/** A party shown nested beneath its host venue's row. Compact, but keeps slot
+ *  badges, event-summary context, edit and remove — everything the flat row had. */
+function NestedPartyRow({ e, canEdit, tripId }: { e: Entity; canEdit: boolean; tripId: string }) {
+  const { tripName } = useTripData();
+  const [showDetail, setShowDetail] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
+  return (
+    <li>
+      <div className="flex items-start gap-2 py-2 pr-4">
+        <span className="mt-0.5 text-slate-300">↳</span>
+        <button onClick={() => setShowDetail(true)} className="min-w-0 flex-1 text-left">
+          <span className="text-sm font-medium text-slate-700">🎉 {e.name}</span>
+          <div className="mt-1 flex flex-wrap gap-1">
+            {e.slots.length === 0 ? (
+              <span className="text-[11px] text-slate-300">not placed yet</span>
+            ) : (
+              e.slots.map((s, i) => <SlotBadge key={i} s={s} />)
+            )}
+          </div>
+          {e.slots
+            .filter((s) => s.kind === "confirmed" && s.eventSummary && s.eventSummary !== e.name)
+            .map((s, i) => (
+              <div key={i} className="mt-0.5 text-[11px] text-slate-400 italic">
+                {highlightEntityName(s.eventSummary!, e.name)}
+              </div>
+            ))}
+        </button>
+        {canEdit && (
+          <div className="mt-0.5 flex shrink-0 items-center gap-1">
+            <button
+              onClick={() => setShowEdit(true)}
+              className="rounded border border-slate-200 px-2 py-0.5 text-xs font-medium text-slate-500 hover:bg-slate-50"
+            >
+              Edit
+            </button>
+            {!e.transient && (
+              <button
+                onClick={() => toggleMembership(tripId, e, true)}
+                title="Remove from trip"
+                className="px-1 text-sm leading-none text-slate-300 hover:text-rose-500"
               >
                 ✕
               </button>

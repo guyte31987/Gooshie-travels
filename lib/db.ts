@@ -483,7 +483,15 @@ export async function runDeduplicationMigration(): Promise<{ deleted: number; fi
     { id: slugId("travel", "Casual Lunch en Route South"), type: "travel" },
     // Ladyland is a standalone festival, not a club party → event.
     { id: slugId("party", "Ladyland"), type: "event" },
+    { id: slugId("club", "Ladyland"), type: "event" },
     { id: slugId("event", "Mermaid Parade"), type: "sight" },
+    // Marches/parades mis-typed as club/party by the auto-saver → event.
+    { id: slugId("party", "NYC Drag March"), type: "event" },
+    { id: slugId("club", "NYC Drag March"), type: "event" },
+    { id: slugId("party", "NYC Pride March & PrideFest Finale"), type: "event" },
+    { id: slugId("club", "NYC Pride March & PrideFest Finale"), type: "event" },
+    { id: slugId("party", "NYC Pride March and PrideFest Finale"), type: "event" },
+    { id: slugId("club", "NYC Pride March and PrideFest Finale"), type: "event" },
   ];
 
   const database = requireDb();
