@@ -43,12 +43,14 @@ Each needs a Database entry before the itinerary fully resolves. Grouped by type
 | --- | --- | --- |
 | hike-cascade-falls | Cascade Falls | 4mi loop, Greylock area |
 
-## Travel / Admin (4)
+## Travel / Admin (7) — drives are their own "Drive from X to Y" slots
 | EntityID | Name | Type |
 | --- | --- | --- |
 | travel-arrival | Arrival & Airbnb Check-In | travel |
-| travel-rental-car-pickup | Rental Car Pickup | travel |
-| travel-drive-east-nyc | Drive East to NYC | travel |
+| travel-drive-brooklyn-new-windsor | Drive: Brooklyn → New Windsor | travel |
+| travel-drive-new-windsor-hudson | Drive: New Windsor → Hudson | travel |
+| travel-drive-hudson-north-adams | Drive: Hudson → North Adams | travel |
+| travel-drive-hershey-nyc | Drive: Hershey → NYC | travel |
 | admin-pre-fist-nap-window | Pre-FIST Nap Window | admin |
 | admin-crossfit | Crossfit (partner) | admin |
 
@@ -58,10 +60,10 @@ Each needs a Database entry before the itinerary fully resolves. Grouped by type
 
 - **`attraction-hersheypark` appears 4×** (Thu Jun 25: AM coasters, PM thrills,
   water park) — a clean demonstration of *one entity, many instances*.
-- **Drives folded to one place.** "Drive North & Optional Kaaterskill" became a
-  single Kaaterskill hike instance (the drive lives in the note); "Rental Car
-  Pickup & Storm King Drive" became a travel instance. Tell me if you'd rather
-  split drives into their own `travel` slots.
+- **Drives are their own slots** ("Drive from X → Y"), split out from the bundled
+  calendar events. The Mon Jun 22 drive day is now: Brooklyn→New Windsor,
+  New Windsor→Hudson (with Kaaterskill as a separate optional stop), Hudson→North
+  Adams. Hershey→NYC on Thu Jun 25.
 - **Lunch/breakfast that the calendar buried in descriptions** (e.g. the Met's
   "lunch: Central Park / Cocina Consuelo") is kept in the note rather than given
   its own slot, to stay faithful to "the calendar is right." Say the word if you
