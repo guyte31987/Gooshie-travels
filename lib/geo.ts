@@ -134,3 +134,21 @@ export function googleMapsUrl(opts: {
   const q = [opts.name, opts.area].filter(Boolean).join(" ").trim();
   return q ? `${base}${encodeURIComponent(q)}` : null;
 }
+
+/** Normalise a stored Instagram value (full URL or @handle or bare handle) to a URL. */
+export function instagramUrl(value: string | undefined): string | null {
+  const v = value?.trim();
+  if (!v) return null;
+  if (/^https?:\/\//i.test(v)) return v;
+  return `https://instagram.com/${v.replace(/^@/, "")}`;
+}
+
+/** A display handle (@name) for a stored Instagram value, falling back to the raw value. */
+export function instagramHandle(value: string | undefined): string {
+  const v = value?.trim() ?? "";
+  const h = v
+    .replace(/^https?:\/\/(www\.)?instagr(am\.com|\.am)\//i, "")
+    .replace(/^@/, "")
+    .replace(/\/.*$/, "");
+  return h ? `@${h}` : v;
+}

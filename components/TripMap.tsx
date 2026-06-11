@@ -10,7 +10,7 @@ import {
   LayerGroup as RLLayerGroup,
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-import { resolvePoint, NYC_CENTER, type LatLng } from "@/lib/geo";
+import { resolvePoint, NYC_CENTER, instagramUrl, instagramHandle, type LatLng } from "@/lib/geo";
 import { ENTITY_TABS, type Entity, type EntityType } from "@/lib/entities";
 import { useTripData } from "./TripData";
 
@@ -98,14 +98,36 @@ export function TripMap() {
                         {p.e.slots[0] && (
                           <div className="mt-1 text-xs text-emerald-700">{p.e.slots[0].label}</div>
                         )}
-                        <a
-                          href={directionsUrl(p.e)}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="mt-1 inline-block text-xs font-medium text-indigo-600 underline"
-                        >
-                          Directions ↗
-                        </a>
+                        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs font-medium">
+                          <a
+                            href={directionsUrl(p.e)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-indigo-600 underline"
+                          >
+                            Directions ↗
+                          </a>
+                          {p.e.website && (
+                            <a
+                              href={p.e.website}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-indigo-600 underline"
+                            >
+                              Website ↗
+                            </a>
+                          )}
+                          {instagramUrl(p.e.instagram) && (
+                            <a
+                              href={instagramUrl(p.e.instagram)!}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-indigo-600 underline"
+                            >
+                              {instagramHandle(p.e.instagram)} ↗
+                            </a>
+                          )}
+                        </div>
                       </div>
                     </Popup>
                   </CircleMarker>

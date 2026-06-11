@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ENTITY_TABS, type Entity, type TripSlot } from "@/lib/entities";
-import { googleMapsUrl } from "@/lib/geo";
+import { googleMapsUrl, instagramUrl, instagramHandle } from "@/lib/geo";
 import { Comments } from "./Comments";
 import { EntityForm } from "./EntityForm";
 import { useTripData, useOptionalTripData } from "./TripData";
@@ -40,15 +40,8 @@ export function EntityDetail({
     lat: entity.lat,
     lng: entity.lng,
   });
-  const igRaw = entity.instagram?.trim() ?? "";
-  const igHandle = igRaw
-    .replace(/^https?:\/\/(www\.)?instagr(am\.com|\.am)\//i, "")
-    .replace(/^@/, "")
-    .replace(/\/.*$/, "");
-  const instagramHandle = igHandle ? `@${igHandle}` : igRaw;
-  const instagramHref = /^https?:\/\//i.test(igRaw)
-    ? igRaw
-    : `https://instagram.com/${igHandle || igRaw.replace(/^@/, "")}`;
+  const instagramHref = instagramUrl(entity.instagram);
+  const igHandle = instagramHandle(entity.instagram);
 
   return (
     <>
@@ -136,7 +129,7 @@ export function EntityDetail({
               </a>
             </Row>
           )}
-          {entity.instagram && (
+          {entity.instagram && instagramHref && (
             <Row label="Instagram">
               <a
                 href={instagramHref}
@@ -144,7 +137,7 @@ export function EntityDetail({
                 rel="noreferrer"
                 className="break-all font-medium text-indigo-600 hover:underline"
               >
-                {instagramHandle} ↗
+                {igHandle} ↗
               </a>
             </Row>
           )}
