@@ -97,6 +97,9 @@ export function planImport(rows: string[][], existing: DBEntity[]): ImportPrevie
   const [header, ...body] = rows;
   const cols = header.map((h) => h.trim().toLowerCase());
   const idCol = cols.indexOf("id");
+  // Only lift an Instagram link out of the Website column when there's no
+  // dedicated instagram column — otherwise trust the explicit column.
+  const hasInstagramCol = cols.includes("instagram");
   const byId = new Map(existing.map((e) => [e.id, e]));
   const patches: ImportPatch[] = [];
   const unmatched: string[] = [];
@@ -123,7 +126,7 @@ export function planImport(rows: string[][], existing: DBEntity[]): ImportPrevie
       // Re-route an Instagram link that was dropped into the Website column.
       let key = map.key;
       let label = col;
-      if (key === "website" && isInstagramUrl(raw)) { key = "instagram"; label = "instagram"; }
+      if (key === "website" && !hasInstagramCol && isInstagramUrl(raw)) { key = "instagram"; label = "instagram"; }
 
       const cur = ent[key];
       const curStr = cur == null ? "" : String(cur).trim();

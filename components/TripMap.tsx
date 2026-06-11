@@ -10,7 +10,7 @@ import {
   LayerGroup as RLLayerGroup,
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-import { resolvePoint, NYC_CENTER, instagramUrl, instagramHandle, type LatLng } from "@/lib/geo";
+import { resolvePoint, NYC_CENTER, externalUrl, instagramUrl, instagramHandle, type LatLng } from "@/lib/geo";
 import { ENTITY_TABS, type Entity, type EntityType } from "@/lib/entities";
 import { useTripData } from "./TripData";
 
@@ -109,7 +109,7 @@ export function TripMap() {
                           </a>
                           {p.e.website && (
                             <a
-                              href={p.e.website}
+                              href={externalUrl(p.e.website)!}
                               target="_blank"
                               rel="noreferrer"
                               className="text-indigo-600 underline"

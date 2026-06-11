@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ENTITY_TABS, type Entity, type TripSlot } from "@/lib/entities";
-import { googleMapsUrl, instagramUrl, instagramHandle } from "@/lib/geo";
+import { googleMapsUrl, externalUrl, instagramUrl, instagramHandle } from "@/lib/geo";
 import { Comments } from "./Comments";
 import { EntityForm } from "./EntityForm";
 import { useTripData, useOptionalTripData } from "./TripData";
@@ -120,7 +120,7 @@ export function EntityDetail({
           {entity.website && (
             <Row label="Website">
               <a
-                href={entity.website}
+                href={externalUrl(entity.website) ?? entity.website}
                 target="_blank"
                 rel="noreferrer"
                 className="break-all font-medium text-indigo-600 hover:underline"

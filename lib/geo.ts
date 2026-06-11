@@ -135,11 +135,20 @@ export function googleMapsUrl(opts: {
   return q ? `${base}${encodeURIComponent(q)}` : null;
 }
 
+/** A safe external href: prepends https:// to bare domains so they don't resolve
+ *  as a relative in-app path. Returns null for empty input. */
+export function externalUrl(value: string | undefined): string | null {
+  const v = value?.trim();
+  if (!v) return null;
+  return /^https?:\/\//i.test(v) ? v : `https://${v.replace(/^\/+/, "")}`;
+}
+
 /** Normalise a stored Instagram value (full URL or @handle or bare handle) to a URL. */
 export function instagramUrl(value: string | undefined): string | null {
   const v = value?.trim();
   if (!v) return null;
   if (/^https?:\/\//i.test(v)) return v;
+  if (/instagr(am\.com|\.am)\//i.test(v)) return `https://${v.replace(/^\/+/, "")}`;
   return `https://instagram.com/${v.replace(/^@/, "")}`;
 }
 
@@ -147,7 +156,7 @@ export function instagramUrl(value: string | undefined): string | null {
 export function instagramHandle(value: string | undefined): string {
   const v = value?.trim() ?? "";
   const h = v
-    .replace(/^https?:\/\/(www\.)?instagr(am\.com|\.am)\//i, "")
+    .replace(/^(https?:\/\/)?(www\.)?instagr(am\.com|\.am)\//i, "")
     .replace(/^@/, "")
     .replace(/\/.*$/, "");
   return h ? `@${h}` : v;

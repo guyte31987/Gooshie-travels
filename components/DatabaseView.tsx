@@ -133,17 +133,25 @@ export function DatabaseView() {
     setSelectMode(false);
     setSelected(new Set());
   };
+  // Only ever act on rows the user can currently see. Selections from a previous
+  // filter stay remembered but are never silently deleted/parked while hidden.
+  const selectedVisible = filtered.filter((e) => selected.has(e.id)).map((e) => e.id);
   const allFilteredSelected = filtered.length > 0 && filtered.every((e) => selected.has(e.id));
   const toggleAllFiltered = () =>
-    setSelected(allFilteredSelected ? new Set() : new Set(filtered.map((e) => e.id)));
+    setSelected((s) => {
+      const n = new Set(s);
+      if (allFilteredSelected) filtered.forEach((e) => n.delete(e.id));
+      else filtered.forEach((e) => n.add(e.id));
+      return n;
+    });
 
   const bulkPark = async (t: EntityType) => {
-    if (!selected.size) return;
-    const n = selected.size;
+    if (!selectedVisible.length) return;
+    const n = selectedVisible.length;
     setBulkBusy(true);
     setError(null);
     try {
-      await bulkUpdateEntities([...selected], { type: t });
+      await bulkUpdateEntities(selectedVisible, { type: t });
       setNotice(`Parked ${n} ${n === 1 ? "entity" : "entities"} as ${t}.`);
       exitSelect();
     } catch (e) {
@@ -154,13 +162,13 @@ export function DatabaseView() {
   };
 
   const bulkDelete = async () => {
-    if (!selected.size) return;
-    const n = selected.size;
+    if (!selectedVisible.length) return;
+    const n = selectedVisible.length;
     if (!confirm(`Delete ${n} ${n === 1 ? "entity" : "entities"} from the database? This cannot be undone.`)) return;
     setBulkBusy(true);
     setError(null);
     try {
-      await bulkDeleteEntities([...selected]);
+      await bulkDeleteEntities(selectedVisible);
       setNotice(`Deleted ${n} ${n === 1 ? "entity" : "entities"}.`);
       exitSelect();
     } catch (e) {
@@ -379,10 +387,10 @@ export function DatabaseView() {
       )}
 
       {/* Batch action bar — sticky at the bottom, thumb-friendly on mobile */}
-      {selectMode && selected.size > 0 && (
+      {selectMode && selectedVisible.length > 0 && (
         <div className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white/95 px-4 py-3 shadow-[0_-2px_10px_rgba(0,0,0,0.06)] backdrop-blur">
           <div className="mx-auto flex max-w-2xl flex-wrap items-center gap-2">
-            <span className="text-sm font-medium text-slate-700">{selected.size} selected</span>
+            <span className="text-sm font-medium text-slate-700">{selectedVisible.length} selected</span>
             {isAdmin && (
               <select
                 value=""
