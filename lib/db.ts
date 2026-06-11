@@ -466,10 +466,8 @@ export async function runDeduplicationMigration(): Promise<{ deleted: number; fi
 
   const database = requireDb();
 
-  // Partial stubs created by a previous bad migration run (set+merge on non-existent docs).
-  const stubsToDelete = toFix.map(({ id }) => id);
-
-  // Fetch toFix docs to check existence — update() throws on missing docs.
+  // Fetch toFix docs to decide per-doc: retype real entities, delete nameless
+  // stubs (created by a previous bad set+merge run), skip non-existent ones.
   const fixRefs = toFix.map(({ id }) => doc(database, "entities", id));
   const fixSnaps = await Promise.all(fixRefs.map((r) => getDoc(r)));
 
@@ -477,14 +475,21 @@ export async function runDeduplicationMigration(): Promise<{ deleted: number; fi
   let deleted = 0;
   let fixed = 0;
 
-  for (const id of [...toDelete, ...stubsToDelete]) {
+  for (const id of toDelete) {
     batch.delete(doc(database, "entities", id));
     deleted++;
   }
   for (let i = 0; i < toFix.length; i++) {
-    if (fixSnaps[i].exists() && fixSnaps[i].data()?.name) {
+    const snap = fixSnaps[i];
+    if (!snap.exists()) continue; // nothing to do
+    if (snap.data()?.name) {
+      // Real entity → retype it.
       batch.update(fixRefs[i], { type: toFix[i].type, updatedAt: serverTimestamp() });
       fixed++;
+    } else {
+      // Nameless stub from the bad migration → remove it.
+      batch.delete(fixRefs[i]);
+      deleted++;
     }
   }
 
