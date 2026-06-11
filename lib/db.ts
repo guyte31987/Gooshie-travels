@@ -463,11 +463,7 @@ export async function runDeduplicationMigration(): Promise<{ deleted: number; fi
     { id: slugId("event", "Mermaid Parade"), type: "sight" },
   ];
 
-  // Fetch toFix docs first — batch.update() throws on non-existent documents.
   const database = requireDb();
-  const fixRefs = toFix.map(({ id }) => doc(database, "entities", id));
-  const fixSnaps = await Promise.all(fixRefs.map((r) => getDoc(r)));
-
   const batch = writeBatch(database);
   let deleted = 0;
   let fixed = 0;
@@ -476,11 +472,10 @@ export async function runDeduplicationMigration(): Promise<{ deleted: number; fi
     batch.delete(doc(database, "entities", id));
     deleted++;
   }
-  for (let i = 0; i < toFix.length; i++) {
-    if (fixSnaps[i].exists()) {
-      batch.update(fixRefs[i], { type: toFix[i].type, updatedAt: serverTimestamp() });
-      fixed++;
-    }
+  for (const { id, type } of toFix) {
+    // set+merge never throws "not-found" unlike update()
+    batch.set(doc(database, "entities", id), { type, updatedAt: serverTimestamp() }, { merge: true });
+    fixed++;
   }
 
   await batch.commit();
