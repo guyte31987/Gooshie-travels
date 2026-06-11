@@ -322,17 +322,22 @@ export function extractPlaceName(summary: string): string {
   return cleanName(summary).replace(PLACE_PREFIX_RE, "").trim();
 }
 
+// Strip "pre X" / "post X" compounds (after hyphen-to-space normalization) so that
+// "Pre-FIST Nap Window" → "dedicated nap window" and doesn't substring-match "fist".
+function stripPrePost(s: string): string {
+  return s.replace(/\b(?:pre|post)\s+\w+/g, " ").replace(/\s{2,}/g, " ").trim();
+}
+
 function matchesEntity(entityName: string, e: ItinEvent): boolean {
   const n = normLoose(entityName);
   if (n.length < 4) return false;
-  // Check location first (most precise), then the extracted place name, then full summary.
+  // Location field is the most precise signal — always trust it as-is.
   const loc = normLoose(e.location ?? "");
   if (loc && loc.includes(n)) return true;
-  const extracted = normLoose(extractPlaceName(e.summary));
+  // Strip pre-/post- compounds before substring matching.
+  const extracted = stripPrePost(normLoose(extractPlaceName(e.summary)));
   if (extracted.includes(n)) return true;
-  // Allow full-summary match only if entity name is reasonably specific (7+ chars)
-  // to prevent short names ("Met") from matching unrelated events.
-  return n.length >= 7 && normLoose(e.summary).includes(n);
+  return n.length >= 7 && stripPrePost(normLoose(e.summary)).includes(n);
 }
 
 // --- shared slot helpers ---------------------------------------------------
@@ -603,13 +608,21 @@ export function resolveTripEntities(opts: {
     return s;
   };
   const isRemoved = (e: ItinEvent) => overrideBy.get(e.uid)?.removed === true;
+  // Pre-compute event types once so the per-entity filter doesn't re-run categorizeEvent.
+  const eventTypeCache = new Map(allEvents.map((e) => [e.uid, categorizeEvent(e)]));
+  const LOGISTICS_TYPES = new Set<EntityType>(["travel", "admin"]);
 
   for (const de of dbEntities) {
     const item = itemBy.get(de.id);
     const inByArea = de.generalArea ? areaSet.has(de.generalArea) : false;
     const included = item?.added || (inByArea && !item?.removed);
 
-    const confirmed = allEvents.filter((e) => matchesEntity(de.name, e) && !isRemoved(e));
+    const confirmed = allEvents.filter(
+      (e) =>
+        !(LOGISTICS_TYPES.has(eventTypeCache.get(e.uid)!) && !PARKED_TYPES.has(de.type)) &&
+        matchesEntity(de.name, e) &&
+        !isRemoved(e)
+    );
     // Only consume calendar events for entities actually in the trip.
     if (!included && confirmed.length === 0) continue;
     confirmed.forEach((e) => matchedUids.add(e.uid));

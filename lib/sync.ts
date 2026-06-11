@@ -43,12 +43,16 @@ export type SyncItem =
 
 // --- matching helpers --------------------------------------------------------
 
+function stripPrePost(s: string): string {
+  return s.replace(/\b(?:pre|post)\s+\w+/g, " ").replace(/\s{2,}/g, " ").trim();
+}
+
 function entityMatchesEvent(entityName: string, e: SyncCalEvent): boolean {
   const n = norm(entityName);
   if (n.length < 4) return false;
   if (e.location && norm(e.location).includes(n)) return true;
-  if (norm(e.extractedName).includes(n)) return true;
-  return n.length >= 7 && norm(e.summary).includes(n);
+  if (stripPrePost(norm(e.extractedName)).includes(n)) return true;
+  return n.length >= 7 && stripPrePost(norm(e.summary)).includes(n);
 }
 
 /**
