@@ -43,7 +43,7 @@ Each needs a Database entry before the itinerary fully resolves. Grouped by type
 | --- | --- | --- |
 | hike-cascade-falls | Cascade Falls | 4mi loop, Greylock area |
 
-## Travel / Admin (7) — drives are their own "Drive from X to Y" slots
+## Travel / Admin / Wellness (7) — drives are their own "Drive from X to Y" slots
 | EntityID | Name | Type |
 | --- | --- | --- |
 | travel-arrival | Arrival & Airbnb Check-In | travel |
@@ -52,7 +52,7 @@ Each needs a Database entry before the itinerary fully resolves. Grouped by type
 | travel-drive-hudson-north-adams | Drive: Hudson → North Adams | travel |
 | travel-drive-hershey-nyc | Drive: Hershey → NYC | travel |
 | admin-pre-fist-nap-window | Pre-FIST Nap Window | admin |
-| admin-crossfit | Crossfit (partner) | admin |
+| spa-crossfit | Crossfit (partner) | spa (Wellness) — gym TBD |
 
 ---
 
