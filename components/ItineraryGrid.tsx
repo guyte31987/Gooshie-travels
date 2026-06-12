@@ -545,6 +545,9 @@ function DetailSheet({ slot, instances, entityById, canEdit, handlers, isNew, on
   const [label, setLabel] = useState(slot.label);
   const [commentOpen, setCommentOpen] = useState(false);
   const [editPlace, setEditPlace] = useState(false);
+  const [noteOpen, setNoteOpen] = useState(false);
+  const [photosOpen, setPhotosOpen] = useState(false);
+  const [altsOpen, setAltsOpen] = useState(false);
   if (!main) return null;
   const type = ent?.type ?? "uncategorised";
   const c = TYPE_COLORS[type] ?? TYPE_COLORS.uncategorised;
@@ -568,13 +571,27 @@ function DetailSheet({ slot, instances, entityById, canEdit, handlers, isNew, on
       <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-white p-5 shadow-xl sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="mb-3 flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <span className={`mb-1 inline-flex items-center gap-1 rounded-full ${c.bg} ${c.text} px-2 py-0.5 text-[11px] font-medium`}>{emojiOf(type)} {type}</span>
+            <div className="mb-1 flex flex-wrap items-center gap-1.5">
+              <span className={`inline-flex items-center gap-1 rounded-full ${c.bg} ${c.text} px-2 py-0.5 text-[11px] font-medium`}>{emojiOf(type)} {type}</span>
+              <CycleBadge value={activityStatusOf(main)} options={STATUS_CYCLE} disabled={!canEdit}
+                onChange={(v) => handlers.onUpdateInstance(slot.id, main.entityId, { status: v })} />
+              <CycleBadge value={bookingStatusOf(main)} options={BOOKING_CYCLE} disabled={!canEdit}
+                onChange={(v) => handlers.onUpdateInstance(slot.id, main.entityId, { bookingStatus: v })} />
+            </div>
             {adhoc && canEdit ? (
               <input value={label} onChange={(e) => setLabel(e.target.value)} autoFocus={isNew} placeholder="Activity name…" className="w-full rounded-lg border border-slate-300 px-2 py-1 text-lg font-semibold outline-none focus:border-slate-400" />
             ) : <h2 className="text-lg font-semibold leading-snug">{title}</h2>}
             <div className="mt-0.5 text-xs text-slate-500">{fmt(slot.start)} – {fmt(slot.end)}{ent?.parent ? ` · @${ent.parent}` : ent?.area ? ` · ${ent.area}` : ""}</div>
           </div>
-          <button onClick={cancel} className="shrink-0 text-slate-400 hover:text-slate-600">✕</button>
+          <div className="flex shrink-0 items-center gap-1">
+            {canEdit && handlers.onSaveEntity && (
+              <button onClick={() => setEditPlace((o) => !o)} title={adhoc ? "Categorise & add details" : "Edit place details"}
+                className={`rounded-lg border px-2 py-1 text-sm ${editPlace ? "border-slate-400 bg-slate-100" : "border-slate-200"} ${adhoc ? "text-indigo-600" : "text-slate-500"} hover:bg-slate-50`}>
+                {adhoc ? "🏷" : "✏️"}
+              </button>
+            )}
+            <button onClick={cancel} className="px-1 text-slate-400 hover:text-slate-600">✕</button>
+          </div>
         </div>
 
         {!adhoc && (
@@ -587,84 +604,47 @@ function DetailSheet({ slot, instances, entityById, canEdit, handlers, isNew, on
           </div>
         )}
 
-        {canEdit && handlers.onSaveEntity && (
+        {canEdit && handlers.onSaveEntity && editPlace && (
           <div className="mt-3">
-            <button onClick={() => setEditPlace((o) => !o)} className={`text-xs font-medium ${adhoc ? "text-indigo-600" : "text-slate-500"} hover:underline`}>
-              {adhoc ? "🏷 Categorise & add details" : "✏️ Edit place details"} {editPlace ? "▲" : "▼"}
-            </button>
-            {editPlace && (
-              <PlaceEditor entityId={main.entityId} ent={ent} fallbackName={adhoc ? label : main.entityId}
-                clubs={[...entityById.values()].filter((e) => e.type === "club" && !e.parent)}
-                onSave={(patch) => { handlers.onSaveEntity!(main.entityId, patch); setEditPlace(false); }}
-                onCancel={() => setEditPlace(false)} />
-            )}
+            <PlaceEditor entityId={main.entityId} ent={ent} fallbackName={adhoc ? label : main.entityId}
+              clubs={[...entityById.values()].filter((e) => e.type === "club" && !e.parent)}
+              onSave={(patch) => { handlers.onSaveEntity!(main.entityId, patch); setEditPlace(false); }}
+              onCancel={() => setEditPlace(false)} />
           </div>
         )}
 
-        <div className="mt-4 grid grid-cols-2 gap-3">
-          <div>
-            <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Status</p>
-            <Segmented
-              value={activityStatusOf(main)} disabled={!canEdit}
-              onChange={(v) => handlers.onUpdateInstance(slot.id, main.entityId, { status: v as ActivityStatus })}
-              options={[{ value: "planned", label: "Planned" }, { value: "scheduled", label: "Scheduled" }, { value: "done", label: "✓ Done" }]}
-            />
-          </div>
-          <div>
-            <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Booking</p>
-            <Segmented
-              value={bookingStatusOf(main)} disabled={!canEdit}
-              onChange={(v) => handlers.onUpdateInstance(slot.id, main.entityId, { bookingStatus: v as BookingStatus })}
-              options={[{ value: "walkin", label: "Walk-in" }, { value: "needed", label: "📋 Needed" }, { value: "done", label: "✅ Booked" }]}
-            />
-          </div>
-        </div>
-
         <div className="mt-4">
-          <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Note</p>
-          {canEdit ? (
-            <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3} className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-400" placeholder="Notes for this visit…" />
-          ) : <p className="whitespace-pre-line text-sm text-slate-700">{main.note || <span className="text-slate-400">No note.</span>}</p>}
-        </div>
-
-        <div className="mt-4">
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Competing options for this slot</p>
-          <ul className="space-y-1.5">
-            {ent && <OptionRow ent={ent} isMain />}
-            {!ent && <li className="rounded-lg border border-slate-200 px-2.5 py-2 text-sm font-medium">{title} <span className="ml-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">main</span></li>}
-            {alts.map((a) => { const e = entityById.get(a.entityId); return <OptionRow key={a.entityId} ent={e} fallbackName={a.entityId.startsWith("adhoc:") ? "New alternative" : a.entityId} canEdit={canEdit} onMakeMain={() => handlers.onMakeMain(slot.id, a.entityId)} />; })}
-          </ul>
-          {canEdit && (
-            <AltAdder
-              entityById={entityById}
-              excludeIds={new Set([main.entityId, ...alts.map((a) => a.entityId)])}
-              onPick={(entityId) => handlers.onAddAlt(slot.id, entityId)}
-              onCreate={(patch) => {
-                const id = `adhoc:alt-${slot.id}-${Date.now()}`;
-                handlers.onAddAlt(slot.id, id);
-                handlers.onSaveEntity?.(id, patch);
-              }}
-              canCreate={!!handlers.onSaveEntity}
-            />
+          <button onClick={() => setNoteOpen((o) => !o)} className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 hover:text-slate-600">
+            📝 Note {noteOpen ? "▲" : "▼"}
+          </button>
+          {noteOpen ? (
+            canEdit ? (
+              <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-400" placeholder="Notes for this visit…" />
+            ) : <p className="mt-1 whitespace-pre-line text-sm text-slate-700">{main.note || <span className="text-slate-400">No note.</span>}</p>
+          ) : (
+            <p className="truncate text-sm text-slate-600">{main.note || <span className="text-slate-400">{canEdit ? "Add a note…" : "No note."}</span>}</p>
           )}
-          <p className="mt-2 text-[11px] text-slate-400">Only the main option exports to Google Calendar.{canEdit ? ' "Make main" swaps a Plan B in.' : ""}</p>
         </div>
 
         {ent && (
-          <div className="mt-4 border-t border-slate-100 pt-3 space-y-4">
-            <a href={`/database?open=${encodeURIComponent(ent.id)}`} className="text-sm font-medium text-indigo-600 hover:underline">{emojiOf(type)} Edit {ent.name} in Database →</a>
-
+          <div className="mt-4 border-t border-slate-100 pt-3 space-y-3">
             <div>
-              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Photos</p>
-              <PhotoGallery
-                photos={main.photos ?? []}
-                context="instance"
-                contextId={`${slot.id}__${main.entityId}`}
-                canEdit={canEdit}
-                onPhotosChange={async (photos) => {
-                  handlers.onUpdateInstance(slot.id, main.entityId, { photos });
-                }}
-              />
+              <button onClick={() => setPhotosOpen((o) => !o)} className="text-sm text-slate-500 hover:text-slate-700">
+                📷 Photos{main.photos?.length ? ` (${main.photos.length})` : ""} {photosOpen ? "▲" : "▼"}
+              </button>
+              {photosOpen && (
+                <div className="mt-2">
+                  <PhotoGallery
+                    photos={main.photos ?? []}
+                    context="instance"
+                    contextId={`${slot.id}__${main.entityId}`}
+                    canEdit={canEdit}
+                    onPhotosChange={async (photos) => {
+                      handlers.onUpdateInstance(slot.id, main.entityId, { photos });
+                    }}
+                  />
+                </div>
+              )}
             </div>
 
             <div>
@@ -677,8 +657,39 @@ function DetailSheet({ slot, instances, entityById, canEdit, handlers, isNew, on
                 </div>
               )}
             </div>
+
+            <a href={`/database?open=${encodeURIComponent(ent.id)}`} className="block text-sm font-medium text-indigo-600 hover:underline">{emojiOf(type)} Edit {ent.name} in Database →</a>
           </div>
         )}
+
+        <div className="mt-4">
+          <button onClick={() => setAltsOpen((o) => !o)} className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 hover:text-slate-600">
+            ⚖️ Competing options{alts.length ? ` (${alts.length + 1})` : ""} {altsOpen ? "▲" : "▼"}
+          </button>
+          {altsOpen && (
+            <div className="mt-2">
+              <ul className="space-y-1.5">
+                {ent && <OptionRow ent={ent} isMain />}
+                {!ent && <li className="rounded-lg border border-slate-200 px-2.5 py-2 text-sm font-medium">{title} <span className="ml-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">main</span></li>}
+                {alts.map((a) => { const e = entityById.get(a.entityId); return <OptionRow key={a.entityId} ent={e} fallbackName={a.entityId.startsWith("adhoc:") ? "New alternative" : a.entityId} canEdit={canEdit} onMakeMain={() => handlers.onMakeMain(slot.id, a.entityId)} />; })}
+              </ul>
+              {canEdit && (
+                <AltAdder
+                  entityById={entityById}
+                  excludeIds={new Set([main.entityId, ...alts.map((a) => a.entityId)])}
+                  onPick={(entityId) => handlers.onAddAlt(slot.id, entityId)}
+                  onCreate={(patch) => {
+                    const id = `adhoc:alt-${slot.id}-${Date.now()}`;
+                    handlers.onAddAlt(slot.id, id);
+                    handlers.onSaveEntity?.(id, patch);
+                  }}
+                  canCreate={!!handlers.onSaveEntity}
+                />
+              )}
+              <p className="mt-2 text-[11px] text-slate-400">Only the main option exports to Google Calendar.{canEdit ? ' "Make main" swaps a Plan B in.' : ""}</p>
+            </div>
+          )}
+        </div>
 
         {canEdit && (
           <div className="mt-5 flex items-center justify-between gap-2">
@@ -768,6 +779,31 @@ function AltAdder({ entityById, excludeIds, onPick, onCreate, canCreate }: {
           onCancel={() => setOpen(false)} />
       )}
     </div>
+  );
+}
+
+const STATUS_CYCLE: { value: ActivityStatus; emoji: string; label: string }[] = [
+  { value: "planned", emoji: "💡", label: "Planned" },
+  { value: "scheduled", emoji: "📅", label: "Scheduled" },
+  { value: "done", emoji: "✔️", label: "Done" },
+];
+const BOOKING_CYCLE: { value: BookingStatus; emoji: string; label: string }[] = [
+  { value: "walkin", emoji: "🚶", label: "Walk-in" },
+  { value: "needed", emoji: "📋", label: "Booking needed" },
+  { value: "done", emoji: "✅", label: "Booked" },
+];
+
+function CycleBadge<T extends string>({ value, options, disabled, onChange }: {
+  value: T; options: { value: T; emoji: string; label: string }[]; disabled?: boolean; onChange: (v: T) => void;
+}) {
+  const cur = options.find((o) => o.value === value) ?? options[0];
+  const next = () => { const i = options.findIndex((o) => o.value === value); onChange(options[(i + 1) % options.length].value); };
+  return (
+    <button type="button" disabled={disabled} onClick={next}
+      title={disabled ? cur.label : `${cur.label} — tap to change`}
+      className={`rounded-full bg-slate-100 px-1.5 py-0.5 text-sm leading-none ${disabled ? "cursor-default" : "hover:bg-slate-200"}`}>
+      {cur.emoji}
+    </button>
   );
 }
 
