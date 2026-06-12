@@ -26,6 +26,7 @@ const PX_PER_MIN = PX_PER_HOUR / 60;
 const SNAP = 15;
 const HEADER_H = 40;
 const GRID_H = (DAY_END_H - DAY_START_H) * PX_PER_HOUR;
+const LONG_PRESS_MS = 300;
 
 export type CalEntity = {
   id: string; name: string; type: EntityType;
@@ -45,11 +46,9 @@ export type CalHandlers = {
   onAddSlot: (slot: CalSlot, inst: CalInstance) => void;
   onDeleteSlot: (slotId: string, instanceIds: string[]) => void;
   onMakeMain: (slotId: string, entityId: string) => void;
-  /** Add an alternative (Plan B) entity to an existing slot. */
   onAddAlt: (slotId: string, entityId: string) => void;
   onUpdateInstance: (slotId: string, entityId: string, patch: Partial<CalInstance>) => void;
   onRenameSlot: (slotId: string, label: string) => void;
-  /** Create/update the DB entity behind an instance (category + details). */
   onSaveEntity?: (entityId: string, patch: EntityPatch) => void;
   onSaveStay?: (stay: IcsStay) => void;
   onDeleteStay?: (from: string) => void;
@@ -97,14 +96,21 @@ export function ItineraryCalendar({
 }) {
   const [detailSlot, setDetailSlot] = useState<string | null>(null);
   const [stayEditDay, setStayEditDay] = useState<string | null>(null);
-  const [view, setView] = useState<"week" | "day" | "map">("week");
+  // Default to day view on mobile, week view on desktop.
+  const [view, setView] = useState<"week" | "day" | "map">(() =>
+    typeof window !== "undefined" && window.innerWidth < 768 ? "day" : "week"
+  );
   const [dayIdx, setDayIdx] = useState(0);
   const newCounter = useRef(0);
   const dayRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const swipeStart = useRef<{ x: number; y: number } | null>(null);
 
   const slotById = useMemo(() => new Map(slots.map((s) => [s.id, s])), [slots]);
   const visibleDays = view === "week" ? days : [days[Math.min(dayIdx, days.length - 1)]];
   const slotsOn = (day: string) => slots.filter((s) => s.day === day);
+
+  const goPrev = () => setDayIdx((i) => Math.max(0, i - 1));
+  const goNext = () => setDayIdx((i) => Math.min(days.length - 1, i + 1));
 
   const exportIcs = () => {
     const ics = buildTripIcs({
@@ -127,9 +133,25 @@ export function ItineraryCalendar({
     setDetailSlot(id);
   };
 
+  // Swipe left/right in day view to navigate between days.
+  const onGridTouchStart = (e: React.TouchEvent) => {
+    if (view !== "day") return;
+    swipeStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  };
+  const onGridTouchEnd = (e: React.TouchEvent) => {
+    if (!swipeStart.current || view !== "day") return;
+    const dx = e.changedTouches[0].clientX - swipeStart.current.x;
+    const dy = e.changedTouches[0].clientY - swipeStart.current.y;
+    swipeStart.current = null;
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
+      dx < 0 ? goNext() : goPrev();
+    }
+  };
+
   return (
     <div className="select-none">
-      <div className="mb-3 flex items-center justify-between gap-2">
+      {/* Toolbar */}
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <div className="inline-flex rounded-full border border-slate-200 bg-white p-0.5 text-xs font-medium">
             {(["day", "week", "map"] as const).map((v) => (
@@ -141,17 +163,23 @@ export function ItineraryCalendar({
               className={`rounded-full border px-3 py-1 text-xs font-medium ${canUndo ? "border-slate-200 bg-white text-slate-600 hover:bg-slate-50" : "border-slate-100 bg-slate-50 text-slate-300"}`}>↶ Undo</button>
           )}
           <button onClick={exportIcs} title="Export to a .ics calendar file"
-            className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-100">⤓ Export .ics</button>
+            className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-100">⤓ .ics</button>
         </div>
+
+        {/* Day navigator — shown in day + map views */}
         {view !== "week" && (
-          <div className="flex items-center gap-2 text-sm">
-            <button onClick={() => setDayIdx((i) => Math.max(0, i - 1))} className="rounded px-2 py-1 text-slate-500 hover:bg-slate-100">‹</button>
-            <span className="min-w-[7rem] text-center font-semibold text-slate-700">{new Date(visibleDays[0] + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric", timeZone: "UTC" })}</span>
-            <button onClick={() => setDayIdx((i) => Math.min(days.length - 1, i + 1))} className="rounded px-2 py-1 text-slate-500 hover:bg-slate-100">›</button>
+          <div className="flex items-center gap-1">
+            <button onClick={goPrev} disabled={dayIdx === 0} className="rounded-lg px-2.5 py-1.5 text-lg text-slate-500 hover:bg-slate-100 disabled:opacity-30">‹</button>
+            <span className="min-w-[7rem] text-center text-sm font-semibold text-slate-700">
+              {new Date(visibleDays[0] + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" })}
+            </span>
+            <button onClick={goNext} disabled={dayIdx === days.length - 1} className="rounded-lg px-2.5 py-1.5 text-lg text-slate-500 hover:bg-slate-100 disabled:opacity-30">›</button>
           </div>
         )}
+
+        {/* Day jump strip — week view only */}
         {view === "week" && (
-          <div className="flex gap-1.5 overflow-x-auto">
+          <div className="flex gap-1 overflow-x-auto">
             {days.map((d, i) => { const dt = new Date(d + "T12:00:00"); return (
               <button key={d} onClick={() => dayRefs.current[i]?.scrollIntoView({ behavior: "smooth", inline: "start", block: "nearest" })} className="shrink-0 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
                 {dt.toLocaleDateString("en-US", { weekday: "short", timeZone: "UTC" })} <span className="text-slate-400">{dt.getUTCDate()}</span>
@@ -165,7 +193,13 @@ export function ItineraryCalendar({
       {view === "map" ? (
         <DayMap day={visibleDays[0]} slots={slotsOn(visibleDays[0])} instances={instances} entityById={entityById} />
       ) : (
-        <div className="relative flex overflow-auto rounded-2xl border border-slate-200 bg-white shadow-sm" style={{ height: "72vh" }}>
+        <div
+          className="relative flex overflow-auto rounded-2xl border border-slate-200 bg-white shadow-sm"
+          style={{ height: "72vh" }}
+          onTouchStart={onGridTouchStart}
+          onTouchEnd={onGridTouchEnd}
+        >
+          {/* Time ruler */}
           <div className="sticky left-0 z-20 w-14 shrink-0 border-r border-slate-100 bg-white" style={{ height: GRID_H + HEADER_H }}>
             <div style={{ height: HEADER_H }} />
             {Array.from({ length: DAY_END_H - DAY_START_H + 1 }, (_, i) => (
@@ -179,10 +213,16 @@ export function ItineraryCalendar({
             const dayStays = stays.filter((s) => day >= s.from && day < s.to);
             const layout = layoutColumns(daySlots.map((s) => ({ id: s.id, start: s.start, end: s.end })));
             const realIdx = days.indexOf(day);
+            const wide = view === "day";
             return (
-              <div key={day} ref={(el) => { dayRefs.current[realIdx] = el; }} data-day={day} className="relative shrink-0 border-r border-slate-100 last:border-r-0" style={{ height: GRID_H + HEADER_H, width: view === "week" ? "var(--col-w)" : "100%" }}>
+              <div key={day} ref={(el) => { dayRefs.current[realIdx] = el; }} data-day={day} className="relative shrink-0 border-r border-slate-100 last:border-r-0" style={{ height: GRID_H + HEADER_H, width: wide ? "100%" : "var(--col-w)" }}>
+                {/* Day header */}
                 <div className="sticky top-0 z-10 flex flex-col justify-center border-b border-slate-100 bg-white/95 px-2 backdrop-blur" style={{ height: HEADER_H }}>
-                  <div className="text-xs font-semibold text-slate-700">{dt.toLocaleDateString("en-US", { weekday: "short", timeZone: "UTC" })} <span className="text-slate-400">{dt.getUTCDate()}</span></div>
+                  <div className={`font-semibold text-slate-700 ${wide ? "text-sm" : "text-xs"}`}>
+                    {wide
+                      ? dt.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric", timeZone: "UTC" })
+                      : `${dt.toLocaleDateString("en-US", { weekday: "short", timeZone: "UTC" })} ${dt.getUTCDate()}`}
+                  </div>
                   {dayStays.length > 0 ? (
                     <button onClick={() => canEdit && setStayEditDay(day)} className={`truncate text-left text-[10px] text-indigo-500 ${canEdit ? "hover:text-indigo-700" : ""}`} title={dayStays.map((s) => s.name).join(", ")}>
                       🛏 {dayStays[0].name}
@@ -200,8 +240,10 @@ export function ItineraryCalendar({
                     const lay = layout.get(s.id)!;
                     const { main, alts } = splitInstances(s.id, instances);
                     if (!main) return null;
-                    return <Block key={s.id} slot={s} main={main} alts={alts} entityById={entityById} col={lay.col} colCount={lay.count}
-                      canEdit={canEdit} onGestureStart={handlers.onGestureStart} onChange={(next) => handlers.onMoveSlot(s.id, next)} onOpen={() => setDetailSlot(s.id)} />;
+                    return <Block key={s.id} slot={s} main={main} alts={alts} entityById={entityById}
+                      col={lay.col} colCount={lay.count} wide={wide}
+                      canEdit={canEdit} onGestureStart={handlers.onGestureStart}
+                      onChange={(next) => handlers.onMoveSlot(s.id, next)} onOpen={() => setDetailSlot(s.id)} />;
                   })}
                 </div>
               </div>
@@ -211,7 +253,9 @@ export function ItineraryCalendar({
       )}
 
       <p className="mt-2 text-center text-xs text-slate-400">
-        {canEdit ? "Drag to move (across days too) · drag top/bottom edge to resize · tap empty space to add · tap a block to open" : "Read-only — sign in as an editor to make changes. Tap a block for details."}
+        {canEdit
+          ? "Tap a block to open · long-press to drag · drag edges to resize"
+          : "Read-only — sign in as an editor to make changes. Tap a block for details."}
       </p>
 
       {detailSlot && slotById.get(detailSlot) && (
@@ -267,16 +311,23 @@ function NowLine({ day, days }: { day: string; days: string[] }) {
 
 // --- block -------------------------------------------------------------------
 
-function Block({ slot, main, alts, entityById, col, colCount, canEdit, onGestureStart, onChange, onOpen }: {
+function Block({ slot, main, alts, entityById, col, colCount, wide, canEdit, onGestureStart, onChange, onOpen }: {
   slot: CalSlot; main: CalInstance; alts: CalInstance[]; entityById: Map<string, CalEntity>;
-  col: number; colCount: number; canEdit: boolean; onGestureStart?: () => void;
+  col: number; colCount: number; wide: boolean; canEdit: boolean; onGestureStart?: () => void;
   onChange: (next: { day: string; start: number; end: number }) => void; onOpen: () => void;
 }) {
   const entity = entityById.get(main.entityId);
   const type = entity?.type ?? "uncategorised";
   const title = entity?.name ?? slot.label;
   const c = TYPE_COLORS[type] ?? TYPE_COLORS.uncategorised;
-  const drag = useRef<{ mode: "move" | "top" | "bottom"; x0: number; y0: number; s0: number; e0: number; lastX: number; lastY: number; moved: boolean } | null>(null);
+
+  // Drag state
+  type DragState = { mode: "move" | "top" | "bottom"; x0: number; y0: number; s0: number; e0: number; lastX: number; lastY: number; moved: boolean };
+  const drag = useRef<DragState | null>(null);
+  // Long-press pending state (touch only)
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingTouch = useRef<{ pointerId: number; x0: number; y0: number; target: Element } | null>(null);
+  const [longPressLifting, setLongPressLifting] = useState(false);
   const [vis, setVis] = useState<{ dx: number; dy: number; start: number } | null>(null);
 
   const top = (slot.start - DAY_START_H * 60) * PX_PER_MIN;
@@ -284,18 +335,57 @@ function Block({ slot, main, alts, entityById, col, colCount, canEdit, onGesture
   const widthPct = 100 / colCount;
   const planned = main.capacity === "planned";
   const dur = slot.end - slot.start;
+  const dragging = vis != null;
 
-  const down = (mode: "move" | "top" | "bottom") => (e: React.PointerEvent) => {
+  const activateDrag = (mode: DragState["mode"], pointerId: number, x0: number, y0: number, target: Element) => {
+    (target as HTMLElement).setPointerCapture(pointerId);
+    drag.current = { mode, x0, y0, s0: slot.start, e0: slot.end, lastX: x0, lastY: y0, moved: false };
+    if (mode === "move") {
+      setVis({ dx: 0, dy: 0, start: slot.start });
+      setLongPressLifting(false);
+    }
+    onGestureStart?.();
+  };
+
+  const down = (mode: DragState["mode"]) => (e: React.PointerEvent) => {
     if (!canEdit) return;
     e.stopPropagation();
+
+    if (e.pointerType === "touch" && mode === "move") {
+      // Long-press required for touch move
+      pendingTouch.current = { pointerId: e.pointerId, x0: e.clientX, y0: e.clientY, target: e.target as Element };
+      setLongPressLifting(true);
+      longPressTimer.current = setTimeout(() => {
+        const pt = pendingTouch.current;
+        if (!pt) return;
+        pendingTouch.current = null;
+        activateDrag("move", pt.pointerId, pt.x0, pt.y0, pt.target);
+      }, LONG_PRESS_MS);
+      return;
+    }
+
+    // Mouse or touch resize handle — immediate drag
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
     drag.current = { mode, x0: e.clientX, y0: e.clientY, s0: slot.start, e0: slot.end, lastX: e.clientX, lastY: e.clientY, moved: false };
     if (mode === "move") setVis({ dx: 0, dy: 0, start: slot.start });
   };
+
   const move = (e: React.PointerEvent) => {
+    // If long-press is pending and finger moved too much, cancel (let browser scroll)
+    if (pendingTouch.current) {
+      const { x0, y0 } = pendingTouch.current;
+      if (Math.abs(e.clientX - x0) + Math.abs(e.clientY - y0) > 8) {
+        clearTimeout(longPressTimer.current!);
+        longPressTimer.current = null;
+        pendingTouch.current = null;
+        setLongPressLifting(false);
+      }
+      return;
+    }
+
     const d = drag.current; if (!d) return;
     d.lastX = e.clientX; d.lastY = e.clientY;
-    if (!d.moved && Math.abs(e.clientY - d.y0) + Math.abs(e.clientX - d.x0) > 4) { d.moved = true; onGestureStart?.(); }
+    if (!d.moved && Math.abs(e.clientY - d.y0) + Math.abs(e.clientX - d.x0) > 4) d.moved = true;
     const dm = snap((e.clientY - d.y0) / PX_PER_MIN);
     if (d.mode === "move") {
       const start = clamp(d.s0 + dm, DAY_START_H * 60, DAY_END_H * 60 - dur);
@@ -306,7 +396,18 @@ function Block({ slot, main, alts, entityById, col, colCount, canEdit, onGesture
       onChange({ day: slot.day, start: clamp(d.s0 + dm, DAY_START_H * 60, d.e0 - SNAP), end: slot.end });
     }
   };
+
   const up = (e: React.PointerEvent) => {
+    // Long press pending → was a tap
+    if (pendingTouch.current) {
+      clearTimeout(longPressTimer.current!);
+      longPressTimer.current = null;
+      pendingTouch.current = null;
+      setLongPressLifting(false);
+      onOpen();
+      return;
+    }
+
     const d = drag.current; drag.current = null;
     (e.target as HTMLElement).releasePointerCapture?.(e.pointerId);
     if (!d) { if (!canEdit) onOpen(); return; }
@@ -326,39 +427,68 @@ function Block({ slot, main, alts, entityById, col, colCount, canEdit, onGesture
   const book = bookingStatusOf(main);
   const bookIcon = book === "done" ? "✅" : book === "needed" ? "📋" : null;
   const done = activityStatusOf(main) === "done";
-  const dragging = vis != null;
 
   return (
-    <div className={`group absolute overflow-hidden rounded-lg border-l-4 ${c.bg} ${c.border} ${c.text} shadow-sm ring-1 ring-black/5 ${planned ? "border-dashed" : ""}`}
-      style={{ top, height, left: `calc(${col * widthPct}% + 2px)`, width: `calc(${widthPct}% - 4px)`, touchAction: "none", cursor: canEdit ? (dragging ? "grabbing" : "grab") : "pointer",
-        transform: dragging ? `translate(${vis!.dx}px, ${vis!.dy}px)` : undefined, zIndex: dragging ? 40 : undefined, opacity: dragging ? 0.9 : 1, pointerEvents: dragging ? "none" : undefined }}
-      onPointerDown={down("move")} onPointerMove={move} onPointerUp={up} onClick={(e) => e.stopPropagation()}>
-      {canEdit && <div className="absolute inset-x-0 top-0 z-10 h-2 cursor-ns-resize" onPointerDown={down("top")} onPointerMove={move} onPointerUp={up} />}
+    <div
+      className={`group absolute overflow-hidden rounded-lg border-l-4 ${c.bg} ${c.border} ${c.text} shadow-sm ring-1 ring-black/5 ${planned ? "border-dashed" : ""} transition-transform duration-150`}
+      style={{
+        top, height,
+        left: `calc(${col * widthPct}% + 2px)`,
+        width: `calc(${widthPct}% - 4px)`,
+        // Allow touch scroll while not dragging; touchAction "none" once captured.
+        touchAction: dragging ? "none" : "auto",
+        cursor: canEdit ? (dragging ? "grabbing" : "grab") : "pointer",
+        transform: dragging
+          ? `translate(${vis!.dx}px, ${vis!.dy}px)`
+          : longPressLifting ? "scale(1.04)" : undefined,
+        boxShadow: longPressLifting ? "0 8px 24px rgba(0,0,0,0.18)" : undefined,
+        zIndex: dragging || longPressLifting ? 40 : undefined,
+        opacity: dragging ? 0.9 : 1,
+        pointerEvents: dragging ? "none" : undefined,
+      }}
+      onPointerDown={down("move")} onPointerMove={move} onPointerUp={up}
+      onClick={(e) => e.stopPropagation()}
+    >
+      {/* Resize top — mouse-only (touch targets too small) */}
+      {canEdit && <div className="absolute inset-x-0 top-0 z-10 hidden h-2 cursor-ns-resize sm:block" onPointerDown={down("top")} onPointerMove={move} onPointerUp={up} />}
       {dragging && <div className="absolute right-1 top-1 rounded bg-black/70 px-1 text-[9px] font-bold text-white">{fmt(vis!.start)}</div>}
+
       <div className="px-1.5 py-1">
         <div className="flex items-start gap-1">
-          <span className="text-[11px] leading-tight">{emojiOf(type)}</span>
+          <span className={`leading-tight ${wide ? "text-sm" : "text-[11px]"}`}>{emojiOf(type)}</span>
           <div className="min-w-0 flex-1">
-            <div className={`truncate text-[11px] font-semibold leading-tight ${done ? "line-through opacity-60" : ""}`}>{title}</div>
-            {height > 30 && <div className="truncate text-[10px] opacity-70">{fmt(slot.start)}{height > 44 ? `–${fmt(slot.end)}` : ""}{entity?.parent ? ` · @${entity.parent}` : entity?.area ? ` · ${entity.area}` : ""}</div>}
+            <div className={`font-semibold leading-tight ${wide ? "text-sm" : "truncate text-[11px]"} ${done ? "line-through opacity-60" : ""}`}>
+              {title}
+            </div>
+            {/* Time + area — always shown in wide/day view; height-gated in week view */}
+            {(wide || height > 30) && (
+              <div className={`opacity-70 ${wide ? "text-xs" : "truncate text-[10px]"}`}>
+                {fmt(slot.start)}{(wide || height > 44) ? `–${fmt(slot.end)}` : ""}
+                {entity?.parent ? ` · @${entity.parent}` : entity?.area ? ` · ${entity.area}` : ""}
+              </div>
+            )}
           </div>
           <div className="flex shrink-0 items-center gap-0.5">
-            {done && <span className="text-[10px]" title="Done">✓</span>}
-            {bookIcon && <span className="text-[10px]" title={book === "done" ? "Booked" : "Needs booking"}>{bookIcon}</span>}
+            {done && <span className={wide ? "text-xs" : "text-[10px]"} title="Done">✓</span>}
+            {bookIcon && <span className={wide ? "text-xs" : "text-[10px]"}>{bookIcon}</span>}
             {planned && <span className="rounded bg-black/10 px-1 text-[8px] font-bold uppercase">plan</span>}
             {alts.length > 0 && <span className={`rounded-full ${c.chip} px-1 text-[9px] font-bold text-white`}>+{alts.length}</span>}
           </div>
         </div>
-        {height > 58 && main.note && <div className="mt-0.5 line-clamp-1 text-[10px] opacity-60">{main.note}</div>}
-        {height > 76 && alts.length > 0 && (
+        {(wide ? main.note : height > 58 && main.note) && (
+          <div className={`mt-0.5 opacity-60 ${wide ? "text-xs line-clamp-2" : "line-clamp-1 text-[10px]"}`}>{main.note}</div>
+        )}
+        {(wide ? alts.length > 0 : height > 76 && alts.length > 0) && (
           <div className="mt-0.5 space-y-px">
-            {alts.slice(0, 2).map((a) => <div key={a.entityId} className="truncate text-[9px] opacity-55">▹ {entityById.get(a.entityId)?.name ?? a.entityId}</div>)}
-            {alts.length > 2 && <div className="text-[9px] opacity-45">+{alts.length - 2} more</div>}
+            {alts.slice(0, wide ? 3 : 2).map((a) => <div key={a.entityId} className={`opacity-55 ${wide ? "text-[11px]" : "truncate text-[9px]"}`}>▹ {entityById.get(a.entityId)?.name ?? a.entityId}</div>)}
+            {alts.length > (wide ? 3 : 2) && <div className={`opacity-45 ${wide ? "text-[11px]" : "text-[9px]"}`}>+{alts.length - (wide ? 3 : 2)} more</div>}
           </div>
         )}
       </div>
+
+      {/* Resize bottom — mouse-only */}
       {canEdit && (
-        <div className="absolute inset-x-0 bottom-0 z-10 h-2 cursor-ns-resize" onPointerDown={down("bottom")} onPointerMove={move} onPointerUp={up}>
+        <div className="absolute inset-x-0 bottom-0 z-10 hidden h-2 cursor-ns-resize sm:block" onPointerDown={down("bottom")} onPointerMove={move} onPointerUp={up}>
           <div className="mx-auto mt-0.5 h-0.5 w-5 rounded-full bg-current opacity-0 group-hover:opacity-30" />
         </div>
       )}
@@ -373,7 +503,7 @@ function DetailSheet({ slot, instances, entityById, canEdit, handlers, onClose }
 }) {
   const { main, alts } = splitInstances(slot.id, instances);
   const ent = main ? entityById.get(main.entityId) : undefined;
-  const adhoc = !ent; // logistics / freshly-added item with no DB entity
+  const adhoc = !ent;
   const isNew = slot.id.startsWith("new-");
   const [note, setNote] = useState(main?.note ?? "");
   const [label, setLabel] = useState(slot.label);
@@ -480,14 +610,13 @@ function DetailSheet({ slot, instances, entityById, canEdit, handlers, onClose }
               canCreate={!!handlers.onSaveEntity}
             />
           )}
-          <p className="mt-2 text-[11px] text-slate-400">Only the main option exports to Google Calendar.{canEdit ? " “Make main” swaps a Plan B in." : ""}</p>
+          <p className="mt-2 text-[11px] text-slate-400">Only the main option exports to Google Calendar.{canEdit ? ' "Make main" swaps a Plan B in.' : ""}</p>
         </div>
 
         {ent && (
           <div className="mt-4 border-t border-slate-100 pt-3 space-y-4">
             <a href={`/database?open=${encodeURIComponent(ent.id)}`} className="text-sm font-medium text-indigo-600 hover:underline">{emojiOf(type)} Edit {ent.name} in Database →</a>
 
-            {/* Visit photos */}
             <div>
               <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Photos</p>
               <PhotoGallery
@@ -501,7 +630,6 @@ function DetailSheet({ slot, instances, entityById, canEdit, handlers, onClose }
               />
             </div>
 
-            {/* Comments */}
             <div>
               <button onClick={() => setCommentOpen((o) => !o)} className="text-sm text-slate-500 hover:text-slate-700">
                 💬 Comments {commentOpen ? "▲" : "▼"}
@@ -541,8 +669,6 @@ function OptionRow({ ent, fallbackName, isMain, canEdit, onMakeMain }: { ent?: C
   );
 }
 
-// "Add an alternative plan" — pick an existing DB place or create a new one as a
-// Plan B instance on this slot. Keeps the itinerary wired to the Database.
 function AltAdder({ entityById, excludeIds, onPick, onCreate, canCreate }: {
   entityById: Map<string, CalEntity>;
   excludeIds: Set<string>;
@@ -596,7 +722,7 @@ function AltAdder({ entityById, excludeIds, onPick, onCreate, canCreate }: {
               ))}
             </ul>
           )}
-          {q.trim() && matches.length === 0 && <p className="mt-1.5 text-[11px] text-slate-400">No match.{canCreate ? " Use “New place” to add it." : ""}</p>}
+          {q.trim() && matches.length === 0 && <p className="mt-1.5 text-[11px] text-slate-400">No match.{canCreate ? ' Use "New place" to add it.' : ""}</p>}
           <button onClick={() => setOpen(false)} className="mt-2 text-[11px] font-medium text-slate-400 hover:underline">Cancel</button>
         </div>
       ) : (
@@ -623,8 +749,6 @@ function Segmented({ value, options, disabled, onChange }: {
   );
 }
 
-// Types offered when categorising a place from the itinerary (real, place-like
-// kinds first; logistics buckets kept available at the end).
 const PLACE_TYPE_OPTIONS = ENTITY_TABS.filter((t) => t.type !== "uncategorised");
 
 function PlaceEditor({ entityId, ent, fallbackName, onSave, onCancel }: {
