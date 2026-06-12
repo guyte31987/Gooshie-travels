@@ -8,7 +8,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ENTITY_TABS, type EntityType } from "@/lib/entities";
-import { type IcsStay } from "@/lib/ics-export";
+import { buildTripIcs, downloadIcs, type IcsStay } from "@/lib/ics-export";
 import { activityStatusOf, bookingStatusOf, type ActivityStatus, type BookingStatus, type Capacity } from "@/lib/itinerary";
 import { useBackClose } from "@/lib/useBackClose";
 import { Comments } from "./Comments";
@@ -139,6 +139,17 @@ export function ItineraryCalendar({
 
   const goPrev = () => setDayIdx((i) => Math.max(0, i - 1));
   const goNext = () => setDayIdx((i) => Math.min(days.length - 1, i + 1));
+
+  const exportIcs = () => {
+    const ics = buildTripIcs({
+      calName,
+      slots: slots.map((s) => ({ id: s.id, day: s.day, start: s.start, end: s.end, label: s.label })),
+      instances: instances.map((i) => ({ slotId: i.slotId, entityId: i.entityId, capacity: i.capacity, note: i.note })),
+      entities: new Map([...entityById].map(([id, e]) => [id, { name: e.name, type: e.type, area: e.area, parent: e.parent, address: e.address }])),
+      stays,
+    });
+    downloadIcs(ics, `${calName.replace(/\W+/g, "-").toLowerCase()}.ics`);
+  };
 
   const addAt = (day: string, startMin: number) => {
     if (!canEdit) return;
@@ -285,6 +296,11 @@ export function ItineraryCalendar({
 
       <div className="mt-4">
         <Legend />
+      </div>
+
+      <div className="mt-3 flex justify-center">
+        <button onClick={exportIcs} title="Export to a .ics calendar file"
+          className="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100">⤓ Export .ics</button>
       </div>
 
       <style>{`:root{--col-w:84vw}@media(min-width:768px){:root{--col-w:172px}}`}</style>
