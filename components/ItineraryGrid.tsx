@@ -8,7 +8,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ENTITY_TABS, type EntityType } from "@/lib/entities";
-import { buildTripIcs, downloadIcs, type IcsStay } from "@/lib/ics-export";
+import { type IcsStay } from "@/lib/ics-export";
 import { activityStatusOf, bookingStatusOf, type ActivityStatus, type BookingStatus, type Capacity } from "@/lib/itinerary";
 import { useBackClose } from "@/lib/useBackClose";
 import { Comments } from "./Comments";
@@ -64,6 +64,14 @@ function fmt(min: number): string {
   let hh = h % 12; if (hh === 0) hh = 12;
   return m === 0 ? `${hh}${am}` : `${hh}:${String(m).padStart(2, "0")}${am}`;
 }
+// Short day label, e.g. "Thu, 06/05".
+function shortDay(iso: string): string {
+  const dt = new Date(iso + "T12:00:00");
+  const wd = dt.toLocaleDateString("en-US", { weekday: "short", timeZone: "UTC" });
+  const mm = String(dt.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(dt.getUTCDate()).padStart(2, "0");
+  return `${wd}, ${mm}/${dd}`;
+}
 const snap = (m: number) => Math.round(m / SNAP) * SNAP;
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 const mapsSearch = (q: string) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
@@ -99,7 +107,7 @@ export function ItineraryCalendar({
   const [detailSlot, setDetailSlot] = useState<string | null>(null);
   const [stayEditDay, setStayEditDay] = useState<string | null>(null);
   // Default to day view on mobile, week view on desktop.
-  const [view, setView] = useState<"week" | "day" | "map">(() =>
+  const [view, setView] = useState<"week" | "day">(() =>
     typeof window !== "undefined" && window.innerWidth < 768 ? "day" : "week"
   );
   const [dayIdx, setDayIdx] = useState(0);
@@ -114,17 +122,6 @@ export function ItineraryCalendar({
 
   const goPrev = () => setDayIdx((i) => Math.max(0, i - 1));
   const goNext = () => setDayIdx((i) => Math.min(days.length - 1, i + 1));
-
-  const exportIcs = () => {
-    const ics = buildTripIcs({
-      calName,
-      slots: slots.map((s) => ({ id: s.id, day: s.day, start: s.start, end: s.end, label: s.label })),
-      instances: instances.map((i) => ({ slotId: i.slotId, entityId: i.entityId, capacity: i.capacity, note: i.note })),
-      entities: new Map([...entityById].map(([id, e]) => [id, { name: e.name, type: e.type, area: e.area, parent: e.parent, address: e.address }])),
-      stays,
-    });
-    downloadIcs(ics, `${calName.replace(/\W+/g, "-").toLowerCase()}.ics`);
-  };
 
   const addAt = (day: string, startMin: number) => {
     if (!canEdit) return;
@@ -158,7 +155,7 @@ export function ItineraryCalendar({
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <div className="inline-flex rounded-full border border-slate-200 bg-white p-0.5 text-xs font-medium">
-            {(["day", "week", "map"] as const).map((v) => (
+            {(["day", "week"] as const).map((v) => (
               <button key={v} onClick={() => setView(v)} className={`rounded-full px-3 py-1 capitalize ${view === v ? "bg-ink text-white" : "text-slate-500"}`}>{v}</button>
             ))}
           </div>
@@ -166,18 +163,16 @@ export function ItineraryCalendar({
             <button onClick={onUndo} disabled={!canUndo} title="Undo"
               className={`rounded-full border px-3 py-1 text-xs font-medium ${canUndo ? "border-slate-200 bg-white text-slate-600 hover:bg-slate-50" : "border-slate-100 bg-slate-50 text-slate-300"}`}>↶ Undo</button>
           )}
-          <button onClick={exportIcs} title="Export to a .ics calendar file"
-            className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-100">⤓ .ics</button>
         </div>
 
-        {/* Day navigator — shown in day + map views */}
-        {view !== "week" && (
+        {/* Day navigator — day view only */}
+        {view === "day" && (
           <div className="flex items-center gap-1">
-            <button onClick={goPrev} disabled={dayIdx === 0} className="rounded-lg px-2.5 py-1.5 text-lg text-slate-500 hover:bg-slate-100 disabled:opacity-30">‹</button>
-            <span className="min-w-[7rem] text-center text-sm font-semibold text-slate-700">
-              {new Date(visibleDays[0] + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" })}
+            <button onClick={goPrev} disabled={dayIdx === 0} className="rounded-lg px-2 py-1 text-lg text-slate-500 hover:bg-slate-100 disabled:opacity-30">‹</button>
+            <span className="min-w-[5.5rem] text-center text-sm font-semibold text-slate-700">
+              {shortDay(visibleDays[0])}
             </span>
-            <button onClick={goNext} disabled={dayIdx === days.length - 1} className="rounded-lg px-2.5 py-1.5 text-lg text-slate-500 hover:bg-slate-100 disabled:opacity-30">›</button>
+            <button onClick={goNext} disabled={dayIdx === days.length - 1} className="rounded-lg px-2 py-1 text-lg text-slate-500 hover:bg-slate-100 disabled:opacity-30">›</button>
           </div>
         )}
 
@@ -192,12 +187,7 @@ export function ItineraryCalendar({
         )}
       </div>
 
-      <Legend />
-
-      {view === "map" ? (
-        <DayMap day={visibleDays[0]} slots={slotsOn(visibleDays[0])} instances={instances} entityById={entityById} />
-      ) : (
-        <div
+      <div
           className="relative flex overflow-auto rounded-2xl border border-slate-200 bg-white shadow-sm"
           style={{ height: "72vh" }}
           onTouchStart={onGridTouchStart}
@@ -224,7 +214,7 @@ export function ItineraryCalendar({
                 <div className="sticky top-0 z-10 flex flex-col justify-center border-b border-slate-100 bg-white/95 px-2 backdrop-blur" style={{ height: HEADER_H }}>
                   <div className={`font-semibold text-slate-700 ${wide ? "text-sm" : "text-xs"}`}>
                     {wide
-                      ? dt.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric", timeZone: "UTC" })
+                      ? shortDay(day)
                       : `${dt.toLocaleDateString("en-US", { weekday: "short", timeZone: "UTC" })} ${dt.getUTCDate()}`}
                   </div>
                   {dayStays.length > 0 ? (
@@ -254,7 +244,6 @@ export function ItineraryCalendar({
             );
           })}
         </div>
-      )}
 
       <p className="mt-2 text-center text-xs text-slate-400">
         {canEdit
@@ -276,6 +265,10 @@ export function ItineraryCalendar({
           onClose={() => setStayEditDay(null)}
         />
       )}
+
+      <div className="mt-4">
+        <Legend />
+      </div>
 
       <style>{`:root{--col-w:84vw}@media(min-width:768px){:root{--col-w:172px}}`}</style>
     </div>
@@ -940,40 +933,6 @@ function StaySheet({ day, days, current, onSave, onDelete, onClose }: {
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-// --- day map -----------------------------------------------------------------
-
-function DayMap({ day, slots, instances, entityById }: { day: string; slots: CalSlot[]; instances: CalInstance[]; entityById: Map<string, CalEntity> }) {
-  const stops = slots
-    .map((s) => ({ s, main: splitInstances(s.id, instances).main }))
-    .filter((x) => x.main)
-    .sort((a, b) => a.s.start - b.s.start)
-    .map((x) => ({ s: x.s, main: x.main!, ent: entityById.get(x.main!.entityId) }));
-  const labelOf = (x: { s: CalSlot; ent?: CalEntity }) => x.ent?.name ?? x.s.label;
-  const queryOf = (x: { s: CalSlot; ent?: CalEntity }) => x.ent?.address || `${labelOf(x)} ${x.ent?.area ?? ""}`;
-  const routeUrl = `https://www.google.com/maps/dir/${stops.map(queryOf).map(encodeURIComponent).join("/")}`;
-  const dt = new Date(day + "T12:00:00");
-
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm" style={{ minHeight: "60vh" }}>
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className="font-semibold text-slate-700">{dt.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric", timeZone: "UTC" })} — {stops.length} stops</h2>
-        {stops.length > 1 && <a href={routeUrl} target="_blank" rel="noreferrer" className="rounded-lg bg-ink px-3 py-1.5 text-sm font-medium text-white">Open route in Google Maps →</a>}
-      </div>
-      <ol className="space-y-2">
-        {stops.map((x, i) => { const c = TYPE_COLORS[x.ent?.type ?? "uncategorised"] ?? TYPE_COLORS.uncategorised; return (
-          <li key={x.s.id} className="flex items-center gap-3">
-            <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${c.chip} text-xs font-bold text-white`}>{i + 1}</span>
-            <div className="min-w-0 flex-1">
-              <a href={mapsSearch(queryOf(x))} target="_blank" rel="noreferrer" className="block truncate text-sm font-medium text-slate-700 hover:underline">{emojiOf(x.ent?.type ?? "uncategorised")} {labelOf(x)}</a>
-              <div className="truncate text-xs text-slate-400">{fmt(x.s.start)} · {x.ent?.address || x.ent?.area || ""}</div>
-            </div>
-          </li>); })}
-        {stops.length === 0 && <li className="text-sm text-slate-400">No stops this day.</li>}
-      </ol>
     </div>
   );
 }

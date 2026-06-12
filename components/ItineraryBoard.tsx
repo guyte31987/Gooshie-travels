@@ -82,12 +82,6 @@ export function ItineraryBoard({ tripId }: { tripId: string }) {
     } finally { setSeeding(false); }
   };
 
-  const reseedEntities = async () => {
-    setSeeding(true);
-    try { await seedEntitiesIfNew(nycSeedEntities()); }
-    finally { setSeeding(false); }
-  };
-
   if (!loaded) return <p className="py-12 text-center text-sm text-slate-400">Loading itinerary…</p>;
 
   if (slots.length === 0) {
@@ -183,14 +177,6 @@ export function ItineraryBoard({ tripId }: { tripId: string }) {
 
   return (
     <div>
-      {canEdit && (
-        <div className="mb-2 flex justify-end">
-          <button onClick={reseedEntities} disabled={seeding} title="Ensure all itinerary places exist in the Database (safe to re-run)"
-            className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-500 hover:bg-slate-50 disabled:opacity-50">
-            {seeding ? "…" : "↻ Fix entity IDs"}
-          </button>
-        </div>
-      )}
       <ItineraryCalendar calName={`${trip.name} — Gooshie`} days={days} entityById={entityById}
         slots={calSlots} instances={calInstances} stays={stays ?? []}
         canEdit={canEdit} handlers={handlers} onUndo={undo} canUndo={history.length > 0} />

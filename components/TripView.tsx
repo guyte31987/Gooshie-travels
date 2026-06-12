@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import dynamic from "next/dynamic";
 import Link from "next/link";
 import { AppHeader } from "./AppHeader";
 import { ItineraryBoard } from "./ItineraryBoard";
@@ -9,12 +8,7 @@ import { PlanningTab } from "./PlanningTab";
 import { TripDataProvider } from "./TripData";
 import { getTrip } from "@/lib/trips";
 
-const TripMap = dynamic(() => import("./TripMap").then((m) => m.TripMap), {
-  ssr: false,
-  loading: () => <div className="py-12 text-center text-sm text-slate-400">Loading map…</div>,
-});
-
-type Tab = "itinerary" | "planning" | "map";
+type Tab = "itinerary" | "planning";
 
 export function TripView({ tripId }: { tripId: string }) {
   const trip = getTrip(tripId);
@@ -34,24 +28,23 @@ export function TripView({ tripId }: { tripId: string }) {
   return (
     <TripDataProvider tripId={trip.id} tripName={trip.name} tripAreas={trip.areas}>
       <div className="mx-auto min-h-screen max-w-2xl px-4 pb-16">
-        <AppHeader title={trip.name} subtitle={trip.dateLabel} backHref="/" />
+        <AppHeader title={trip.name} backHref="/" />
 
-        <nav className="mb-5 flex gap-1 rounded-lg bg-slate-100 p-1 text-sm">
-          <TabBtn active={tab === "itinerary"} onClick={() => setTab("itinerary")}>
-            Itinerary
-          </TabBtn>
-          <TabBtn active={tab === "planning"} onClick={() => setTab("planning")}>
-            Trip DB
-          </TabBtn>
-          <TabBtn active={tab === "map"} onClick={() => setTab("map")}>
-            Map
-          </TabBtn>
-        </nav>
+        <div className="mb-5 flex items-center justify-between gap-3">
+          <p className="text-xs text-slate-500">{trip.dateLabel}</p>
+          <nav className="flex gap-0.5 rounded-lg bg-slate-100 p-0.5 text-xs">
+            <TabBtn active={tab === "itinerary"} onClick={() => setTab("itinerary")}>
+              Itinerary
+            </TabBtn>
+            <TabBtn active={tab === "planning"} onClick={() => setTab("planning")}>
+              Trip DB
+            </TabBtn>
+          </nav>
+        </div>
 
         <main>
           {tab === "itinerary" && <ItineraryBoard tripId={trip.id} />}
           {tab === "planning" && <PlanningTab />}
-          {tab === "map" && <TripMap />}
         </main>
       </div>
     </TripDataProvider>
@@ -70,7 +63,7 @@ function TabBtn({
   return (
     <button
       onClick={onClick}
-      className={`flex-1 rounded-md px-3 py-1.5 font-medium transition ${
+      className={`rounded-md px-2.5 py-1 font-medium transition ${
         active ? "bg-white text-ink shadow-sm" : "text-slate-500 hover:text-slate-700"
       }`}
     >
