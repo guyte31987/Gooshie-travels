@@ -12,6 +12,11 @@ export type PreviewEntity = {
   area?: string;
   /** Parent venue name, for parties shown "at <club>". */
   parent?: string;
+  address?: string;
+  website?: string;
+  instagram?: string;
+  phone?: string;
+  hours?: string;
 };
 
 export type Capacity = "confirmed" | "planned" | "planB";
@@ -21,6 +26,9 @@ export type PreviewInstance = {
   entityId: string;
   capacity: Capacity;
   note?: string;
+  /** Per-occurrence booking state (a few are seeded for the prototype). */
+  needsBooking?: boolean;
+  booked?: boolean;
 };
 
 export type PreviewSlot = {
@@ -117,6 +125,29 @@ export const PREVIEW_ENTITIES: PreviewEntity[] = [
   E("event-nyc-pride-march", "NYC Pride March & PrideFest", "event", "Greenwich Village"),
 ];
 
+// Contact / hours details for the entities most likely to be tapped. Merged in
+// below; the rest simply have no contact fields (the popup hides what's absent).
+const DETAILS: Record<string, Partial<PreviewEntity>> = {
+  "food-deans": { address: "213 6th Ave, New York, NY", website: "https://deans.nyc", instagram: "@deans.nyc", hours: "Daily 4pm–late" },
+  "party-fist": { address: "Basement, 29 Wyckoff Ave, Queens, NY", website: "https://ra.co/clubs/basement", instagram: "@fist.nyc", hours: "Fri 11pm–6am" },
+  "food-russ-and-daughters-cafe": { address: "127 Orchard St, New York, NY", website: "https://www.russanddaughterscafe.com", instagram: "@russanddaughters", phone: "+1 212-475-4880", hours: "Sun 9am–3:30pm" },
+  "museum-storm-king-art-center": { address: "1 Museum Rd, New Windsor, NY", website: "https://stormking.org", hours: "Wed–Mon 10am–5:30pm" },
+  "museum-met-cloisters": { address: "99 Margaret Corbin Dr, New York, NY", website: "https://www.metmuseum.org", hours: "Thu–Tue 10am–5pm" },
+  "museum-mass-moca": { address: "1040 MASS MoCA Way, North Adams, MA", website: "https://massmoca.org", hours: "Wed–Mon 10am–5pm" },
+  "food-lil-debs-oasis": { address: "747 Columbia St, Hudson, NY", instagram: "@lildebsoasis", hours: "Mon 5–9pm (closed Tue–Wed)" },
+  "food-no-comply-foods": { address: "Great Barrington, MA", instagram: "@nocomplyfoods", hours: "Wed–Sat 5–9pm" },
+  "spa-mermaid-spa": { address: "3703 Mermaid Ave, Brooklyn, NY", phone: "+1 718-872-3878", hours: "Daily 9am–11pm" },
+  "event-ladyland": { address: "Under the K Bridge Park, Brooklyn, NY", website: "https://www.ladylandfestival.com", instagram: "@ladylandfest" },
+  "party-pure-honey": { address: "House of Yes, 2 Wyckoff Ave, Brooklyn, NY", instagram: "@purehoney", hours: "Fri 10pm–4am" },
+  "food-blue-mango": { address: "27 Spring St, Williamstown, MA", hours: "Daily 11:30am–9:30pm" },
+  "attraction-hersheypark": { address: "100 Hersheypark Dr, Hershey, PA", website: "https://www.hersheypark.com", hours: "Open 10am" },
+  "sight-the-high-line": { address: "New York, NY", website: "https://www.thehighline.org", hours: "Daily 7am–10pm" },
+  "food-wenwen": { address: "1065 Manhattan Ave, Brooklyn, NY", instagram: "@wenwen.nyc", hours: "Daily 11am–11pm" },
+  "museum-new-museum": { address: "235 Bowery, New York, NY", website: "https://www.newmuseum.org", hours: "Tue–Sun 11am–6pm" },
+  "sight-jacob-riis-park": { address: "Jacob Riis Park, Queens, NY", hours: "Beach — dawn to dusk" },
+};
+for (const e of PREVIEW_ENTITIES) Object.assign(e, DETAILS[e.id] ?? {});
+
 export const PREVIEW_SLOTS: PreviewSlot[] = [
   { id: "thu18-arrival", day: "2026-06-18", start: "20:00", end: "23:00", label: "Arrival" },
   { id: "fri19-met", day: "2026-06-19", start: "10:00", end: "13:00", label: "Met morning" },
@@ -176,10 +207,10 @@ export const PREVIEW_INSTANCES: PreviewInstance[] = [
   { slotId: "fri19-seneca", entityId: "event-seneca-village-juneteenth", capacity: "planned", note: "Free outdoor performance. Optional 20-min stop." },
   { slotId: "fri19-studio", entityId: "museum-studio-museum-in-harlem", capacity: "confirmed", note: "New Adjaye building. Juneteenth hours 11–8." },
   { slotId: "fri19-studio", entityId: "museum-moma", capacity: "planB", note: "If Harlem feels too far." },
-  { slotId: "fri19-dinner", entityId: "food-deans", capacity: "confirmed", note: "DINNER — LOCKED. Oysters / langoustines / Guinness." },
+  { slotId: "fri19-dinner", entityId: "food-deans", capacity: "confirmed", note: "DINNER — LOCKED. Oysters / langoustines / Guinness.", needsBooking: true, booked: true },
   { slotId: "fri19-dinner", entityId: "food-la-cantine", capacity: "planB", note: "Fallback if Dean's is full." },
   { slotId: "fri19-nap", entityId: "admin-pre-fist-nap-window", capacity: "confirmed", note: "Rest before the techno marathon." },
-  { slotId: "fri19-fist", entityId: "party-fist", capacity: "confirmed", note: "FIST 10-Year. URGENT — will sell out." },
+  { slotId: "fri19-fist", entityId: "party-fist", capacity: "confirmed", note: "FIST 10-Year. URGENT — will sell out.", needsBooking: true, booked: false },
   { slotId: "sat20-brunch", entityId: "food-win-son-bakery", capacity: "confirmed", note: "Scallion pancake sandos." },
   { slotId: "sat20-brunch", entityId: "food-kelloggs-diner", capacity: "planB" },
   { slotId: "sat20-brunch", entityId: "food-frankels-delicatessen", capacity: "planB" },
@@ -197,7 +228,7 @@ export const PREVIEW_INSTANCES: PreviewInstance[] = [
   { slotId: "sun21-mistersunday", entityId: "party-mister-sunday-soul-summit", capacity: "confirmed", note: "Soul Summit takeover. Solstice peak." },
   { slotId: "mon22-rental", entityId: "travel-drive-brooklyn-new-windsor", capacity: "confirmed", note: "Pick up SUV; drive Rte 9W." },
   { slotId: "mon22-coffee", entityId: "food-cornwall-coffee-co", capacity: "confirmed", note: "Coffee + pastry, eat in car." },
-  { slotId: "mon22-stormking", entityId: "museum-storm-king-art-center", capacity: "confirmed", note: "500 acres — Calder / Serra / Maya Lin." },
+  { slotId: "mon22-stormking", entityId: "museum-storm-king-art-center", capacity: "confirmed", note: "500 acres — Calder / Serra / Maya Lin.", needsBooking: true, booked: true },
   { slotId: "mon22-lunch", entityId: "food-downstate-newburgh", capacity: "planned" },
   { slotId: "mon22-sktrail", entityId: "hike-storm-king-mountain", capacity: "planned", note: "2.4mi loop — skip if short on time." },
   { slotId: "mon22-dia", entityId: "museum-dia-beacon", capacity: "planned", note: "Optional Beacon stop." },
@@ -215,7 +246,7 @@ export const PREVIEW_INSTANCES: PreviewInstance[] = [
   { slotId: "wed24-dinner", entityId: "food-no-comply-foods", capacity: "confirmed", note: "DINNER — LOCKED. No reservations." },
   { slotId: "wed24-dinner", entityId: "food-mezze-bistro-and-bar", capacity: "planB", note: "Splurge alt." },
   { slotId: "thu25-chocworld", entityId: "attraction-hersheys-chocolate-world", capacity: "confirmed", note: "Free factory tour. Opens 9am." },
-  { slotId: "thu25-coasters-am", entityId: "attraction-hersheypark", capacity: "confirmed", note: "AM: Wildcat's Revenge, Skyrush." },
+  { slotId: "thu25-coasters-am", entityId: "attraction-hersheypark", capacity: "confirmed", note: "AM: Wildcat's Revenge, Skyrush.", needsBooking: true, booked: true },
   { slotId: "thu25-lunch", entityId: "food-hersheypark-lunch", capacity: "confirmed" },
   { slotId: "thu25-coasters-pm", entityId: "attraction-hersheypark", capacity: "confirmed", note: "PM thrills: Candymonium / Storm Runner." },
   { slotId: "thu25-waterpark", entityId: "attraction-hersheypark", capacity: "confirmed", note: "Boardwalk water park." },
@@ -230,14 +261,14 @@ export const PREVIEW_INSTANCES: PreviewInstance[] = [
   { slotId: "fri26-vintage", entityId: "vintage-desert-vintage", capacity: "planB" },
   { slotId: "fri26-dragmarch", entityId: "event-nyc-drag-march", capacity: "confirmed", note: "Tompkins → Stonewall. Early dinner first." },
   { slotId: "fri26-joespub", entityId: "show-joes-pub", capacity: "planned", note: "2Scoops drag show." },
-  { slotId: "fri26-parties", entityId: "party-pure-honey", capacity: "confirmed", note: "Pure Honey Pride @ HOY, 10pm–1am." },
+  { slotId: "fri26-parties", entityId: "party-pure-honey", capacity: "confirmed", note: "Pure Honey Pride @ HOY, 10pm–1am.", needsBooking: true, booked: false },
   { slotId: "fri26-parties", entityId: "party-black-market-marathon", capacity: "planB", note: "3DB Black Market 1–4am." },
   { slotId: "fri26-parties", entityId: "club-sultan-room", capacity: "planB" },
   { slotId: "sat27-brunch", entityId: "food-wenwen", capacity: "confirmed", note: "Taiwanese (BDSM Chicken)." },
   { slotId: "sat27-brunch", entityId: "food-kelloggs-diner", capacity: "planB" },
   { slotId: "sat27-brunch", entityId: "food-sunday-in-brooklyn", capacity: "planB" },
   { slotId: "sat27-riis", entityId: "sight-jacob-riis-park", capacity: "confirmed", note: "Queer beach Bay 1." },
-  { slotId: "sat27-ladyland", entityId: "event-ladyland", capacity: "confirmed", note: "Kim Petras / Romy / CupcakKe." },
+  { slotId: "sat27-ladyland", entityId: "event-ladyland", capacity: "confirmed", note: "Kim Petras / Romy / CupcakKe.", needsBooking: true, booked: true },
   { slotId: "sun28-pride", entityId: "event-nyc-pride-march", capacity: "confirmed", note: "March noon. Brunch S&P; Buvette after. Flight 7pm+." },
 ];
 
