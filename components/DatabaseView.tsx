@@ -63,10 +63,14 @@ export function DatabaseView() {
     [entities]
   );
 
+  const [calSourceOnly, setCalSourceOnly] = useState(false);
+  const calSourceCount = entities.filter((e) => e.calendarSource).length;
+
   const filtered = entities
     .filter((e) => showOperational || !OPERATIONAL_TYPES.has(e.type))
     .filter((e) => !region || e.generalArea === region)
     .filter((e) => !type || e.type === type)
+    .filter((e) => !calSourceOnly || e.calendarSource)
     .filter(
       (e) => !q || `${e.name} ${e.area ?? ""} ${e.notes ?? ""}`.toLowerCase().includes(q.toLowerCase())
     )
@@ -297,6 +301,14 @@ export function DatabaseView() {
             >
               {showOperational ? "Hide" : "Show"} admin/travel
             </button>
+            {calSourceCount > 0 && (
+              <button
+                onClick={() => setCalSourceOnly((v) => !v)}
+                className={`rounded-full px-2.5 py-1 font-medium ${calSourceOnly ? "bg-amber-500 text-white" : "bg-amber-50 text-amber-700 hover:bg-amber-100"}`}
+              >
+                📅 From calendar <span className={calSourceOnly ? "opacity-70" : "text-amber-400"}>{calSourceCount}</span>
+              </button>
+            )}
           </div>
 
           <div className="mb-3 flex items-center gap-2 text-xs text-slate-400">
