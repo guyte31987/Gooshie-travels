@@ -109,6 +109,11 @@ export function ItineraryBoard({ tripId }: { tripId: string }) {
         if (cap !== i.capacity) savePlanInstance({ ...i, capacity: cap });
       }
     },
+    onAddAlt: (slotId, entityId) => {
+      const id = instanceId(slotId, entityId);
+      if (instances.some((i) => i.id === id)) return;
+      savePlanInstance({ id, tripId, slotId, entityId, capacity: "planB", note: "" });
+    },
     onUpdateInstance: (slotId, entityId, patch) => {
       const id = instanceId(slotId, entityId);
       const cur = instances.find((i) => i.id === id);

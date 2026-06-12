@@ -43,6 +43,8 @@ export type CalHandlers = {
   onAddSlot: (slot: CalSlot, inst: CalInstance) => void;
   onDeleteSlot: (slotId: string, instanceIds: string[]) => void;
   onMakeMain: (slotId: string, entityId: string) => void;
+  /** Add an alternative (Plan B) entity to an existing slot. */
+  onAddAlt: (slotId: string, entityId: string) => void;
   onUpdateInstance: (slotId: string, entityId: string, patch: Partial<CalInstance>) => void;
   onRenameSlot: (slotId: string, label: string) => void;
   /** Create/update the DB entity behind an instance (category + details). */
@@ -461,9 +463,22 @@ function DetailSheet({ slot, instances, entityById, canEdit, handlers, onClose }
           <ul className="space-y-1.5">
             {ent && <OptionRow ent={ent} isMain />}
             {!ent && <li className="rounded-lg border border-slate-200 px-2.5 py-2 text-sm font-medium">{title} <span className="ml-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">main</span></li>}
-            {alts.map((a) => { const e = entityById.get(a.entityId); return e ? <OptionRow key={a.entityId} ent={e} canEdit={canEdit} onMakeMain={() => handlers.onMakeMain(slot.id, a.entityId)} /> : null; })}
+            {alts.map((a) => { const e = entityById.get(a.entityId); return <OptionRow key={a.entityId} ent={e} fallbackName={a.entityId.startsWith("adhoc:") ? "New alternative" : a.entityId} canEdit={canEdit} onMakeMain={() => handlers.onMakeMain(slot.id, a.entityId)} />; })}
           </ul>
-          <p className="mt-2 text-[11px] text-slate-400">Only the main option exports to Google Calendar.{canEdit ? " “Make main” swaps it in." : ""}</p>
+          {canEdit && (
+            <AltAdder
+              entityById={entityById}
+              excludeIds={new Set([main.entityId, ...alts.map((a) => a.entityId)])}
+              onPick={(entityId) => handlers.onAddAlt(slot.id, entityId)}
+              onCreate={(patch) => {
+                const id = `adhoc:alt-${slot.id}-${Date.now()}`;
+                handlers.onAddAlt(slot.id, id);
+                handlers.onSaveEntity?.(id, patch);
+              }}
+              canCreate={!!handlers.onSaveEntity}
+            />
+          )}
+          <p className="mt-2 text-[11px] text-slate-400">Only the main option exports to Google Calendar.{canEdit ? " “Make main” swaps a Plan B in." : ""}</p>
         </div>
 
         {ent && (
@@ -490,15 +505,82 @@ function DetailSheet({ slot, instances, entityById, canEdit, handlers, onClose }
   );
 }
 
-function OptionRow({ ent, isMain, canEdit, onMakeMain }: { ent: CalEntity; isMain?: boolean; canEdit?: boolean; onMakeMain?: () => void }) {
+function OptionRow({ ent, fallbackName, isMain, canEdit, onMakeMain }: { ent?: CalEntity; fallbackName?: string; isMain?: boolean; canEdit?: boolean; onMakeMain?: () => void }) {
   return (
     <li className="flex items-center gap-2 rounded-lg border border-slate-200 px-2.5 py-2">
-      <span>{emojiOf(ent.type)}</span>
-      <div className="min-w-0 flex-1"><div className="truncate text-sm font-medium">{ent.name}</div>{ent.area && <div className="text-[11px] text-slate-400">{ent.parent ? `@${ent.parent}` : ent.area}</div>}</div>
+      <span>{emojiOf(ent?.type ?? "uncategorised")}</span>
+      <div className="min-w-0 flex-1"><div className="truncate text-sm font-medium">{ent?.name ?? fallbackName}</div>{ent?.area && <div className="text-[11px] text-slate-400">{ent.parent ? `@${ent.parent}` : ent.area}</div>}</div>
       {isMain ? <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">main</span>
         : canEdit ? <button onClick={onMakeMain} className="rounded-full border border-slate-300 px-2 py-0.5 text-[10px] font-medium text-slate-600 hover:bg-slate-50">make main ⇄</button>
         : <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-400">Plan B</span>}
     </li>
+  );
+}
+
+// "Add an alternative plan" — pick an existing DB place or create a new one as a
+// Plan B instance on this slot. Keeps the itinerary wired to the Database.
+function AltAdder({ entityById, excludeIds, onPick, onCreate, canCreate }: {
+  entityById: Map<string, CalEntity>;
+  excludeIds: Set<string>;
+  onPick: (entityId: string) => void;
+  onCreate: (patch: EntityPatch) => void;
+  canCreate: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [mode, setMode] = useState<"pick" | "create">("pick");
+  const [q, setQ] = useState("");
+  const matches = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    if (!needle) return [];
+    return [...entityById.values()]
+      .filter((e) => !excludeIds.has(e.id) && e.type !== "uncategorised")
+      .filter((e) => `${e.name} ${e.area ?? ""}`.toLowerCase().includes(needle))
+      .slice(0, 8);
+  }, [q, entityById, excludeIds]);
+
+  if (!open) {
+    return (
+      <button onClick={() => setOpen(true)} className="mt-2 rounded-lg border border-dashed border-slate-300 px-2.5 py-1.5 text-[11px] font-medium text-slate-500 hover:bg-slate-50">
+        ＋ Add an alternative plan
+      </button>
+    );
+  }
+
+  return (
+    <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50 p-2.5">
+      {canCreate && (
+        <div className="mb-2 inline-flex rounded-md border border-slate-200 bg-white p-0.5 text-[11px] font-medium">
+          <button onClick={() => setMode("pick")} className={`rounded px-2 py-0.5 ${mode === "pick" ? "bg-ink text-white" : "text-slate-500"}`}>From Database</button>
+          <button onClick={() => setMode("create")} className={`rounded px-2 py-0.5 ${mode === "create" ? "bg-ink text-white" : "text-slate-500"}`}>New place</button>
+        </div>
+      )}
+      {mode === "pick" ? (
+        <div>
+          <input value={q} onChange={(e) => setQ(e.target.value)} autoFocus placeholder="Search the Database…"
+            className="w-full rounded-lg border border-slate-300 px-2 py-1 text-sm outline-none focus:border-slate-400" />
+          {matches.length > 0 && (
+            <ul className="mt-1.5 space-y-1">
+              {matches.map((e) => (
+                <li key={e.id}>
+                  <button onClick={() => { onPick(e.id); setOpen(false); setQ(""); }}
+                    className="flex w-full items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-left hover:bg-slate-50">
+                    <span>{emojiOf(e.type)}</span>
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium">{e.name}</span>
+                    {e.area && <span className="shrink-0 text-[11px] text-slate-400">{e.parent ? `@${e.parent}` : e.area}</span>}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          {q.trim() && matches.length === 0 && <p className="mt-1.5 text-[11px] text-slate-400">No match.{canCreate ? " Use “New place” to add it." : ""}</p>}
+          <button onClick={() => setOpen(false)} className="mt-2 text-[11px] font-medium text-slate-400 hover:underline">Cancel</button>
+        </div>
+      ) : (
+        <PlaceEditor entityId="" fallbackName=""
+          onSave={(patch) => { onCreate(patch); setOpen(false); }}
+          onCancel={() => setOpen(false)} />
+      )}
+    </div>
   );
 }
 
@@ -697,6 +779,7 @@ export function ItineraryGrid() {
     onAddSlot: (slot, inst) => { record(); setSlots((p) => [...p, slot]); setInstances((p) => [...p, inst]); },
     onDeleteSlot: (id) => { record(); setSlots((p) => p.filter((s) => s.id !== id)); setInstances((p) => p.filter((i) => i.slotId !== id)); },
     onMakeMain: (slotId, entityId) => { record(); setInstances((p) => p.map((i) => i.slotId !== slotId ? i : i.entityId === entityId ? { ...i, capacity: "confirmed" } : i.capacity !== "planB" ? { ...i, capacity: "planB" } : i)); },
+    onAddAlt: (slotId, entityId) => { record(); setInstances((p) => p.some((i) => i.slotId === slotId && i.entityId === entityId) ? p : [...p, { slotId, entityId, capacity: "planB", note: "" }]); },
     onUpdateInstance: (slotId, entityId, patch) => { record(); setInstances((p) => p.map((i) => i.slotId === slotId && i.entityId === entityId ? { ...i, ...patch } : i)); },
     onRenameSlot: (slotId, label) => { record(); setSlots((p) => p.map((s) => s.id === slotId ? { ...s, label } : s)); setEntities((p) => p.some((e) => e.id === `adhoc:${slotId}`) ? p : [...p, { id: `adhoc:${slotId}`, name: label, type: "uncategorised" }]); },
     onSaveEntity: (entityId, patch) => { record(); setEntities((p) => p.some((e) => e.id === entityId) ? p.map((e) => e.id === entityId ? { ...e, ...patch } : e) : [...p, { id: entityId, ...patch }]); },
