@@ -10,12 +10,10 @@ import {
   ENTITY_TABS,
   OPERATIONAL_TYPES,
   PARKED_TYPES,
-  buildEntities,
-  buildSeed,
   buildCuratedSeedEntities,
   type EntityType,
-  type ItinDay,
 } from "@/lib/entities";
+import { buildAllSeedEntities } from "@/lib/seed-entities";
 import {
   subscribeEntities,
   deleteEntity,
@@ -83,18 +81,11 @@ export function DatabaseView() {
     setSeeding(true);
     setError(null);
     try {
-      const res = await fetch("/api/itinerary", { cache: "no-store" });
-      const data = await res.json();
-      const days: ItinDay[] = data.days ?? [];
-      const tz: string = data.tz ?? "Europe/London";
-      const built = buildEntities(days, tz);
-      const { entities: dbEntities, items } = buildSeed(built);
       const trip = TRIPS[0];
       await seedDatabase({
         trip: { id: trip.id, name: trip.name, dateLabel: trip.dateLabel, areas: trip.areas },
-        entities: dbEntities,
-        items,
-        itinerary: { tz, days, syncedAt: new Date().toISOString() },
+        entities: buildAllSeedEntities(),
+        items: [],
       });
     } catch (e) {
       console.error("Seed failed:", e);
@@ -188,8 +179,8 @@ export function DatabaseView() {
         <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-4 text-sm">
           <p className="font-medium text-indigo-900">The Database is empty.</p>
           <p className="mt-1 text-indigo-700">
-            Seed it once from your current spreadsheets + calendar. This writes every entity and the
-            NYC trip into the database so you can edit them.
+            Seed it once from the bundled lists. This writes every entity and the NYC trip into the
+            database so you can edit them.
           </p>
           {isAdmin ? (
             <button

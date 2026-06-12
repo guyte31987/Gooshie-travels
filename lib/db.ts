@@ -22,7 +22,7 @@ import {
   type Firestore,
 } from "firebase/firestore";
 import { db } from "./firebase";
-import type { EntityType, ItinDay } from "./entities";
+import type { EntityType } from "./entities";
 import { DEFAULT_GENERAL_AREAS } from "./areas";
 import { slugId } from "./slug";
 
@@ -73,12 +73,6 @@ export type TripItem = {
   removed?: boolean; // explicitly removed from this trip
   appearances?: StoredAppearance[];
   dismissed?: string[]; // dismissed conflict keys
-};
-
-export type ItineraryCache = {
-  tz: string;
-  days: unknown[];
-  syncedAt: string;
 };
 
 function requireDb(): Firestore {
@@ -183,44 +177,6 @@ export async function saveTripItem(tripId: string, item: TripItem): Promise<void
   await setDoc(doc(requireDb(), `tripEntities/${tripId}/items`, item.entityId), item, { merge: true });
 }
 
-// --- trip calendar secret + cached itinerary --------------------------------
-
-export async function getTripSecret(tripId: string): Promise<string | null> {
-  if (!db) return null;
-  const snap = await getDoc(doc(db, "tripSecrets", tripId));
-  return snap.exists() ? ((snap.data().icalUrl as string) ?? null) : null;
-}
-
-export async function saveTripSecret(tripId: string, icalUrl: string): Promise<void> {
-  await setDoc(doc(requireDb(), "tripSecrets", tripId), { icalUrl });
-}
-
-export async function getItineraryCache(tripId: string): Promise<ItineraryCache | null> {
-  if (!db) return null;
-  const snap = await getDoc(doc(db, "tripItineraries", tripId));
-  return snap.exists() ? (snap.data() as ItineraryCache) : null;
-}
-
-export async function saveItineraryCache(tripId: string, cache: ItineraryCache): Promise<void> {
-  await setDoc(doc(requireDb(), "tripItineraries", tripId), cache);
-}
-
-// --- calendar baseline (for the "what changed since last sync" report) ------
-// A snapshot of the calendar as the admin last acknowledged it. Re-syncing diffs
-// the fresh pull against this; "Mark as seen" overwrites it with the current pull.
-
-export type CalendarBaseline = { days: ItinDay[]; syncedAt: string };
-
-export async function getCalendarBaseline(): Promise<CalendarBaseline | null> {
-  if (!db) return null;
-  const snap = await getDoc(doc(db, "meta", "calendarBaseline"));
-  return snap.exists() ? (snap.data() as CalendarBaseline) : null;
-}
-
-export async function saveCalendarBaseline(b: CalendarBaseline): Promise<void> {
-  await setDoc(doc(requireDb(), "meta", "calendarBaseline"), b);
-}
-
 // --- last CSV import log (so the result is reviewable after the dialog closes) -
 
 export type ImportLogChange = { name: string; fields: string[] };
@@ -263,13 +219,12 @@ export type SeedPayload = {
   trip: Trip;
   entities: DBEntity[];
   items: TripItem[];
-  itinerary?: ItineraryCache;
 };
 
-/** Writes the initial Database, trip, curation and itinerary cache in batches. */
+/** Writes the initial Database, trip and curation in batches. */
 export async function seedDatabase(payload: SeedPayload): Promise<void> {
   const database = requireDb();
-  const { trip, entities, items, itinerary } = payload;
+  const { trip, entities, items } = payload;
 
   // Entities can exceed the 500-op batch limit when combined; chunk them.
   const chunks: DBEntity[][] = [];
@@ -291,8 +246,6 @@ export async function seedDatabase(payload: SeedPayload): Promise<void> {
     await batch.commit();
   }
 
-  if (itinerary) await saveItineraryCache(trip.id, itinerary);
-
   await setDoc(doc(database, "meta", "seeded"), { at: serverTimestamp(), trip: trip.id });
 }
 
@@ -300,51 +253,6 @@ export async function isSeeded(): Promise<boolean> {
   if (!db) return false;
   const snap = await getDoc(doc(db, "meta", "seeded"));
   return snap.exists();
-}
-
-// --- instances (per-occurrence overrides: lock / edit / remove) ------------
-
-export type Instance = {
-  id: string; // = calendar UID for calendar-derived occurrences
-  tripId: string;
-  entityId?: string;
-  removed?: boolean;
-  title?: string;
-  /** Snapshot captured on lock so the occurrence survives calendar deletion. */
-  dayKey?: string;
-  startMs?: number;
-  time?: string;
-
-  // --- Schedule level (the calendar event occurrence) ---
-  /** Locks the schedule card: orphan-survival + protects scheduleNote from re-sync. */
-  scheduleLocked?: boolean;
-  /** Merged note: calendar description prepended on first lock, then freely editable. */
-  scheduleNote?: string;
-
-  // --- Entity instance level (only when entityId is set) ---
-  /** Can be toggled independently after schedule lock. */
-  entityInstanceLocked?: boolean;
-  /** Notes specific to this visit to the place. */
-  entityInstanceNote?: string;
-  /** Booking state — null means inherit the entity's needsBooking default. */
-  needsBooking?: boolean | null;
-  booked?: boolean;
-  bookingNote?: string;
-  /** "Book this many days before the trip starts." */
-  bookingOffsetDays?: number;
-};
-
-export const subscribeInstances = (tripId: string, cb: (i: Instance[]) => void) =>
-  subColl<Instance>(`tripInstances/${tripId}/items`, cb);
-
-export async function saveInstance(tripId: string, instance: Instance): Promise<void> {
-  await setDoc(doc(requireDb(), `tripInstances/${tripId}/items`, instance.id), instance, {
-    merge: true,
-  });
-}
-
-export async function deleteInstanceOverride(tripId: string, id: string): Promise<void> {
-  await deleteDoc(doc(requireDb(), `tripInstances/${tripId}/items`, id));
 }
 
 // --- comments (per instance/appearance) ------------------------------------

@@ -7,7 +7,8 @@ import { Comments } from "./Comments";
 import { EntityForm } from "./EntityForm";
 import { useTripData, useOptionalTripData, TripDataProvider } from "./TripData";
 import { useAuth } from "./AuthProvider";
-import { saveInstance, deleteInstanceOverride, type Instance, type DBEntity } from "@/lib/db";
+import { type DBEntity } from "@/lib/db";
+import { savePlanInstance, type PlanInstance } from "@/lib/itinerary";
 import { TRIPS } from "@/lib/trips";
 
 /** The entity popup — place-level info, general comments, and per-visit appearances.
@@ -320,23 +321,11 @@ function Appearance({
     setEditingBooking(true);
   };
 
-  const entityInstanceLocked = slot.locked || override?.entityInstanceLocked;
-  const instanceId = slot.uid
-    ? `${tripId}:${slot.uid}`
-    : `${tripId}:${entity.id}:${slot.kind}:${slot.dayKey ?? index}`;
+  const instanceId = slot.uid ?? `${tripId}:${entity.id}:${slot.kind}:${slot.dayKey ?? index}`;
 
-  const persist = (patch: Partial<Instance>) => {
-    if (!slot.uid) return;
-    saveInstance(tripId, {
-      id: slot.uid,
-      tripId,
-      entityId: entity.id,
-      dayKey: slot.dayKey,
-      startMs: slot.startMs,
-      time: slot.time,
-      ...override,
-      ...patch,
-    });
+  const persist = (patch: Partial<PlanInstance>) => {
+    if (!override) return;
+    savePlanInstance({ ...override, ...patch });
   };
 
   const entityNeedsBooking = entity.needsBooking ?? false;
@@ -352,7 +341,7 @@ function Appearance({
         ? "bg-amber-50 text-amber-700"
         : "bg-indigo-50 text-indigo-700";
   const word =
-    slot.kind === "confirmed" ? "In Schedule" : slot.kind === "planB" ? "Plan B" : "Alternative";
+    slot.kind === "confirmed" ? "In Schedule" : slot.kind === "planB" ? "Plan B" : "Planned";
 
   return (
     <li className="border-b border-slate-100 px-3 py-2 last:border-b-0">
@@ -367,58 +356,15 @@ function Appearance({
             {slot.time}
           </span>
         )}
-        {entityInstanceLocked && <span title="Instance locked">🔒</span>}
-        {slot.mismatch && <span className="text-xs text-rose-600">⚠️ differs from calendar</span>}
         <span className="ml-auto text-slate-300">{open ? "▲" : "▼"}</span>
       </button>
 
-      {/* Entity instance note (read summary) */}
-      {override?.entityInstanceNote && (
-        <p className="mt-1 text-xs text-slate-500">{override.entityInstanceNote}</p>
-      )}
+      {override?.note && <p className="mt-1 text-xs text-slate-500">{override.note}</p>}
 
       {open && (
         <div className="mt-2 space-y-2">
-          {canEdit && slot.uid && (
-            <div className="flex flex-wrap items-center gap-2 text-xs">
-              <button
-                onClick={() => persist({ entityInstanceLocked: !entityInstanceLocked })}
-                className={`rounded border px-2 py-1 font-medium ${
-                  entityInstanceLocked
-                    ? "border-amber-300 bg-amber-50 text-amber-700"
-                    : "border-slate-300 text-slate-600 hover:bg-slate-50"
-                }`}
-              >
-                {entityInstanceLocked ? "🔒 Locked — unlock instance" : "🔓 Lock instance"}
-              </button>
-              <button
-                onClick={() => {
-                  if (confirm("Archive this occurrence?")) persist({ removed: true });
-                }}
-                className="rounded border border-rose-200 px-2 py-1 font-medium text-rose-600 hover:bg-rose-50"
-              >
-                Archive
-              </button>
-              {override && (
-                <button
-                  onClick={() => deleteInstanceOverride(tripId, slot.uid!)}
-                  className="text-slate-400 hover:underline"
-                  title="Discard all app overrides and trust the calendar again"
-                >
-                  reset to calendar
-                </button>
-              )}
-            </div>
-          )}
-
-          {entityInstanceLocked && (
-            <p className="rounded-lg bg-amber-50 px-2 py-1 text-[11px] text-amber-700">
-              Instance locked — entity data for this visit is app-owned.
-            </p>
-          )}
-
           {/* Booking */}
-          {canEdit && slot.uid && (
+          {canEdit && override && (
             <div>
               <button
                 onClick={() => editingBooking ? setEditingBooking(false) : openBookingForm()}
@@ -480,9 +426,9 @@ function BookingForm({
   setBookingOffsetDraft,
   onClose,
 }: {
-  override: Instance | undefined;
+  override: PlanInstance | undefined;
   entityNeedsBooking: boolean;
-  onPersist: (patch: Partial<Instance>) => void;
+  onPersist: (patch: Partial<PlanInstance>) => void;
   bookingNoteDraft: string;
   setBookingNoteDraft: (v: string) => void;
   bookingOffsetDraft: string;
@@ -500,13 +446,13 @@ function BookingForm({
         <span className="font-medium text-slate-500">Needs booking:</span>
         {(
           [
-            { label: "Yes", value: true as boolean | null },
-            { label: "No", value: false as boolean | null },
-            { label: `Default (${entityNeedsBooking ? "yes" : "no"})`, value: null as boolean | null },
+            { label: "Yes", value: true as boolean | undefined },
+            { label: "No", value: false as boolean | undefined },
+            { label: `Default (${entityNeedsBooking ? "yes" : "no"})`, value: undefined as boolean | undefined },
           ] as const
         ).map(({ label, value }) => {
           const active =
-            value === null ? override?.needsBooking == null : override?.needsBooking === value;
+            value === undefined ? override?.needsBooking == null : override?.needsBooking === value;
           return (
             <button
               key={label}

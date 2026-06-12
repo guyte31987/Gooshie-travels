@@ -39,6 +39,9 @@ export type PlanInstance = {
   note?: string;
   needsBooking?: boolean;
   booked?: boolean;
+  bookingNote?: string;
+  /** "Book this many days before the trip starts." */
+  bookingOffsetDays?: number;
 };
 
 export const instanceId = (slotId: string, entityId: string) => `${slotId}__${entityId}`;

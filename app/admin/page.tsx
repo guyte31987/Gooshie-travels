@@ -1,17 +1,11 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
 import { AdminPanel } from "@/components/AdminPanel";
-import { SyncReport } from "@/components/SyncReport";
-import { ErrorBoundary } from "@/components/ErrorBoundary";
-
-type AdminTab = "access" | "sync";
 
 export default function AdminPage() {
   const { isAdmin, loading } = useAuth();
-  const [tab, setTab] = useState<AdminTab>("access");
 
   if (loading) {
     return (
@@ -39,44 +33,7 @@ export default function AdminPage() {
           ← Back to trip
         </Link>
       </header>
-
-      <nav className="mb-5 flex gap-1 rounded-lg bg-slate-100 p-1 text-sm">
-        <TabBtn active={tab === "access"} onClick={() => setTab("access")}>
-          Access
-        </TabBtn>
-        <TabBtn active={tab === "sync"} onClick={() => setTab("sync")}>
-          Sync &amp; Conflicts
-        </TabBtn>
-      </nav>
-
-      {tab === "access" ? (
-        <AdminPanel />
-      ) : (
-        <ErrorBoundary label="The Sync report">
-          <SyncReport />
-        </ErrorBoundary>
-      )}
+      <AdminPanel />
     </div>
-  );
-}
-
-function TabBtn({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`flex-1 rounded-md px-3 py-1.5 font-medium transition ${
-        active ? "bg-white text-ink shadow-sm" : "text-slate-500 hover:text-slate-700"
-      }`}
-    >
-      {children}
-    </button>
   );
 }
