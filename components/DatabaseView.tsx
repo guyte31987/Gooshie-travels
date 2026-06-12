@@ -14,6 +14,7 @@ import {
   type EntityType,
 } from "@/lib/entities";
 import { buildAllSeedEntities } from "@/lib/seed-entities";
+import { nycSeedEntities } from "@/lib/itinerary-seed";
 import {
   subscribeEntities,
   deleteEntity,
@@ -22,7 +23,6 @@ import {
   bulkDeleteEntities,
   seedDatabase,
   seedEntitiesIfNew,
-  runDeduplicationMigration,
   getAreas,
   type DBEntity,
 } from "@/lib/db";
@@ -43,7 +43,6 @@ export function DatabaseView() {
   const [showOperational, setShowOperational] = useState(false);
   const [seeding, setSeeding] = useState(false);
   const [backfilling, setBackfilling] = useState(false);
-  const [migrating, setMigrating] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectMode, setSelectMode] = useState(false);
@@ -105,6 +104,24 @@ export function DatabaseView() {
         created > 0
           ? `Added ${created} curated ${created === 1 ? "place" : "places"}. Export → enrich → import to fill addresses & coordinates.`
           : "All curated places are already in the database."
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Back-fill failed — see console.");
+    } finally {
+      setBackfilling(false);
+    }
+  };
+
+  const backfillItineraryEntities = async () => {
+    setBackfilling(true);
+    setNotice(null);
+    setError(null);
+    try {
+      const created = await seedEntitiesIfNew(nycSeedEntities());
+      setNotice(
+        created > 0
+          ? `Added ${created} itinerary ${created === 1 ? "place" : "places"} — they'll now resolve in the calendar.`
+          : "All itinerary places are already in the database."
       );
     } catch (e) {
       setError(e instanceof Error ? e.message : "Back-fill failed — see console.");
@@ -246,22 +263,12 @@ export function DatabaseView() {
             )}
             {isAdmin && (
               <button
-                onClick={async () => {
-                  if (!confirm("Delete verbose duplicate entities and fix known wrong types? This runs once.")) return;
-                  setMigrating(true);
-                  try {
-                    const { deleted, fixed } = await runDeduplicationMigration();
-                    setNotice(`Migration done: ${deleted} duplicates removed, ${fixed} types fixed.`);
-                  } catch (e) {
-                    setError(String(e));
-                  } finally {
-                    setMigrating(false);
-                  }
-                }}
-                disabled={migrating}
-                className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-100 disabled:opacity-50"
+                onClick={backfillItineraryEntities}
+                disabled={backfilling}
+                title="Ensure every itinerary place (Deans, Seneca Village, Lil' Deb's, etc.) exists in the DB with its correct ID"
+                className="rounded-lg border border-teal-300 px-3 py-2 text-sm font-medium text-teal-700 hover:bg-teal-50 disabled:opacity-50"
               >
-                {migrating ? "Running…" : "🧹 Clean duplicates"}
+                {backfilling ? "Adding…" : "Fix itinerary IDs"}
               </button>
             )}
           </div>
@@ -457,9 +464,8 @@ export function DatabaseView() {
 }
 
 /**
- * Compact "park this somewhere harmless" control. Files a noisy logistics entity
- * into a bucket type (Travel / Admin / Misc) so the calendar sync stops flagging
- * it — without deleting it from the DB or touching the calendar.
+ * Compact "park this somewhere harmless" control. Files a logistics entity
+ * into a bucket type (Travel / Admin / Misc) so it stops appearing in place lists.
  */
 function ParkSelect({ onPark }: { onPark: (t: EntityType) => void }) {
   return (
@@ -468,7 +474,7 @@ function ParkSelect({ onPark }: { onPark: (t: EntityType) => void }) {
       onChange={(e) => {
         if (e.target.value) onPark(e.target.value as EntityType);
       }}
-      title="Park this as a logistics/misc bucket so the calendar sync stops flagging it"
+      title="Re-type this entity as a logistics/misc bucket"
       className="rounded border border-slate-300 px-1.5 py-1 text-xs font-medium text-slate-500 hover:bg-slate-50"
     >
       <option value="">Park…</option>

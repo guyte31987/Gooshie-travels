@@ -98,7 +98,8 @@ export function buildTripIcs(opts: {
     lines.push(`DTSTAMP:${new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d+/, "")}`);
     lines.push(fold(`SUMMARY:${esc(title)}`));
     lines.push(`DTSTART;TZID=America/New_York:${localStamp(slot.day, slot.start)}`);
-    lines.push(`DTEND;TZID=America/New_York:${localStamp(slot.day, slot.end)}`);
+    const endMin = slot.end > slot.start ? slot.end : slot.start + 90;
+    lines.push(`DTEND;TZID=America/New_York:${localStamp(slot.day, endMin)}`);
     if (location) lines.push(fold(`LOCATION:${esc(location)}`));
     if (main.note) lines.push(fold(`DESCRIPTION:${esc(main.note)}`));
     lines.push(`STATUS:${planned ? "TENTATIVE" : "CONFIRMED"}`);

@@ -9,7 +9,7 @@
 import { useMemo, useRef, useState } from "react";
 import { ENTITY_TABS, type EntityType } from "@/lib/entities";
 import { buildTripIcs, downloadIcs, type IcsStay } from "@/lib/ics-export";
-import type { Capacity } from "@/lib/itinerary";
+import { activityStatusOf, bookingStatusOf, type ActivityStatus, type BookingStatus, type Capacity } from "@/lib/itinerary";
 import {
   PREVIEW_ENTITIES,
   PREVIEW_SLOTS,
@@ -30,7 +30,13 @@ export type CalEntity = {
   area?: string; parent?: string; address?: string; website?: string; instagram?: string; phone?: string; hours?: string;
 };
 export type CalSlot = { id: string; day: string; start: number; end: number; label: string };
-export type CalInstance = { slotId: string; entityId: string; capacity: Capacity; note?: string; needsBooking?: boolean; booked?: boolean };
+export type CalInstance = { slotId: string; entityId: string; capacity: Capacity; note?: string; status?: ActivityStatus; bookingStatus?: BookingStatus; needsBooking?: boolean; booked?: boolean };
+
+/** Editable place fields surfaced inside the itinerary popup (writes to the DB). */
+export type EntityPatch = {
+  name: string; type: EntityType;
+  area?: string; address?: string; website?: string; instagram?: string; hours?: string; notes?: string;
+};
 
 export type CalHandlers = {
   onMoveSlot: (slotId: string, next: { day: string; start: number; end: number }) => void;
@@ -39,6 +45,8 @@ export type CalHandlers = {
   onMakeMain: (slotId: string, entityId: string) => void;
   onUpdateInstance: (slotId: string, entityId: string, patch: Partial<CalInstance>) => void;
   onRenameSlot: (slotId: string, label: string) => void;
+  /** Create/update the DB entity behind an instance (category + details). */
+  onSaveEntity?: (entityId: string, patch: EntityPatch) => void;
   onGestureStart?: () => void;
 };
 
@@ -291,7 +299,9 @@ function Block({ slot, main, alts, entityById, col, colCount, canEdit, onGesture
     if (!d.moved) onOpen();
   };
 
-  const bookIcon = main.needsBooking ? (main.booked ? "✅" : "📋") : null;
+  const book = bookingStatusOf(main);
+  const bookIcon = book === "done" ? "✅" : book === "needed" ? "📋" : null;
+  const done = activityStatusOf(main) === "done";
   const dragging = vis != null;
 
   return (
@@ -305,11 +315,12 @@ function Block({ slot, main, alts, entityById, col, colCount, canEdit, onGesture
         <div className="flex items-start gap-1">
           <span className="text-[11px] leading-tight">{emojiOf(type)}</span>
           <div className="min-w-0 flex-1">
-            <div className="truncate text-[11px] font-semibold leading-tight">{title}</div>
+            <div className={`truncate text-[11px] font-semibold leading-tight ${done ? "line-through opacity-60" : ""}`}>{title}</div>
             {height > 30 && <div className="truncate text-[10px] opacity-70">{fmt(slot.start)}{height > 44 ? `–${fmt(slot.end)}` : ""}{entity?.parent ? ` · @${entity.parent}` : entity?.area ? ` · ${entity.area}` : ""}</div>}
           </div>
           <div className="flex shrink-0 items-center gap-0.5">
-            {bookIcon && <span className="text-[10px]" title={main.booked ? "Booked" : "Needs booking"}>{bookIcon}</span>}
+            {done && <span className="text-[10px]" title="Done">✓</span>}
+            {bookIcon && <span className="text-[10px]" title={book === "done" ? "Booked" : "Needs booking"}>{bookIcon}</span>}
             {planned && <span className="rounded bg-black/10 px-1 text-[8px] font-bold uppercase">plan</span>}
             {alts.length > 0 && <span className={`rounded-full ${c.chip} px-1 text-[9px] font-bold text-white`}>+{alts.length}</span>}
           </div>
@@ -343,6 +354,7 @@ function DetailSheet({ slot, instances, entityById, canEdit, handlers, onClose }
   const [note, setNote] = useState(main?.note ?? "");
   const [label, setLabel] = useState(slot.label);
   const [commentOpen, setCommentOpen] = useState(false);
+  const [editPlace, setEditPlace] = useState(false);
   if (!main) return null;
   const type = ent?.type ?? "uncategorised";
   const c = TYPE_COLORS[type] ?? TYPE_COLORS.uncategorised;
@@ -385,13 +397,37 @@ function DetailSheet({ slot, instances, entityById, canEdit, handlers, onClose }
           </div>
         )}
 
-        {main.needsBooking != null && (
+        {canEdit && handlers.onSaveEntity && (
           <div className="mt-3">
-            {main.needsBooking ? (
-              <button disabled={!canEdit} onClick={() => handlers.onUpdateInstance(slot.id, main.entityId, { booked: !main.booked })} className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${main.booked ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"} ${canEdit ? "" : "opacity-70"}`}>{main.booked ? "✅ Booked" : "📋 Needs booking"}{canEdit ? " — tap to toggle" : ""}</button>
-            ) : <span className="text-xs text-slate-400">No booking needed</span>}
+            <button onClick={() => setEditPlace((o) => !o)} className={`text-xs font-medium ${adhoc ? "text-indigo-600" : "text-slate-500"} hover:underline`}>
+              {adhoc ? "🏷 Categorise & add details" : "✏️ Edit place details"} {editPlace ? "▲" : "▼"}
+            </button>
+            {editPlace && (
+              <PlaceEditor entityId={main.entityId} ent={ent} fallbackName={adhoc ? label : main.entityId}
+                onSave={(patch) => { handlers.onSaveEntity!(main.entityId, patch); setEditPlace(false); }}
+                onCancel={() => setEditPlace(false)} />
+            )}
           </div>
         )}
+
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <div>
+            <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Status</p>
+            <Segmented
+              value={activityStatusOf(main)} disabled={!canEdit}
+              onChange={(v) => handlers.onUpdateInstance(slot.id, main.entityId, { status: v as ActivityStatus })}
+              options={[{ value: "planned", label: "Planned" }, { value: "scheduled", label: "Scheduled" }, { value: "done", label: "✓ Done" }]}
+            />
+          </div>
+          <div>
+            <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Booking</p>
+            <Segmented
+              value={bookingStatusOf(main)} disabled={!canEdit}
+              onChange={(v) => handlers.onUpdateInstance(slot.id, main.entityId, { bookingStatus: v as BookingStatus })}
+              options={[{ value: "walkin", label: "Walk-in" }, { value: "needed", label: "📋 Needed" }, { value: "done", label: "✅ Booked" }]}
+            />
+          </div>
+        </div>
 
         <div className="mt-4">
           <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Note</p>
@@ -443,6 +479,68 @@ function OptionRow({ ent, isMain, canEdit, onMakeMain }: { ent: CalEntity; isMai
         : canEdit ? <button onClick={onMakeMain} className="rounded-full border border-slate-300 px-2 py-0.5 text-[10px] font-medium text-slate-600 hover:bg-slate-50">make main ⇄</button>
         : <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-400">Plan B</span>}
     </li>
+  );
+}
+
+function Segmented({ value, options, disabled, onChange }: {
+  value: string; options: { value: string; label: string }[]; disabled?: boolean; onChange: (v: string) => void;
+}) {
+  return (
+    <div className="inline-flex w-full rounded-lg border border-slate-200 bg-slate-50 p-0.5 text-[11px] font-medium">
+      {options.map((o) => (
+        <button key={o.value} disabled={disabled} onClick={() => onChange(o.value)}
+          className={`flex-1 rounded-md px-1.5 py-1 ${value === o.value ? "bg-ink text-white shadow-sm" : "text-slate-500"} ${disabled ? "cursor-default opacity-70" : "hover:text-slate-700"}`}>
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// Types offered when categorising a place from the itinerary (real, place-like
+// kinds first; logistics buckets kept available at the end).
+const PLACE_TYPE_OPTIONS = ENTITY_TABS.filter((t) => t.type !== "uncategorised");
+
+function PlaceEditor({ entityId, ent, fallbackName, onSave, onCancel }: {
+  entityId: string; ent?: CalEntity; fallbackName: string;
+  onSave: (patch: EntityPatch) => void; onCancel: () => void;
+}) {
+  const [name, setName] = useState(ent?.name ?? (fallbackName.startsWith("adhoc:") ? "" : fallbackName));
+  const [type, setType] = useState<EntityType>(ent?.type && ent.type !== "uncategorised" ? ent.type : "food");
+  const [area, setArea] = useState(ent?.area ?? "");
+  const [address, setAddress] = useState(ent?.address ?? "");
+  const [website, setWebsite] = useState(ent?.website ?? "");
+  const [instagram, setInstagram] = useState(ent?.instagram ?? "");
+  const [hours, setHours] = useState(ent?.hours ?? "");
+  const inp = "w-full rounded-lg border border-slate-300 px-2 py-1 text-sm outline-none focus:border-slate-400";
+
+  const save = () => {
+    if (!name.trim()) return;
+    onSave({ name: name.trim(), type, area: area.trim() || undefined, address: address.trim() || undefined,
+      website: website.trim() || undefined, instagram: instagram.trim() || undefined, hours: hours.trim() || undefined });
+  };
+
+  return (
+    <div className="mt-2 space-y-2 rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+      <div className="grid grid-cols-2 gap-2">
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Place name" className={inp} autoFocus />
+        <select value={type} onChange={(e) => setType(e.target.value as EntityType)} className={inp}>
+          {PLACE_TYPE_OPTIONS.map((t) => <option key={t.type} value={t.type}>{t.emoji} {t.label}</option>)}
+        </select>
+      </div>
+      <input value={area} onChange={(e) => setArea(e.target.value)} placeholder="Area / neighbourhood" className={inp} />
+      <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Address" className={inp} />
+      <div className="grid grid-cols-2 gap-2">
+        <input value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="Website" className={inp} />
+        <input value={instagram} onChange={(e) => setInstagram(e.target.value)} placeholder="@instagram" className={inp} />
+      </div>
+      <input value={hours} onChange={(e) => setHours(e.target.value)} placeholder="Hours" className={inp} />
+      <div className="flex justify-end gap-2 pt-1">
+        <button onClick={onCancel} className="rounded-lg border border-slate-300 px-3 py-1 text-xs font-medium text-slate-600 hover:bg-white">Cancel</button>
+        <button onClick={save} disabled={!name.trim()} className="rounded-lg bg-ink px-3 py-1 text-xs font-medium text-white disabled:opacity-50">Save place</button>
+      </div>
+      <p className="text-[10px] text-slate-400">Saved to the Database — also updates everywhere this place appears.</p>
+    </div>
   );
 }
 
@@ -527,6 +625,7 @@ export function ItineraryGrid() {
     onMakeMain: (slotId, entityId) => { record(); setInstances((p) => p.map((i) => i.slotId !== slotId ? i : i.entityId === entityId ? { ...i, capacity: "confirmed" } : i.capacity !== "planB" ? { ...i, capacity: "planB" } : i)); },
     onUpdateInstance: (slotId, entityId, patch) => { record(); setInstances((p) => p.map((i) => i.slotId === slotId && i.entityId === entityId ? { ...i, ...patch } : i)); },
     onRenameSlot: (slotId, label) => { record(); setSlots((p) => p.map((s) => s.id === slotId ? { ...s, label } : s)); setEntities((p) => p.some((e) => e.id === `adhoc:${slotId}`) ? p : [...p, { id: `adhoc:${slotId}`, name: label, type: "uncategorised" }]); },
+    onSaveEntity: (entityId, patch) => { record(); setEntities((p) => p.some((e) => e.id === entityId) ? p.map((e) => e.id === entityId ? { ...e, ...patch } : e) : [...p, { id: entityId, ...patch }]); },
   };
 
   return (

@@ -19,6 +19,11 @@ import { db } from "./firebase";
 
 export type Capacity = "confirmed" | "planned" | "planB";
 
+/** Where the activity itself stands (separate from booking). */
+export type ActivityStatus = "planned" | "scheduled" | "done";
+/** Whether a reservation is needed and where it stands. */
+export type BookingStatus = "walkin" | "needed" | "done";
+
 /** A time window in the itinerary. start/end are minutes-from-midnight (local). */
 export type Slot = {
   id: string;
@@ -37,6 +42,10 @@ export type PlanInstance = {
   entityId: string;
   capacity: Capacity;
   note?: string;
+  /** Activity lifecycle — defaults to "scheduled" when absent. */
+  status?: ActivityStatus;
+  /** Reservation state — when absent, derive from the legacy needsBooking/booked. */
+  bookingStatus?: BookingStatus;
   needsBooking?: boolean;
   booked?: boolean;
   bookingNote?: string;
@@ -45,6 +54,19 @@ export type PlanInstance = {
 };
 
 export const instanceId = (slotId: string, entityId: string) => `${slotId}__${entityId}`;
+
+/** Resolve an instance's booking state, falling back to the legacy booleans. */
+export function bookingStatusOf(i: { bookingStatus?: BookingStatus; needsBooking?: boolean; booked?: boolean }): BookingStatus {
+  if (i.bookingStatus) return i.bookingStatus;
+  if (i.booked) return "done";
+  if (i.needsBooking) return "needed";
+  return "walkin";
+}
+
+/** Resolve an instance's activity status (defaults to scheduled). */
+export function activityStatusOf(i: { status?: ActivityStatus }): ActivityStatus {
+  return i.status ?? "scheduled";
+}
 
 const slotsPath = (tripId: string) => `tripSlots/${tripId}/items`;
 const instPath = (tripId: string) => `tripPlanInstances/${tripId}/items`;
