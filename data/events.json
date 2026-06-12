@@ -10,5 +10,23 @@
     "type": "event",
     "area": "East Williamsburg",
     "notes": "Queer music festival (Avant Gardner / Brooklyn Mirage). One-off, ticketed."
+  },
+  {
+    "name": "Seneca Village Juneteenth",
+    "type": "event",
+    "area": "Central Park",
+    "notes": "Free outdoor Juneteenth performance, 82nd–89th St (CPW). One-off, date-fixed."
+  },
+  {
+    "name": "NYC Drag March",
+    "type": "event",
+    "area": "East Village",
+    "notes": "Pride-weekend march, Tompkins Square Park → Stonewall. One-off, date-fixed."
+  },
+  {
+    "name": "NYC Pride March & PrideFest",
+    "type": "event",
+    "area": "Greenwich Village",
+    "notes": "NYC Pride March (noon, 26th & 5th) plus the PrideFest street festival. One-off, date-fixed."
   }
 ]

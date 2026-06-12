@@ -1,0 +1,26 @@
+[
+  {
+    "name": "BKLYN House Hotel",
+    "area": "Bushwick",
+    "address": "9 Beaver St, Brooklyn, NY 11206",
+    "notes": "NYC base, Jun 19–23."
+  },
+  {
+    "name": "Williamstown Airbnb",
+    "area": "Williamstown MA",
+    "address": "287 Luce Rd, Williamstown, MA 01267",
+    "notes": "Berkshires base, Jun 22–25."
+  },
+  {
+    "name": "Cottage Inn, Grantville",
+    "area": "Grantville PA",
+    "address": "10200 Allentown Blvd, Grantville, PA 17028",
+    "notes": "Hershey-area stay, Jun 24–26. Pay there."
+  },
+  {
+    "name": "Hotel 1200",
+    "area": "Bushwick",
+    "address": "1200 Broadway, Brooklyn, NY 11221",
+    "notes": "NYC base on return, Jun 25–29."
+  }
+]

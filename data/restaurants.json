@@ -726,5 +726,41 @@
     "booking": "Walk-in",
     "section": "Berkshires / Hudson Valley — on the drive",
     "closed": true
+  },
+  {
+    "name": "Cornwall Coffee Co.",
+    "area": "New Windsor / Cornwall",
+    "source": "",
+    "hours": "Mornings",
+    "price": "$",
+    "why": "Coffee + pastry en route north on the drive day; eat in the car.",
+    "days": "Mon 22 (en route)",
+    "booking": "Walk-in",
+    "section": "Berkshires / Hudson Valley — on the drive",
+    "closed": false
+  },
+  {
+    "name": "Downstate (Newburgh)",
+    "area": "Newburgh",
+    "source": "",
+    "hours": "",
+    "price": "$$",
+    "why": "Quick lunch stop en route on the drive day.",
+    "days": "Mon 22 (en route)",
+    "booking": "Walk-in",
+    "section": "Berkshires / Hudson Valley — on the drive",
+    "closed": false
+  },
+  {
+    "name": "Hersheypark food",
+    "area": "Hershey PA",
+    "source": "",
+    "hours": "Park hours",
+    "price": "$$",
+    "why": "In-park concessions — smash burgers / BBQ between coasters.",
+    "days": "Thu 25",
+    "booking": "Walk-in",
+    "section": "Hershey",
+    "closed": false
   }
 ]

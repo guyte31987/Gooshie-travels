@@ -1,8 +1,15 @@
 # New entities to add to the Database
 
-These EntityIDs are referenced by `instances.csv` but **don't exist in the seed
-data yet**. They came from calendar events that have no matching seed place.
-Each needs a Database entry before the itinerary fully resolves. Grouped by type.
+These EntityIDs are referenced by `instances.csv` but didn't exist in the seed
+data. They came from calendar events that have no matching seed place.
+
+**Status:** the reusable places below are now **seeded** into `data/*.json`
+(events, shows, museums→MoMA, hikes→Cascade Falls, restaurants→3 en-route,
+spas→Crossfit/Wellness, and a new `accommodation.json` wired into the seed
+pipeline). The **logistics** items (arrival, 4 drives, Pre-FIST nap) are
+deliberately **not** seeded — they live as trip-local slots, not reusable
+Database entities. Real addresses/hours for the new places come next via the
+Places-CSV → Gemini enrichment loop.
 
 ## Accommodation (4) — all new; the calendar's lodging differs from the docx
 | EntityID | Name | When | Address |

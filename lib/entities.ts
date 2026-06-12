@@ -16,6 +16,7 @@ import {
   attractions,
   shows,
   events,
+  accommodation,
   type Restaurant,
   type VintageShop,
   type SeedPlace,
@@ -34,6 +35,7 @@ const SEED_GROUPS: { type: EntityType; places: SeedPlace[] }[] = [
   { type: "attraction", places: attractions },
   { type: "show", places: shows },
   { type: "event", places: events },
+  { type: "accommodation", places: accommodation },
 ];
 
 /** Build a plain Entity (no slots) from a curated seed place. Parties get a parentId. */

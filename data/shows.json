@@ -1,1 +1,19 @@
-[]
+[
+  {
+    "name": "Bushwick Comedy Club",
+    "area": "Bushwick",
+    "address": "259 Melrose St, Brooklyn, NY",
+    "notes": "Comedy club. Plan B venue: BCC at Eris Bar."
+  },
+  {
+    "name": "BCC at Eris Bar",
+    "area": "Bushwick",
+    "notes": "Bushwick Comedy Club nights hosted at Eris Bar — alternative venue."
+  },
+  {
+    "name": "Joe's Pub",
+    "area": "NoHo",
+    "address": "425 Lafayette St, New York, NY",
+    "notes": "Cabaret/performance venue at The Public Theater (e.g. the 2Scoops drag show)."
+  }
+]
