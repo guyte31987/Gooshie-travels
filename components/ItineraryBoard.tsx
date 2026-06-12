@@ -9,7 +9,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ItineraryCalendar, type CalEntity, type CalSlot, type CalInstance, type CalHandlers } from "./ItineraryGrid";
 import { useAuth } from "./AuthProvider";
 import { getTrip, tripDays } from "@/lib/trips";
-import { subscribeEntities, saveEntity, seedEntitiesIfNew, type DBEntity } from "@/lib/db";
+import { subscribeEntities, saveEntity, seedEntitiesIfNew, subscribeTripDoc, saveTripStays, type DBEntity, type TripStay } from "@/lib/db";
 import { suggestGeneralArea } from "@/lib/areas";
 import {
   subscribeSlots, subscribePlanInstances, saveSlot, savePlanInstance, deleteSlot, deletePlanInstance,
@@ -17,6 +17,7 @@ import {
 } from "@/lib/itinerary";
 import { nycSeedSlots, nycSeedInstances, nycSeedEntities } from "@/lib/itinerary-seed";
 import { PREVIEW_STAYS } from "@/lib/preview-data";
+import type { IcsStay } from "@/lib/ics-export";
 
 export function ItineraryBoard({ tripId }: { tripId: string }) {
   const trip = getTrip(tripId);
@@ -25,6 +26,7 @@ export function ItineraryBoard({ tripId }: { tripId: string }) {
   const [dbEntities, setDbEntities] = useState<DBEntity[]>([]);
   const [slots, setSlots] = useState<Slot[]>([]);
   const [instances, setInstances] = useState<PlanInstance[]>([]);
+  const [stays, setStays] = useState<IcsStay[] | null>(null); // null = not yet loaded from Firestore
   const [loaded, setLoaded] = useState(false);
   const [seeding, setSeeding] = useState(false);
 
@@ -32,8 +34,16 @@ export function ItineraryBoard({ tripId }: { tripId: string }) {
     const unsubE = subscribeEntities(setDbEntities);
     const unsubS = subscribeSlots(tripId, (s) => { setSlots(s); setLoaded(true); });
     const unsubI = subscribePlanInstances(tripId, setInstances);
-    return () => { unsubE(); unsubS(); unsubI(); };
+    const unsubT = subscribeTripDoc(tripId, (t) => setStays(t?.stays ?? []));
+    return () => { unsubE(); unsubS(); unsubI(); unsubT(); };
   }, [tripId]);
+
+  // Seed PREVIEW_STAYS into Firestore on first load when Firestore has no stays yet.
+  useEffect(() => {
+    if (stays !== null && stays.length === 0 && tripId === "nyc-2026") {
+      saveTripStays(tripId, PREVIEW_STAYS);
+    }
+  }, [stays, tripId]);
 
   const entityById = useMemo(() => {
     const nameOf = new Map(dbEntities.map((e) => [e.id, e.name]));
@@ -105,6 +115,14 @@ export function ItineraryBoard({ tripId }: { tripId: string }) {
       if (cur) savePlanInstance({ ...cur, ...patch });
     },
     onRenameSlot: (slotId, label) => { const s = slotById.get(slotId); if (s) saveSlot({ ...s, label }); },
+    onSaveStay: (stay: IcsStay) => {
+      const next = [...(stays ?? []).filter((s) => s.from !== stay.from), stay]
+        .sort((a, b) => a.from.localeCompare(b.from));
+      saveTripStays(tripId, next);
+    },
+    onDeleteStay: (from: string) => {
+      saveTripStays(tripId, (stays ?? []).filter((s) => s.from !== from));
+    },
     onSaveEntity: (entityId, patch) => {
       const existing = dbEntities.find((e) => e.id === entityId);
       saveEntity({
@@ -129,7 +147,7 @@ export function ItineraryBoard({ tripId }: { tripId: string }) {
         </div>
       )}
       <ItineraryCalendar calName={`${trip.name} — Gooshie`} days={days} entityById={entityById}
-        slots={calSlots} instances={calInstances} stays={tripId === "nyc-2026" ? PREVIEW_STAYS : []}
+        slots={calSlots} instances={calInstances} stays={stays ?? []}
         canEdit={canEdit} handlers={handlers} />
     </div>
   );

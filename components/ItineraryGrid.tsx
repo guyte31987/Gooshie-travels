@@ -47,6 +47,8 @@ export type CalHandlers = {
   onRenameSlot: (slotId: string, label: string) => void;
   /** Create/update the DB entity behind an instance (category + details). */
   onSaveEntity?: (entityId: string, patch: EntityPatch) => void;
+  onSaveStay?: (stay: IcsStay) => void;
+  onDeleteStay?: (from: string) => void;
   onGestureStart?: () => void;
 };
 
@@ -90,6 +92,7 @@ export function ItineraryCalendar({
   canUndo?: boolean;
 }) {
   const [detailSlot, setDetailSlot] = useState<string | null>(null);
+  const [stayEditDay, setStayEditDay] = useState<string | null>(null);
   const [view, setView] = useState<"week" | "day" | "map">("week");
   const [dayIdx, setDayIdx] = useState(0);
   const newCounter = useRef(0);
@@ -176,7 +179,13 @@ export function ItineraryCalendar({
               <div key={day} ref={(el) => { dayRefs.current[realIdx] = el; }} data-day={day} className="relative shrink-0 border-r border-slate-100 last:border-r-0" style={{ height: GRID_H + HEADER_H, width: view === "week" ? "var(--col-w)" : "100%" }}>
                 <div className="sticky top-0 z-10 flex flex-col justify-center border-b border-slate-100 bg-white/95 px-2 backdrop-blur" style={{ height: HEADER_H }}>
                   <div className="text-xs font-semibold text-slate-700">{dt.toLocaleDateString("en-US", { weekday: "short", timeZone: "UTC" })} <span className="text-slate-400">{dt.getUTCDate()}</span></div>
-                  {dayStays.length > 0 && <div className="truncate text-[10px] text-indigo-500" title={dayStays.map((s) => s.name).join(", ")}>🛏 {dayStays[0].name}</div>}
+                  {dayStays.length > 0 ? (
+                    <button onClick={() => canEdit && setStayEditDay(day)} className={`truncate text-left text-[10px] text-indigo-500 ${canEdit ? "hover:text-indigo-700" : ""}`} title={dayStays.map((s) => s.name).join(", ")}>
+                      🛏 {dayStays[0].name}
+                    </button>
+                  ) : canEdit ? (
+                    <button onClick={() => setStayEditDay(day)} className="text-left text-[10px] text-slate-300 hover:text-slate-500">+ stay</button>
+                  ) : null}
                 </div>
 
                 <div className="absolute inset-x-0" style={{ top: HEADER_H, height: GRID_H }}
@@ -203,6 +212,17 @@ export function ItineraryCalendar({
 
       {detailSlot && slotById.get(detailSlot) && (
         <DetailSheet slot={slotById.get(detailSlot)!} instances={instances} entityById={entityById} canEdit={canEdit} handlers={handlers} onClose={() => setDetailSlot(null)} />
+      )}
+
+      {stayEditDay && (
+        <StaySheet
+          day={stayEditDay}
+          days={days}
+          current={stays.find((s) => stayEditDay >= s.from && stayEditDay < s.to)}
+          onSave={(stay) => { handlers.onSaveStay?.(stay); setStayEditDay(null); }}
+          onDelete={(from) => { handlers.onDeleteStay?.(from); setStayEditDay(null); }}
+          onClose={() => setStayEditDay(null)}
+        />
       )}
 
       <style>{`:root{--col-w:84vw}@media(min-width:768px){:root{--col-w:172px}}`}</style>
@@ -544,6 +564,59 @@ function PlaceEditor({ entityId, ent, fallbackName, onSave, onCancel }: {
   );
 }
 
+// --- stay sheet --------------------------------------------------------------
+
+function StaySheet({ day, days, current, onSave, onDelete, onClose }: {
+  day: string; days: string[]; current?: IcsStay;
+  onSave: (stay: IcsStay) => void; onDelete: (from: string) => void; onClose: () => void;
+}) {
+  const [name, setName] = useState(current?.name ?? "");
+  const [from, setFrom] = useState(current?.from ?? day);
+  const [to, setTo] = useState(current?.to ?? (days[Math.min(days.indexOf(day) + 1, days.length - 1)]));
+  const [address, setAddress] = useState(current?.address ?? "");
+  const inp = "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-400";
+
+  const save = () => { if (name.trim() && from && to && to > from) onSave({ name: name.trim(), from, to, address: address.trim() || undefined }); };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 sm:items-center sm:p-4" onClick={onClose}>
+      <div className="w-full max-w-md rounded-t-2xl bg-white p-5 shadow-xl sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="font-semibold text-slate-800">🛏 {current ? "Edit stay" : "Add stay"}</h2>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600">✕</button>
+        </div>
+        <div className="space-y-3">
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Hotel / Airbnb name" className={inp} autoFocus />
+          <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Address (optional)" className={inp} />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <p className="mb-1 text-[11px] font-medium text-slate-400">Check-in</p>
+              <select value={from} onChange={(e) => setFrom(e.target.value)} className={inp}>
+                {days.map((d) => <option key={d} value={d}>{new Date(d + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" })}</option>)}
+              </select>
+            </div>
+            <div>
+              <p className="mb-1 text-[11px] font-medium text-slate-400">Check-out</p>
+              <select value={to} onChange={(e) => setTo(e.target.value)} className={inp}>
+                {days.filter((d) => d > from).map((d) => <option key={d} value={d}>{new Date(d + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" })}</option>)}
+              </select>
+            </div>
+          </div>
+        </div>
+        <div className="mt-5 flex items-center justify-between">
+          {current ? (
+            <button onClick={() => onDelete(current.from)} className="text-xs font-medium text-rose-500 hover:underline">Remove stay</button>
+          ) : <span />}
+          <div className="flex gap-2">
+            <button onClick={onClose} className="rounded-lg border border-slate-300 px-4 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50">Cancel</button>
+            <button onClick={save} disabled={!name.trim() || !to || to <= from} className="rounded-lg bg-ink px-4 py-1.5 text-sm font-medium text-white disabled:opacity-50">Save</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // --- day map -----------------------------------------------------------------
 
 function DayMap({ day, slots, instances, entityById }: { day: string; slots: CalSlot[]; instances: CalInstance[]; entityById: Map<string, CalEntity> }) {
@@ -611,6 +684,7 @@ export function ItineraryGrid() {
   const [entities, setEntities] = useState<CalEntity[]>(() => PREVIEW_ENTITIES.map((e) => ({ ...e })));
   const [slots, setSlots] = useState<CalSlot[]>(() => PREVIEW_SLOTS.map((s) => ({ id: s.id, day: s.day, start: toMin(s.start), end: s.end ? toMin(s.end) : toMin(s.start) + 90, label: s.label })));
   const [instances, setInstances] = useState<CalInstance[]>(() => PREVIEW_INSTANCES.map((i) => ({ ...i })));
+  const [pvStays, setPvStays] = useState<IcsStay[]>(() => PREVIEW_STAYS.map((s) => ({ ...s })));
   const [history, setHistory] = useState<{ entities: CalEntity[]; slots: CalSlot[]; instances: CalInstance[] }[]>([]);
   const entityById = useMemo(() => new Map(entities.map((e) => [e.id, e])), [entities]);
 
@@ -626,10 +700,12 @@ export function ItineraryGrid() {
     onUpdateInstance: (slotId, entityId, patch) => { record(); setInstances((p) => p.map((i) => i.slotId === slotId && i.entityId === entityId ? { ...i, ...patch } : i)); },
     onRenameSlot: (slotId, label) => { record(); setSlots((p) => p.map((s) => s.id === slotId ? { ...s, label } : s)); setEntities((p) => p.some((e) => e.id === `adhoc:${slotId}`) ? p : [...p, { id: `adhoc:${slotId}`, name: label, type: "uncategorised" }]); },
     onSaveEntity: (entityId, patch) => { record(); setEntities((p) => p.some((e) => e.id === entityId) ? p.map((e) => e.id === entityId ? { ...e, ...patch } : e) : [...p, { id: entityId, ...patch }]); },
+    onSaveStay: (stay) => setPvStays((p) => [...p.filter((s) => s.from !== stay.from), stay].sort((a, b) => a.from.localeCompare(b.from))),
+    onDeleteStay: (from) => setPvStays((p) => p.filter((s) => s.from !== from)),
   };
 
   return (
     <ItineraryCalendar calName="NY Trip — Gooshie" days={PV_DAYS} entityById={entityById} slots={slots} instances={instances}
-      stays={PREVIEW_STAYS} canEdit handlers={handlers} onUndo={undo} canUndo={history.length > 0} />
+      stays={pvStays} canEdit handlers={handlers} onUndo={undo} canUndo={history.length > 0} />
   );
 }

@@ -26,11 +26,14 @@ import type { EntityType } from "./entities";
 import { DEFAULT_GENERAL_AREAS } from "./areas";
 import { slugId } from "./slug";
 
+export type TripStay = { name: string; from: string; to: string; address?: string };
+
 export type Trip = {
   id: string;
   name: string;
   dateLabel?: string;
   areas: string[];
+  stays?: TripStay[];
 };
 
 export type DBEntity = {
@@ -153,6 +156,15 @@ export async function seedEntitiesIfNew(entities: DBEntity[]): Promise<number> {
 // --- trips ------------------------------------------------------------------
 
 export const subscribeTrips = (cb: (t: Trip[]) => void) => subColl<Trip>("trips", cb);
+
+export function subscribeTripDoc(tripId: string, cb: (t: Trip | null) => void): () => void {
+  if (!db) return () => {};
+  return onSnapshot(doc(db, "trips", tripId), (snap) => cb(snap.exists() ? (snap.data() as Trip) : null));
+}
+
+export async function saveTripStays(tripId: string, stays: TripStay[]): Promise<void> {
+  await setDoc(doc(requireDb(), "trips", tripId), { stays }, { merge: true });
+}
 
 export async function getTripDoc(id: string): Promise<Trip | null> {
   if (!db) return null;
