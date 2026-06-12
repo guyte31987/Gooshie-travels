@@ -50,7 +50,7 @@ export type CalHandlers = {
   onGestureStart?: () => void;
 };
 
-const emojiOf = (type: string) => ENTITY_TABS.find((t) => t.type === type)?.emoji ?? "•";
+const emojiOf = (type: string) => ENTITY_TABS.find((t) => t.type === type || (type === "party" && t.type === "club"))?.emoji ?? "•";
 function fmt(min: number): string {
   let h = Math.floor(min / 60); const m = min % 60;
   const am = h < 12 || h >= 24 ? "am" : "pm"; h = h % 24;
@@ -448,7 +448,7 @@ function DetailSheet({ slot, instances, entityById, canEdit, handlers, onClose }
 
         {ent && (
           <div className="mt-4 border-t border-slate-100 pt-3">
-            <a href="/database" className="text-sm font-medium text-indigo-600 hover:underline">{emojiOf(type)} Edit {ent.name} in Database →</a>
+            <a href={`/database?open=${encodeURIComponent(ent.id)}`} className="text-sm font-medium text-indigo-600 hover:underline">{emojiOf(type)} Edit {ent.name} in Database →</a>
             <div className="mt-2">
               <button onClick={() => setCommentOpen((o) => !o)} className="text-sm text-slate-500 hover:text-slate-700">💬 Comments {commentOpen ? "▲" : "▼"} <span className="text-slate-400">· 📷 photos</span></button>
               {commentOpen && <p className="mt-2 text-[11px] text-slate-400">Comments + photos arrive in a later pass.</p>}

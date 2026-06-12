@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { AppHeader } from "./AppHeader";
 import { EntityDetail } from "./EntityDetail";
 import { EntityForm } from "./EntityForm";
@@ -49,6 +50,8 @@ export function DatabaseView() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
 
+  const searchParams = useSearchParams();
+
   useEffect(() => {
     const unsub = subscribeEntities((e) => {
       setEntities(e);
@@ -57,6 +60,14 @@ export function DatabaseView() {
     getAreas().then(setAreas).catch(() => {});
     return unsub;
   }, []);
+
+  // Auto-open an entity card when ?open=<id> is in the URL (e.g. from itinerary).
+  useEffect(() => {
+    const openId = searchParams.get("open");
+    if (!openId || !entities.length) return;
+    const match = entities.find((e) => e.id === openId);
+    if (match) setViewing(match);
+  }, [searchParams, entities]);
 
   const regions = useMemo(
     () => Array.from(new Set(entities.map((e) => e.generalArea).filter(Boolean))).sort() as string[],
