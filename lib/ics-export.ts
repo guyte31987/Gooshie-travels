@@ -3,11 +3,12 @@
 // clean, lossless calendar that never needs to be parsed back in.
 //
 // Rules (see docs/PIPELINE_TEMPLATE.md):
-//  • one VEVENT per slot's MAIN instance (confirmed or planned); Plan B never exports
+//  • one VEVENT per slot's MAIN instance (confirmed or planned); Plan B has no
+//    event of its own but its name is listed in the main event's DESCRIPTION
 //  • confirmed → STATUS:CONFIRMED, planned → STATUS:TENTATIVE + "[Plan] " title prefix
 //  • SUMMARY = entity name (or the slot label for trip-local logistics)
 //  • LOCATION = entity address (or name + area); parties inherit their club's address
-//  • DESCRIPTION = the instance note
+//  • DESCRIPTION = the instance note + "Plan B options: …" when alternatives exist
 //  • multi-day stays export as all-day transparent events
 
 export type IcsEntity = { name: string; type: string; area?: string; parent?: string; address?: string };
@@ -66,6 +67,14 @@ function mainInstance(slotId: string, instances: IcsInstance[]): IcsInstance | u
   return all.find((i) => i.capacity !== "planB");
 }
 
+/** Plan B entity names for a slot, in array order. */
+function altNames(slotId: string, instances: IcsInstance[], entities: Map<string, IcsEntity>): string[] {
+  return instances
+    .filter((i) => i.slotId === slotId && i.capacity === "planB")
+    .map((i) => entities.get(i.entityId)?.name)
+    .filter((n): n is string => !!n);
+}
+
 export function buildTripIcs(opts: {
   calName: string;
   slots: IcsSlot[];
@@ -101,7 +110,11 @@ export function buildTripIcs(opts: {
     const endMin = slot.end > slot.start ? slot.end : slot.start + 90;
     lines.push(`DTEND;TZID=America/New_York:${localStamp(slot.day, endMin)}`);
     if (location) lines.push(fold(`LOCATION:${esc(location)}`));
-    if (main.note) lines.push(fold(`DESCRIPTION:${esc(main.note)}`));
+    const alts = altNames(slot.id, instances, entities);
+    const description = [main.note, alts.length ? `Plan B options: ${alts.join(", ")}` : ""]
+      .filter(Boolean)
+      .join("\n\n");
+    if (description) lines.push(fold(`DESCRIPTION:${esc(description)}`));
     lines.push(`STATUS:${planned ? "TENTATIVE" : "CONFIRMED"}`);
     lines.push("END:VEVENT");
   }
