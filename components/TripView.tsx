@@ -4,7 +4,7 @@ import { useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { AppHeader } from "./AppHeader";
-import { Schedule } from "./Schedule";
+import { ItineraryBoard } from "./ItineraryBoard";
 import { PlanningTab } from "./PlanningTab";
 import { TripDataProvider } from "./TripData";
 import { getTrip } from "@/lib/trips";
@@ -49,7 +49,7 @@ export function TripView({ tripId }: { tripId: string }) {
         </nav>
 
         <main>
-          {tab === "itinerary" && <Schedule />}
+          {tab === "itinerary" && <ItineraryBoard tripId={trip.id} />}
           {tab === "planning" && <PlanningTab />}
           {tab === "map" && <TripMap />}
         </main>

@@ -67,6 +67,15 @@ service cloud.firestore {
       allow read: if isMember();
       allow write: if isEditor();
     }
+    // New itinerary model: app-owned slots + plan instances — members read, editors write.
+    match /tripSlots/{tripId}/items/{slotId} {
+      allow read: if isMember();
+      allow write: if isEditor();
+    }
+    match /tripPlanInstances/{tripId}/items/{instanceId} {
+      allow read: if isMember();
+      allow write: if isEditor();
+    }
 
     // Secret calendar URLs — editors only (never exposed to viewers).
     match /tripSecrets/{id} {
