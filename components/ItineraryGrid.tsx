@@ -6,7 +6,7 @@
 // come in via props so this component holds only ephemeral UI state (view,
 // selected day, open sheet, drag visuals).
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ENTITY_TABS, type EntityType } from "@/lib/entities";
 import { buildTripIcs, downloadIcs, type IcsStay } from "@/lib/ics-export";
 import { activityStatusOf, bookingStatusOf, type ActivityStatus, type BookingStatus, type Capacity } from "@/lib/itinerary";
@@ -329,6 +329,17 @@ function Block({ slot, main, alts, entityById, col, colCount, wide, canEdit, onG
   const pendingTouch = useRef<{ pointerId: number; x0: number; y0: number; target: Element } | null>(null);
   const [longPressLifting, setLongPressLifting] = useState(false);
   const [vis, setVis] = useState<{ dx: number; dy: number; start: number } | null>(null);
+  const blockRef = useRef<HTMLDivElement>(null);
+
+  // Non-passive touchmove so we can preventDefault() to stop page scroll while dragging.
+  // React's synthetic events are passive and can't call preventDefault on touchmove.
+  useEffect(() => {
+    const el = blockRef.current;
+    if (!el || !canEdit) return;
+    const onTouchMove = (e: TouchEvent) => { if (drag.current) e.preventDefault(); };
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    return () => el.removeEventListener("touchmove", onTouchMove);
+  }, [canEdit]);
 
   const top = (slot.start - DAY_START_H * 60) * PX_PER_MIN;
   const height = Math.max(22, (slot.end - slot.start) * PX_PER_MIN);
@@ -430,6 +441,7 @@ function Block({ slot, main, alts, entityById, col, colCount, wide, canEdit, onG
 
   return (
     <div
+      ref={blockRef}
       className={`group absolute overflow-hidden rounded-lg border-l-4 ${c.bg} ${c.border} ${c.text} shadow-sm ring-1 ring-black/5 ${planned ? "border-dashed" : ""} transition-transform duration-150`}
       style={{
         top, height,
