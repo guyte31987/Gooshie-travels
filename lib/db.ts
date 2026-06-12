@@ -312,6 +312,12 @@ export async function addComment(
   });
 }
 
+export async function updateComment(id: string, text: string, photoUrl?: string): Promise<void> {
+  const patch: Record<string, unknown> = { text, updatedAt: serverTimestamp() };
+  if (photoUrl !== undefined) patch.photoUrl = photoUrl;
+  await setDoc(doc(requireDb(), "comments", id), patch, { merge: true });
+}
+
 export async function deleteComment(id: string): Promise<void> {
   await deleteDoc(doc(requireDb(), "comments", id));
 }
