@@ -133,6 +133,8 @@ export function ItineraryGrid() {
         )}
       </div>
 
+      <Legend />
+
       {view === "map" ? (
         <DayMap day={TRIP_DAYS[dayIdx]} slotIds={slotIdsOn(TRIP_DAYS[dayIdx])} slotTime={slotTime} instances={instances} entityById={entityById} />
       ) : (
@@ -184,6 +186,25 @@ export function ItineraryGrid() {
       )}
 
       <style>{`:root{--col-w:84vw}@media(min-width:768px){:root{--col-w:172px}}`}</style>
+    </div>
+  );
+}
+
+// --- legend ------------------------------------------------------------------
+
+function Legend() {
+  const used = new Set(PREVIEW_ENTITIES.map((e) => e.type));
+  const types = ENTITY_TABS.filter((t) => used.has(t.type));
+  return (
+    <div className="mb-3 flex flex-wrap gap-x-3 gap-y-1.5 rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2">
+      {types.map((t) => {
+        const c = TYPE_COLORS[t.type] ?? TYPE_COLORS.uncategorised;
+        return (
+          <span key={t.type} className="inline-flex items-center gap-1 text-[11px] text-slate-600">
+            <span className={`h-2.5 w-2.5 rounded-sm ${c.chip}`} /> {t.emoji} {t.label}
+          </span>
+        );
+      })}
     </div>
   );
 }

@@ -129,6 +129,7 @@ export const PREVIEW_ENTITIES: PreviewEntity[] = [
 // below; the rest simply have no contact fields (the popup hides what's absent).
 const DETAILS: Record<string, Partial<PreviewEntity>> = {
   "food-deans": { address: "213 6th Ave, New York, NY", website: "https://deans.nyc", instagram: "@deans.nyc", hours: "Daily 4pm–late" },
+  "food-bong": { address: "Bushwick, Brooklyn, NY", area: "Bushwick" },
   "party-fist": { address: "Basement, 29 Wyckoff Ave, Queens, NY", website: "https://ra.co/clubs/basement", instagram: "@fist.nyc", hours: "Fri 11pm–6am" },
   "food-russ-and-daughters-cafe": { address: "127 Orchard St, New York, NY", website: "https://www.russanddaughterscafe.com", instagram: "@russanddaughters", phone: "+1 212-475-4880", hours: "Sun 9am–3:30pm" },
   "museum-storm-king-art-center": { address: "1 Museum Rd, New Windsor, NY", website: "https://stormking.org", hours: "Wed–Mon 10am–5:30pm" },
