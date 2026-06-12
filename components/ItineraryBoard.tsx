@@ -9,13 +9,13 @@ import { useEffect, useMemo, useState } from "react";
 import { ItineraryCalendar, type CalEntity, type CalSlot, type CalInstance, type CalHandlers } from "./ItineraryGrid";
 import { useAuth } from "./AuthProvider";
 import { getTrip, tripDays } from "@/lib/trips";
-import { subscribeEntities, saveEntity, type DBEntity } from "@/lib/db";
+import { subscribeEntities, saveEntity, seedEntitiesIfNew, type DBEntity } from "@/lib/db";
 import { suggestGeneralArea } from "@/lib/areas";
 import {
   subscribeSlots, subscribePlanInstances, saveSlot, savePlanInstance, deleteSlot, deletePlanInstance,
   seedItinerary, isItinerarySeeded, instanceId, type Slot, type PlanInstance,
 } from "@/lib/itinerary";
-import { nycSeedSlots, nycSeedInstances } from "@/lib/itinerary-seed";
+import { nycSeedSlots, nycSeedInstances, nycSeedEntities } from "@/lib/itinerary-seed";
 import { PREVIEW_STAYS } from "@/lib/preview-data";
 
 export function ItineraryBoard({ tripId }: { tripId: string }) {
@@ -58,7 +58,16 @@ export function ItineraryBoard({ tripId }: { tripId: string }) {
   const seed = async () => {
     if (await isItinerarySeeded(tripId)) return;
     setSeeding(true);
-    try { await seedItinerary(nycSeedSlots(tripId), nycSeedInstances(tripId)); }
+    try {
+      // Seed entities first (using exact preview IDs) then slots + instances.
+      await seedEntitiesIfNew(nycSeedEntities());
+      await seedItinerary(nycSeedSlots(tripId), nycSeedInstances(tripId));
+    } finally { setSeeding(false); }
+  };
+
+  const reseedEntities = async () => {
+    setSeeding(true);
+    try { await seedEntitiesIfNew(nycSeedEntities()); }
     finally { setSeeding(false); }
   };
 
@@ -110,8 +119,18 @@ export function ItineraryBoard({ tripId }: { tripId: string }) {
   };
 
   return (
-    <ItineraryCalendar calName={`${trip.name} — Gooshie`} days={days} entityById={entityById}
-      slots={calSlots} instances={calInstances} stays={tripId === "nyc-2026" ? PREVIEW_STAYS : []}
-      canEdit={canEdit} handlers={handlers} />
+    <div>
+      {canEdit && (
+        <div className="mb-2 flex justify-end">
+          <button onClick={reseedEntities} disabled={seeding} title="Ensure all itinerary places exist in the Database (safe to re-run)"
+            className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-500 hover:bg-slate-50 disabled:opacity-50">
+            {seeding ? "…" : "↻ Fix entity IDs"}
+          </button>
+        </div>
+      )}
+      <ItineraryCalendar calName={`${trip.name} — Gooshie`} days={days} entityById={entityById}
+        slots={calSlots} instances={calInstances} stays={tripId === "nyc-2026" ? PREVIEW_STAYS : []}
+        canEdit={canEdit} handlers={handlers} />
+    </div>
   );
 }
