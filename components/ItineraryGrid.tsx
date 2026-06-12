@@ -215,7 +215,7 @@ export function ItineraryCalendar({
             const realIdx = days.indexOf(day);
             const wide = view === "day";
             return (
-              <div key={day} ref={(el) => { dayRefs.current[realIdx] = el; }} data-day={day} className="relative shrink-0 border-r border-slate-100 last:border-r-0" style={{ height: GRID_H + HEADER_H, width: wide ? "100%" : "var(--col-w)" }}>
+              <div key={day} ref={(el) => { dayRefs.current[realIdx] = el; }} data-day={day} className={`relative border-r border-slate-100 last:border-r-0 ${wide ? "min-w-0 flex-1" : "shrink-0"}`} style={{ height: GRID_H + HEADER_H, width: wide ? undefined : "var(--col-w)" }}>
                 {/* Day header */}
                 <div className="sticky top-0 z-10 flex flex-col justify-center border-b border-slate-100 bg-white/95 px-2 backdrop-blur" style={{ height: HEADER_H }}>
                   <div className={`font-semibold text-slate-700 ${wide ? "text-sm" : "text-xs"}`}>
