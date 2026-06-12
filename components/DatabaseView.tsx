@@ -45,6 +45,7 @@ export function DatabaseView() {
   const [showOperational, setShowOperational] = useState(false);
   const [seeding, setSeeding] = useState(false);
   const [backfilling, setBackfilling] = useState(false);
+  const [merging, setMerging] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectMode, setSelectMode] = useState(false);
@@ -170,6 +171,75 @@ export function DatabaseView() {
       setError(e instanceof Error ? e.message : "Back-fill failed — see console.");
     } finally {
       setBackfilling(false);
+    }
+  };
+
+  // --- merge duplicates -------------------------------------------------------
+  // For each duplicate name group: copy richer fields from the orphan (not in
+  // itinerary) into the itinerary-connected entity, then delete the orphan.
+  // Fields copied only when the itinerary entity's own field is blank.
+  const mergeDuplicates = async () => {
+    const norm = (n: string) => n.toLowerCase().replace(/[^a-z0-9]+/g, "");
+    // Group by normalized name
+    const groups = new Map<string, DBEntity[]>();
+    for (const e of entities) {
+      const k = norm(e.name);
+      groups.set(k, [...(groups.get(k) ?? []), e]);
+    }
+    const dupGroups = [...groups.values()].filter((g) => g.length > 1);
+    if (dupGroups.length === 0) { setNotice("No duplicates found."); return; }
+
+    const preview: string[] = [];
+    for (const group of dupGroups) {
+      const live = group.find((e) => usedEntityIds.has(e.id));
+      const orphans = group.filter((e) => !usedEntityIds.has(e.id));
+      if (!live || orphans.length === 0) continue;
+      for (const orphan of orphans) {
+        const fields: string[] = [];
+        if (!live.hours && orphan.hours) fields.push(`hours: ${orphan.hours}`);
+        if (!live.address && orphan.address) fields.push(`address: ${orphan.address}`);
+        if (!live.website && orphan.website) fields.push(`website: ${orphan.website}`);
+        if (!live.instagram && orphan.instagram) fields.push(`instagram: ${orphan.instagram}`);
+        preview.push(`${live.name}: ${fields.length ? fields.join(", ") : "no new fields"} — delete orphan ${orphan.id}`);
+      }
+    }
+
+    const ok = confirm(
+      `Merge & delete ${dupGroups.length} duplicate group(s)?\n\n` +
+      preview.join("\n") +
+      `\n\nThis will save merged fields then delete the orphan(s). Cannot be undone.`
+    );
+    if (!ok) return;
+
+    setMerging(true);
+    setError(null);
+    try {
+      let merged = 0;
+      let deleted = 0;
+      for (const group of dupGroups) {
+        const live = group.find((e) => usedEntityIds.has(e.id));
+        const orphans = group.filter((e) => !usedEntityIds.has(e.id));
+        if (!live || orphans.length === 0) continue;
+        // Accumulate best fields from all orphans
+        const patch: Partial<DBEntity> = {};
+        for (const orphan of orphans) {
+          if (!live.hours && !patch.hours && orphan.hours) patch.hours = orphan.hours;
+          if (!live.address && !patch.address && orphan.address) patch.address = orphan.address;
+          if (!live.website && !patch.website && orphan.website) patch.website = orphan.website;
+          if (!live.instagram && !patch.instagram && orphan.instagram) patch.instagram = orphan.instagram;
+        }
+        if (Object.keys(patch).length > 0) {
+          await saveEntity({ ...live, ...patch });
+          merged++;
+        }
+        await bulkDeleteEntities(orphans.map((o) => o.id));
+        deleted += orphans.length;
+      }
+      setNotice(`Done — merged fields into ${merged} entities, deleted ${deleted} orphan${deleted !== 1 ? "s" : ""}.`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Merge failed — see console.");
+    } finally {
+      setMerging(false);
     }
   };
 
@@ -312,6 +382,16 @@ export function DatabaseView() {
                 className="rounded-lg border border-teal-300 px-3 py-2 text-sm font-medium text-teal-700 hover:bg-teal-50 disabled:opacity-50"
               >
                 {backfilling ? "Adding…" : "Fix itinerary IDs"}
+              </button>
+            )}
+            {isAdmin && dupCount > 0 && (
+              <button
+                onClick={mergeDuplicates}
+                disabled={merging}
+                title="For each duplicate pair, copy richer fields (hours, address, website) into the itinerary-connected entity, then delete the orphan. Shows a preview before acting."
+                className="rounded-lg border border-amber-300 px-3 py-2 text-sm font-medium text-amber-700 hover:bg-amber-50 disabled:opacity-50"
+              >
+                {merging ? "Merging…" : `Merge & clean ${dupCount / 2 | 0} duplicates`}
               </button>
             )}
           </div>
