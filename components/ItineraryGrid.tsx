@@ -75,6 +75,20 @@ function shortDay(iso: string): string {
   const dd = String(dt.getUTCDate()).padStart(2, "0");
   return `${wd}, ${dd}/${mm}`;
 }
+// Cancel the next click event (capture phase) to kill the ghost/synthesized
+// click that browsers fire after a touch — it would otherwise activate
+// whatever element sits under the finger in a popup we just opened.
+function swallowNextClick() {
+  if (typeof window === "undefined") return;
+  const handler = (ev: Event) => {
+    ev.stopPropagation();
+    ev.preventDefault();
+    window.removeEventListener("click", handler, true);
+  };
+  window.addEventListener("click", handler, true);
+  setTimeout(() => window.removeEventListener("click", handler, true), 500);
+}
+
 const snap = (m: number) => Math.round(m / SNAP) * SNAP;
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 const mapsSearch = (q: string) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
@@ -443,6 +457,9 @@ function Block({ slot, main, alts, entityById, col, colCount, wide, canEdit, onG
   const up = (e: React.PointerEvent) => {
     if (pendingTouch.current) {
       clearPending();
+      // Swallow the synthesized click that follows this touch — otherwise it
+      // lands on the just-opened popup (e.g. the map link) and navigates away.
+      if (e.pointerType === "touch") swallowNextClick();
       onOpen();
       return;
     }
