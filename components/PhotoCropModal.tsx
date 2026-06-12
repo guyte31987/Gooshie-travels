@@ -6,10 +6,10 @@ import type { Area } from "react-easy-crop";
 import { cropImage, compressImage } from "@/lib/imageUtils";
 
 const RATIOS = [
-  { label: "Free", value: undefined },
-  { label: "1:1", value: 1 },
-  { label: "4:3", value: 4 / 3 },
-  { label: "16:9", value: 16 / 9 },
+  { label: "Square", value: 1 },
+  { label: "Portrait", value: 3 / 4 },
+  { label: "Landscape", value: 4 / 3 },
+  { label: "Wide", value: 16 / 9 },
 ];
 
 export function PhotoCropModal({
@@ -23,7 +23,7 @@ export function PhotoCropModal({
 }) {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
-  const [aspect, setAspect] = useState<number | undefined>(undefined);
+  const [aspect, setAspect] = useState<number | undefined>(1);
   const [croppedArea, setCroppedArea] = useState<Area | null>(null);
   const [busy, setBusy] = useState(false);
 
