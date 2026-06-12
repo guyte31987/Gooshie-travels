@@ -3,6 +3,7 @@
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
 import { getAuth, type Auth } from "firebase/auth";
 import { initializeFirestore, getFirestore, type Firestore } from "firebase/firestore";
+import { getStorage, type FirebaseStorage } from "firebase/storage";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -23,6 +24,7 @@ export const ADMIN_EMAIL = (process.env.NEXT_PUBLIC_ADMIN_EMAIL || "").toLowerCa
 let app: FirebaseApp | undefined;
 let authInstance: Auth | undefined;
 let dbInstance: Firestore | undefined;
+let storageInstance: FirebaseStorage | undefined;
 
 if (firebaseConfigured) {
   app = getApps().length ? getApp() : initializeApp(firebaseConfig);
@@ -34,7 +36,10 @@ if (firebaseConfigured) {
     // Already initialized (e.g. hot reload) — fall back to the existing instance.
     dbInstance = getFirestore(app);
   }
+  storageInstance = getStorage(app);
 }
 
 export const auth = authInstance;
 export const db = dbInstance;
+export const storage = storageInstance;
+export { app };

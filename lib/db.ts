@@ -62,6 +62,8 @@ export type DBEntity = {
   calendarSource?: boolean;
   /** For party/event entities — links them to a parent club/venue entity. */
   parentId?: string;
+  /** Firebase Storage download URLs for entity photos. */
+  photos?: string[];
 };
 
 export type StoredAppearance = {
@@ -279,6 +281,8 @@ export type Comment = {
   authorName: string;
   authorEmail: string;
   createdAt?: { seconds: number } | null;
+  /** Optional single photo attached to this comment. */
+  photoUrl?: string;
 };
 
 export function subscribeComments(instanceId: string, cb: (c: Comment[]) => void): () => void {
@@ -295,7 +299,8 @@ export async function addComment(
   instanceId: string,
   text: string,
   authorName: string,
-  authorEmail: string
+  authorEmail: string,
+  photoUrl?: string
 ): Promise<void> {
   await addDoc(collection(requireDb(), "comments"), {
     instanceId,
@@ -303,6 +308,7 @@ export async function addComment(
     authorName,
     authorEmail,
     createdAt: serverTimestamp(),
+    ...(photoUrl ? { photoUrl } : {}),
   });
 }
 
@@ -324,7 +330,8 @@ export async function addEntityComment(
   entityId: string,
   text: string,
   authorName: string,
-  authorEmail: string
+  authorEmail: string,
+  photoUrl?: string
 ): Promise<void> {
   await addDoc(collection(requireDb(), "comments"), {
     entityId,
@@ -332,6 +339,7 @@ export async function addEntityComment(
     authorName,
     authorEmail,
     createdAt: serverTimestamp(),
+    ...(photoUrl ? { photoUrl } : {}),
   });
 }
 

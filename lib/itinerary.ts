@@ -51,6 +51,8 @@ export type PlanInstance = {
   bookingNote?: string;
   /** "Book this many days before the trip starts." */
   bookingOffsetDays?: number;
+  /** Firebase Storage download URLs for visit photos. */
+  photos?: string[];
 };
 
 export const instanceId = (slotId: string, entityId: string) => `${slotId}__${entityId}`;

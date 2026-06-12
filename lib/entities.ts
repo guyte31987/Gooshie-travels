@@ -118,6 +118,7 @@ export type Entity = {
   /** True when derived from an item not yet saved in the Database. */
   transient?: boolean;
   parentId?: string;
+  photos?: string[];
   slots: TripSlot[];
 };
 

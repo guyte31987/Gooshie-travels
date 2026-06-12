@@ -9,11 +9,13 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "browser-image-compression": "^2.0.2",
     "firebase": "^11.1.0",
     "leaflet": "^1.9.4",
     "next": "^16.2.9",
     "react": "19.0.0",
     "react-dom": "19.0.0",
+    "react-easy-crop": "^6.0.2",
     "react-leaflet": "^5.0.0",
     "xlsx": "^0.18.5"
   },

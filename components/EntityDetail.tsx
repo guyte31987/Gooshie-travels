@@ -5,9 +5,10 @@ import { ENTITY_TABS, type Entity, type TripSlot } from "@/lib/entities";
 import { googleMapsUrl, externalUrl, instagramUrl, instagramHandle } from "@/lib/geo";
 import { Comments } from "./Comments";
 import { EntityForm } from "./EntityForm";
+import { PhotoGallery } from "./PhotoGallery";
 import { useTripData, useOptionalTripData, TripDataProvider } from "./TripData";
 import { useAuth } from "./AuthProvider";
-import { type DBEntity } from "@/lib/db";
+import { saveEntity, type DBEntity } from "@/lib/db";
 import { savePlanInstance, activityStatusOf, bookingStatusOf, type PlanInstance, type ActivityStatus, type BookingStatus } from "@/lib/itinerary";
 import { TRIPS } from "@/lib/trips";
 
@@ -191,6 +192,20 @@ export function EntityDetail({
             </ul>
           </div>
         )}
+
+        {/* Entity photos */}
+        <div className="mt-4 border-t border-slate-100 pt-3">
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Photos</p>
+          <PhotoGallery
+            photos={entity.photos ?? []}
+            context="entity"
+            contextId={entity.id}
+            canEdit={canEdit}
+            onPhotosChange={async (photos) => {
+              await saveEntity({ id: entity.id, name: entity.name, type: entity.type, generalArea: entity.generalArea, area: entity.area, address: entity.address, website: entity.website, instagram: entity.instagram, lat: entity.lat, lng: entity.lng, hours: entity.hours, price: entity.price, source: entity.source, booking: entity.booking, notes: entity.notes, closed: entity.closed, bestDay: entity.bestDay, needsBooking: entity.needsBooking, parentId: entity.parentId, photos });
+            }}
+          />
+        </div>
 
         {/* Entity-level comments */}
         <div className="mt-4 border-t border-slate-100 pt-3">
@@ -403,6 +418,22 @@ function Appearance({
           {override?.bookingOffsetDays != null && (
             <div className="text-[11px] text-slate-400">
               Book {override.bookingOffsetDays} days before trip
+            </div>
+          )}
+
+          {/* Visit photos */}
+          {override && (
+            <div className="border-t border-slate-100 pt-2">
+              <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Photos</p>
+              <PhotoGallery
+                photos={override.photos ?? []}
+                context="instance"
+                contextId={override.id}
+                canEdit={canEdit}
+                onPhotosChange={async (photos) => {
+                  await savePlanInstance({ ...override, photos });
+                }}
+              />
             </div>
           )}
 

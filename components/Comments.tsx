@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "./AuthProvider";
 import {
   subscribeComments,
@@ -10,6 +10,8 @@ import {
   deleteComment,
   type Comment,
 } from "@/lib/db";
+import { PhotoCropModal } from "./PhotoCropModal";
+import { uploadPhoto, photoPath, deletePhoto } from "@/lib/storage";
 
 /** Comment thread for either an entity instance (a specific visit) or a general entity (the place). */
 export function Comments({
@@ -18,13 +20,9 @@ export function Comments({
   label,
   onPosted,
 }: {
-  /** Pass for entity-instance-level comments (about this specific visit). */
   instanceId?: string;
-  /** Pass for entity-level comments (about the place in general). */
   entityId?: string;
-  /** Optional heading shown above the thread. */
   label?: string;
-  /** Called after a comment is successfully posted (e.g. to lock the occurrence so it survives calendar deletion). */
   onPosted?: () => void;
 }) {
   const { user, isAdmin } = useAuth();
@@ -32,25 +30,64 @@ export function Comments({
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
 
+  // Photo attach state
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [srcForCrop, setSrcForCrop] = useState<string | null>(null);
+  const [pendingPhotoBlob, setPendingPhotoBlob] = useState<Blob | null>(null);
+  const [pendingPhotoPreview, setPendingPhotoPreview] = useState<string | null>(null);
+
   useEffect(() => {
     if (instanceId) return subscribeComments(instanceId, setComments);
     if (entityId) return subscribeEntityComments(entityId, setComments);
   }, [instanceId, entityId]);
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setSrcForCrop(reader.result as string);
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
+  const handleCropConfirm = (blob: Blob) => {
+    setSrcForCrop(null);
+    setPendingPhotoBlob(blob);
+    setPendingPhotoPreview(URL.createObjectURL(blob));
+  };
+
+  const clearPendingPhoto = () => {
+    setPendingPhotoBlob(null);
+    if (pendingPhotoPreview) URL.revokeObjectURL(pendingPhotoPreview);
+    setPendingPhotoPreview(null);
+  };
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!text.trim() || !user) return;
+    if ((!text.trim() && !pendingPhotoBlob) || !user) return;
     setBusy(true);
     const name = user.displayName || user.email || "Someone";
     const email = (user.email || "").toLowerCase();
     try {
-      if (instanceId) await addComment(instanceId, text.trim(), name, email);
-      else if (entityId) await addEntityComment(entityId, text.trim(), name, email);
+      let photoUrl: string | undefined;
+      if (pendingPhotoBlob) {
+        const contextId = instanceId ?? entityId ?? "general";
+        const path = photoPath("comment", contextId);
+        photoUrl = await uploadPhoto(path, pendingPhotoBlob);
+      }
+      if (instanceId) await addComment(instanceId, text.trim(), name, email, photoUrl);
+      else if (entityId) await addEntityComment(entityId, text.trim(), name, email, photoUrl);
       setText("");
+      clearPendingPhoto();
       onPosted?.();
     } finally {
       setBusy(false);
     }
+  };
+
+  const handleDeleteComment = async (c: Comment) => {
+    if (c.photoUrl) await deletePhoto(c.photoUrl).catch(() => {});
+    await deleteComment(c.id);
   };
 
   return (
@@ -70,44 +107,76 @@ export function Comments({
                   <span className="text-xs font-medium text-slate-600">{c.authorName}</span>
                   {(mine || isAdmin) && (
                     <button
-                      onClick={() => deleteComment(c.id)}
+                      onClick={() => handleDeleteComment(c)}
                       className="text-xs text-slate-300 hover:text-rose-500"
                     >
                       delete
                     </button>
                   )}
                 </div>
-                <p className="text-slate-700">{c.text}</p>
+                {c.text && <p className="text-slate-700">{c.text}</p>}
+                {c.photoUrl && (
+                  <img
+                    src={c.photoUrl}
+                    alt=""
+                    className="mt-1.5 max-h-48 rounded-lg object-cover"
+                  />
+                )}
               </li>
             );
           })}
         </ul>
       )}
       {user && (
-        <form onSubmit={submit} className="flex gap-2">
-          <input
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="Add a comment…"
-            className="flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm shadow-sm outline-none focus:border-slate-400"
-          />
+        <form onSubmit={submit} className="space-y-2">
+          <div className="flex gap-2">
+            <input
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="Add a comment…"
+              className="flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm shadow-sm outline-none focus:border-slate-400"
+            />
+            <button
+              type="submit"
+              disabled={busy || (!text.trim() && !pendingPhotoBlob)}
+              className="rounded-lg bg-ink px-3 py-1.5 text-sm font-medium text-white hover:bg-ink/90 disabled:opacity-40"
+            >
+              {busy ? "…" : "Post"}
+            </button>
+          </div>
+
+          {/* Pending photo preview */}
+          {pendingPhotoPreview && (
+            <div className="relative inline-block">
+              <img src={pendingPhotoPreview} alt="" className="h-20 rounded-lg object-cover" />
+              <button
+                type="button"
+                onClick={clearPendingPhoto}
+                className="absolute -right-1.5 -top-1.5 rounded-full bg-slate-700 px-1.5 py-0.5 text-[10px] text-white"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+
+          <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
           <button
-            type="submit"
-            disabled={busy || !text.trim()}
-            className="rounded-lg bg-ink px-3 py-1.5 text-sm font-medium text-white hover:bg-ink/90 disabled:opacity-40"
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="text-xs text-slate-400 hover:text-slate-600"
           >
-            Post
+            📷 {pendingPhotoPreview ? "Change photo" : "Attach photo"}
           </button>
         </form>
       )}
-      <button
-        type="button"
-        disabled
-        title="Photos & video arrive with the media host (Phase 3)"
-        className="mt-1.5 text-xs text-slate-300"
-      >
-        📷 Add photo/video (soon)
-      </button>
+
+      {srcForCrop && (
+        <PhotoCropModal
+          imageSrc={srcForCrop}
+          onConfirm={handleCropConfirm}
+          onCancel={() => setSrcForCrop(null)}
+        />
+      )}
     </div>
   );
 }

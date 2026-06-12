@@ -1,0 +1,27 @@
+rules_version = '2';
+
+// Gooshie Travels — Firebase Storage rules.
+// Photos are stored under: photos/{context}s/{contextId}/{filename}
+// contexts: entities, instances, comments
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isAuth() {
+      return request.auth != null;
+    }
+    function isAdmin() {
+      return isAuth() && (
+        request.auth.token.email.lower() == 'guy_te3@hotmail.com'
+        || request.auth.token.email.lower() == 'maissis1987@gmail.com'
+      );
+    }
+
+    // Photos — any authenticated user can read; only admins and editors can upload/delete.
+    // Note: editor check via Firestore member lookup isn't available in Storage rules,
+    // so we allow any authenticated user to write (Firestore protects the URL references).
+    match /photos/{allPaths=**} {
+      allow read: if isAuth();
+      allow write: if isAuth();
+      allow delete: if isAuth();
+    }
+  }
+}
