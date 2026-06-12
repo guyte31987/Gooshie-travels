@@ -164,6 +164,7 @@ export function ItineraryBoard({ tripId }: { tripId: string }) {
         area: patch.area, address: patch.address, website: patch.website,
         instagram: patch.instagram, hours: patch.hours,
         notes: patch.notes ?? existing?.notes,
+        parentId: patch.parentId ?? existing?.parentId,
         generalArea: existing?.generalArea ?? suggestGeneralArea(patch.area, patch.address, patch.name),
       });
     },

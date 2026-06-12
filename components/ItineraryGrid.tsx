@@ -39,6 +39,7 @@ export type CalInstance = { slotId: string; entityId: string; capacity: Capacity
 export type EntityPatch = {
   name: string; type: EntityType;
   area?: string; address?: string; website?: string; instagram?: string; hours?: string; notes?: string;
+  parentId?: string;
 };
 
 export type CalHandlers = {
@@ -593,6 +594,7 @@ function DetailSheet({ slot, instances, entityById, canEdit, handlers, isNew, on
             </button>
             {editPlace && (
               <PlaceEditor entityId={main.entityId} ent={ent} fallbackName={adhoc ? label : main.entityId}
+                clubs={[...entityById.values()].filter((e) => e.type === "club" && !e.parent)}
                 onSave={(patch) => { handlers.onSaveEntity!(main.entityId, patch); setEditPlace(false); }}
                 onCancel={() => setEditPlace(false)} />
             )}
@@ -786,8 +788,9 @@ function Segmented({ value, options, disabled, onChange }: {
 
 const PLACE_TYPE_OPTIONS = ENTITY_TABS.filter((t) => t.type !== "uncategorised");
 
-function PlaceEditor({ entityId, ent, fallbackName, onSave, onCancel }: {
+function PlaceEditor({ entityId, ent, fallbackName, clubs, onSave, onCancel }: {
   entityId: string; ent?: CalEntity; fallbackName: string;
+  clubs?: CalEntity[];
   onSave: (patch: EntityPatch) => void; onCancel: () => void;
 }) {
   const [name, setName] = useState(ent?.name ?? (fallbackName.startsWith("adhoc:") ? "" : fallbackName));
@@ -797,12 +800,14 @@ function PlaceEditor({ entityId, ent, fallbackName, onSave, onCancel }: {
   const [website, setWebsite] = useState(ent?.website ?? "");
   const [instagram, setInstagram] = useState(ent?.instagram ?? "");
   const [hours, setHours] = useState(ent?.hours ?? "");
+  const [parentId, setParentId] = useState<string>(ent?.id ? "" : "");
   const inp = "w-full rounded-lg border border-slate-300 px-2 py-1 text-sm outline-none focus:border-slate-400";
 
   const save = () => {
     if (!name.trim()) return;
     onSave({ name: name.trim(), type, area: area.trim() || undefined, address: address.trim() || undefined,
-      website: website.trim() || undefined, instagram: instagram.trim() || undefined, hours: hours.trim() || undefined });
+      website: website.trim() || undefined, instagram: instagram.trim() || undefined, hours: hours.trim() || undefined,
+      parentId: (type === "club" && parentId) ? parentId : undefined });
   };
 
   return (
@@ -813,6 +818,12 @@ function PlaceEditor({ entityId, ent, fallbackName, onSave, onCancel }: {
           {PLACE_TYPE_OPTIONS.map((t) => <option key={t.type} value={t.type}>{t.emoji} {t.label}</option>)}
         </select>
       </div>
+      {type === "club" && clubs && clubs.length > 0 && (
+        <select value={parentId} onChange={(e) => setParentId(e.target.value)} className={inp}>
+          <option value="">No parent venue (this IS the venue)</option>
+          {clubs.map((c) => <option key={c.id} value={c.id}>{c.name}{c.area ? ` — ${c.area}` : ""}</option>)}
+        </select>
+      )}
       <input value={area} onChange={(e) => setArea(e.target.value)} placeholder="Area / neighbourhood" className={inp} />
       <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Address" className={inp} />
       <div className="grid grid-cols-2 gap-2">
