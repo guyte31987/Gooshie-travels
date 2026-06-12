@@ -11,6 +11,7 @@ import { useAuth } from "./AuthProvider";
 import { saveEntity, type DBEntity } from "@/lib/db";
 import { savePlanInstance, activityStatusOf, bookingStatusOf, type PlanInstance, type ActivityStatus, type BookingStatus } from "@/lib/itinerary";
 import { TRIPS } from "@/lib/trips";
+import { useBackClose } from "@/lib/useBackClose";
 
 /** The entity popup — place-level info, general comments, and per-visit appearances.
  *  Opened from entity name links in EventPopup, Planning, Map, or Database. */
@@ -31,6 +32,7 @@ export function EntityDetail({
   const { isAdmin, role: authRole } = useAuth();
   const canEdit = isAdmin || authRole === "editor";
   const [editing, setEditing] = useState(false);
+  useBackClose(true, onClose);
   const tripData = useOptionalTripData();
   // When opened from the GDB (no TripData context), fall back to the raw DB
   // entity list for child/parent resolution so "Events at this venue" still shows.

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { ENTITY_TABS, type EntityType } from "@/lib/entities";
 import { saveEntity, saveAreas, subscribeEntities, type DBEntity } from "@/lib/db";
 import { slugId } from "@/lib/slug";
+import { useBackClose } from "@/lib/useBackClose";
 
 const FIELDS: { key: keyof DBEntity; label: string; textarea?: boolean }[] = [
   { key: "area", label: "Area / neighborhood" },
@@ -33,6 +34,7 @@ export function EntityForm({
   );
   const [busy, setBusy] = useState(false);
   const [clubEntities, setClubEntities] = useState<DBEntity[]>([]);
+  useBackClose(true, onClose);
 
   useEffect(() => {
     const unsub = subscribeEntities((all) =>

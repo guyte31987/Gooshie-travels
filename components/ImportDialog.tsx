@@ -8,6 +8,7 @@ import {
   type ImportLog,
 } from "@/lib/db";
 import { parseCsv, planImport, applyImport, type ImportPreview } from "@/lib/import";
+import { useBackClose } from "@/lib/useBackClose";
 
 export function ImportDialog({
   entities,
@@ -20,6 +21,7 @@ export function ImportDialog({
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<ImportLog | null>(null);
   const [lastLog, setLastLog] = useState<ImportLog | null>(null);
+  useBackClose(true, onClose);
 
   // Surface the previous import so the result is reviewable after the dialog closed.
   useEffect(() => {

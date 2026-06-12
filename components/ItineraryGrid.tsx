@@ -10,6 +10,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ENTITY_TABS, type EntityType } from "@/lib/entities";
 import { buildTripIcs, downloadIcs, type IcsStay } from "@/lib/ics-export";
 import { activityStatusOf, bookingStatusOf, type ActivityStatus, type BookingStatus, type Capacity } from "@/lib/itinerary";
+import { useBackClose } from "@/lib/useBackClose";
 import { Comments } from "./Comments";
 import { PhotoGallery } from "./PhotoGallery";
 import {
@@ -548,14 +549,13 @@ function DetailSheet({ slot, instances, entityById, canEdit, handlers, isNew, on
   const [noteOpen, setNoteOpen] = useState(false);
   const [photosOpen, setPhotosOpen] = useState(false);
   const [altsOpen, setAltsOpen] = useState(false);
-  if (!main) return null;
   const type = ent?.type ?? "uncategorised";
   const c = TYPE_COLORS[type] ?? TYPE_COLORS.uncategorised;
   const title = ent?.name ?? label;
   const mapQuery = ent?.address || `${ent?.name ?? label}${ent?.area ? " " + ent.area : ""}`;
 
   const save = () => {
-    if (canEdit) {
+    if (main && canEdit) {
       if (note !== (main.note ?? "")) handlers.onUpdateInstance(slot.id, main.entityId, { note });
       if (adhoc && label !== slot.label) handlers.onRenameSlot(slot.id, label);
     }
@@ -565,6 +565,8 @@ function DetailSheet({ slot, instances, entityById, canEdit, handlers, isNew, on
     if (isNew && canEdit) handlers.onDeleteSlot(slot.id, instances.filter((i) => i.slotId === slot.id).map((i) => `${i.slotId}__${i.entityId}`));
     onClose();
   };
+  useBackClose(true, cancel);
+  if (!main) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 sm:items-center sm:p-4" onClick={cancel}>
@@ -898,6 +900,7 @@ function StaySheet({ day, days, current, onSave, onDelete, onClose }: {
   const [from, setFrom] = useState(current?.from ?? day);
   const [to, setTo] = useState(current?.to ?? (days[Math.min(days.indexOf(day) + 1, days.length - 1)]));
   const [address, setAddress] = useState(current?.address ?? "");
+  useBackClose(true, onClose);
   const inp = "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-400";
 
   const save = () => { if (name.trim() && from && to && to > from) onSave({ name: name.trim(), from, to, address: address.trim() || undefined }); };
