@@ -27,7 +27,10 @@ const PX_PER_MIN = PX_PER_HOUR / 60;
 const SNAP = 15;
 const HEADER_H = 40;
 const GRID_H = (DAY_END_H - DAY_START_H) * PX_PER_HOUR;
-const LONG_PRESS_MS = 300;
+const LONG_PRESS_MS = 350;
+// Delay before showing the "lifting" grab affordance, so a quick tap (which
+// just opens the popup) doesn't flash a grabbed/dragged look.
+const LIFT_HINT_MS = 160;
 
 export type CalEntity = {
   id: string; name: string; type: EntityType;
@@ -64,13 +67,13 @@ function fmt(min: number): string {
   let hh = h % 12; if (hh === 0) hh = 12;
   return m === 0 ? `${hh}${am}` : `${hh}:${String(m).padStart(2, "0")}${am}`;
 }
-// Short day label, e.g. "Thu, 06/05".
+// Short day label, e.g. "Thu, 05/06" (DD/MM).
 function shortDay(iso: string): string {
   const dt = new Date(iso + "T12:00:00");
   const wd = dt.toLocaleDateString("en-US", { weekday: "short", timeZone: "UTC" });
   const mm = String(dt.getUTCMonth() + 1).padStart(2, "0");
   const dd = String(dt.getUTCDate()).padStart(2, "0");
-  return `${wd}, ${mm}/${dd}`;
+  return `${wd}, ${dd}/${mm}`;
 }
 const snap = (m: number) => Math.round(m / SNAP) * SNAP;
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
@@ -338,6 +341,7 @@ function Block({ slot, main, alts, entityById, col, colCount, wide, canEdit, onG
   };
   const drag = useRef<DragState | null>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const liftTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingTouch = useRef<{ pointerId: number; x0: number; y0: number; target: Element } | null>(null);
   const [dragPhase, setDragPhase] = useState<null | "lifting" | "dragging">(null);
   const blockRef = useRef<HTMLDivElement>(null);
@@ -389,7 +393,7 @@ function Block({ slot, main, alts, entityById, col, colCount, wide, canEdit, onG
 
     if (e.pointerType === "touch" && mode === "move") {
       pendingTouch.current = { pointerId: e.pointerId, x0: e.clientX, y0: e.clientY, target: e.target as Element };
-      setDragPhase("lifting");
+      liftTimer.current = setTimeout(() => setDragPhase("lifting"), LIFT_HINT_MS);
       longPressTimer.current = setTimeout(() => {
         const pt = pendingTouch.current;
         if (!pt) return;
@@ -404,15 +408,17 @@ function Block({ slot, main, alts, entityById, col, colCount, wide, canEdit, onG
     if (mode === "move") setDragPhase("dragging");
   };
 
+  const clearPending = () => {
+    if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; }
+    if (liftTimer.current) { clearTimeout(liftTimer.current); liftTimer.current = null; }
+    pendingTouch.current = null;
+    setDragPhase(null);
+  };
+
   const move = (e: React.PointerEvent) => {
     if (pendingTouch.current) {
       const { x0, y0 } = pendingTouch.current;
-      if (Math.abs(e.clientX - x0) + Math.abs(e.clientY - y0) > 8) {
-        clearTimeout(longPressTimer.current!);
-        longPressTimer.current = null;
-        pendingTouch.current = null;
-        setDragPhase(null);
-      }
+      if (Math.abs(e.clientX - x0) + Math.abs(e.clientY - y0) > 8) clearPending();
       return;
     }
 
@@ -436,10 +442,7 @@ function Block({ slot, main, alts, entityById, col, colCount, wide, canEdit, onG
 
   const up = (e: React.PointerEvent) => {
     if (pendingTouch.current) {
-      clearTimeout(longPressTimer.current!);
-      longPressTimer.current = null;
-      pendingTouch.current = null;
-      setDragPhase(null);
+      clearPending();
       onOpen();
       return;
     }
@@ -458,6 +461,12 @@ function Block({ slot, main, alts, entityById, col, colCount, wide, canEdit, onG
       setDragPhase(null);
     }
     if (!d.moved) onOpen();
+  };
+
+  // Browser hijacked the gesture (e.g. page scroll) — reset without opening.
+  const cancel = () => {
+    clearPending();
+    if (drag.current) { drag.current = null; clearDragTransform(); setDragPhase(null); }
   };
 
   const book = bookingStatusOf(main);
@@ -480,7 +489,7 @@ function Block({ slot, main, alts, entityById, col, colCount, wide, canEdit, onG
         boxShadow: isLifting ? "0 8px 24px rgba(0,0,0,0.18)" : undefined,
         zIndex: isLifting ? 40 : undefined,
       }}
-      onPointerDown={down("move")} onPointerMove={move} onPointerUp={up}
+      onPointerDown={down("move")} onPointerMove={move} onPointerUp={up} onPointerCancel={cancel}
       onClick={(e) => e.stopPropagation()}
     >
       {canEdit && <div className="absolute inset-x-0 top-0 z-10 hidden h-2 cursor-ns-resize sm:block" onPointerDown={down("top")} onPointerMove={move} onPointerUp={up} />}
