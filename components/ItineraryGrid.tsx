@@ -10,6 +10,8 @@ import { useMemo, useRef, useState } from "react";
 import { ENTITY_TABS, type EntityType } from "@/lib/entities";
 import { buildTripIcs, downloadIcs, type IcsStay } from "@/lib/ics-export";
 import { activityStatusOf, bookingStatusOf, type ActivityStatus, type BookingStatus, type Capacity } from "@/lib/itinerary";
+import { Comments } from "./Comments";
+import { PhotoGallery } from "./PhotoGallery";
 import {
   PREVIEW_ENTITIES,
   PREVIEW_SLOTS,
@@ -30,7 +32,7 @@ export type CalEntity = {
   area?: string; parent?: string; address?: string; website?: string; instagram?: string; phone?: string; hours?: string;
 };
 export type CalSlot = { id: string; day: string; start: number; end: number; label: string };
-export type CalInstance = { slotId: string; entityId: string; capacity: Capacity; note?: string; status?: ActivityStatus; bookingStatus?: BookingStatus; needsBooking?: boolean; booked?: boolean };
+export type CalInstance = { slotId: string; entityId: string; capacity: Capacity; note?: string; status?: ActivityStatus; bookingStatus?: BookingStatus; needsBooking?: boolean; booked?: boolean; photos?: string[] };
 
 /** Editable place fields surfaced inside the itinerary popup (writes to the DB). */
 export type EntityPatch = {
@@ -482,11 +484,33 @@ function DetailSheet({ slot, instances, entityById, canEdit, handlers, onClose }
         </div>
 
         {ent && (
-          <div className="mt-4 border-t border-slate-100 pt-3">
+          <div className="mt-4 border-t border-slate-100 pt-3 space-y-4">
             <a href={`/database?open=${encodeURIComponent(ent.id)}`} className="text-sm font-medium text-indigo-600 hover:underline">{emojiOf(type)} Edit {ent.name} in Database →</a>
-            <div className="mt-2">
-              <button onClick={() => setCommentOpen((o) => !o)} className="text-sm text-slate-500 hover:text-slate-700">💬 Comments {commentOpen ? "▲" : "▼"} <span className="text-slate-400">· 📷 photos</span></button>
-              {commentOpen && <p className="mt-2 text-[11px] text-slate-400">Comments + photos arrive in a later pass.</p>}
+
+            {/* Visit photos */}
+            <div>
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Photos</p>
+              <PhotoGallery
+                photos={main.photos ?? []}
+                context="instance"
+                contextId={`${slot.id}__${main.entityId}`}
+                canEdit={canEdit}
+                onPhotosChange={async (photos) => {
+                  handlers.onUpdateInstance(slot.id, main.entityId, { photos });
+                }}
+              />
+            </div>
+
+            {/* Comments */}
+            <div>
+              <button onClick={() => setCommentOpen((o) => !o)} className="text-sm text-slate-500 hover:text-slate-700">
+                💬 Comments {commentOpen ? "▲" : "▼"}
+              </button>
+              {commentOpen && (
+                <div className="mt-2">
+                  <Comments instanceId={`${slot.id}__${main.entityId}`} />
+                </div>
+              )}
             </div>
           </div>
         )}
