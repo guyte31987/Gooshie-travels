@@ -8,7 +8,7 @@ import { EntityForm } from "./EntityForm";
 import { useTripData, useOptionalTripData, TripDataProvider } from "./TripData";
 import { useAuth } from "./AuthProvider";
 import { type DBEntity } from "@/lib/db";
-import { savePlanInstance, type PlanInstance } from "@/lib/itinerary";
+import { savePlanInstance, activityStatusOf, bookingStatusOf, type PlanInstance, type ActivityStatus, type BookingStatus } from "@/lib/itinerary";
 import { TRIPS } from "@/lib/trips";
 
 /** The entity popup — place-level info, general comments, and per-visit appearances.
@@ -329,10 +329,6 @@ function Appearance({
   };
 
   const entityNeedsBooking = entity.needsBooking ?? false;
-  const effectiveNeedsBooking =
-    override?.needsBooking === true ? true
-    : override?.needsBooking === false ? false
-    : entityNeedsBooking;
 
   const tone =
     slot.kind === "confirmed"
@@ -363,7 +359,24 @@ function Appearance({
 
       {open && (
         <div className="mt-2 space-y-2">
-          {/* Booking */}
+          {/* Activity + booking status — mirrors the itinerary popup. */}
+          {override && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Status</p>
+                <StatusButtons value={activityStatusOf(override)} disabled={!canEdit}
+                  onChange={(v) => persist({ status: v as ActivityStatus })}
+                  options={[["planned", "Planned"], ["scheduled", "Scheduled"], ["done", "✓ Done"]]} />
+              </div>
+              <div>
+                <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Booking</p>
+                <StatusButtons value={bookingStatusOf(override)} disabled={!canEdit}
+                  onChange={(v) => persist({ bookingStatus: v as BookingStatus })}
+                  options={[["walkin", "Walk-in"], ["needed", "📋 Needed"], ["done", "✅ Booked"]]} />
+              </div>
+            </div>
+          )}
+          {/* Booking details (note + lead time) */}
           {canEdit && override && (
             <div>
               <button
@@ -387,22 +400,9 @@ function Appearance({
             </div>
           )}
 
-          {effectiveNeedsBooking && (
-            <div className="flex flex-wrap items-center gap-2">
-              {override?.booked ? (
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
-                  ✅ Booked
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-700">
-                  📋 Needs booking
-                </span>
-              )}
-              {override?.bookingOffsetDays != null && (
-                <span className="text-[11px] text-slate-400">
-                  · {override.bookingOffsetDays} days before trip
-                </span>
-              )}
+          {override?.bookingOffsetDays != null && (
+            <div className="text-[11px] text-slate-400">
+              Book {override.bookingOffsetDays} days before trip
             </div>
           )}
 
@@ -509,6 +509,21 @@ function BookingForm({
           </button>
         </>
       )}
+    </div>
+  );
+}
+
+function StatusButtons({ value, options, disabled, onChange }: {
+  value: string; options: [string, string][]; disabled?: boolean; onChange: (v: string) => void;
+}) {
+  return (
+    <div className="inline-flex w-full rounded-lg border border-slate-200 bg-slate-50 p-0.5 text-[11px] font-medium">
+      {options.map(([v, label]) => (
+        <button key={v} disabled={disabled} onClick={() => onChange(v)}
+          className={`flex-1 rounded-md px-1.5 py-1 ${value === v ? "bg-slate-800 text-white" : "text-slate-500"} ${disabled ? "cursor-default opacity-70" : "hover:text-slate-700"}`}>
+          {label}
+        </button>
+      ))}
     </div>
   );
 }
