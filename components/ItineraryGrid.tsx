@@ -333,18 +333,20 @@ function Block({ slot, main, alts, entityById, col, colCount, wide, canEdit, onG
   const title = entity?.name ?? slot.label;
   const c = TYPE_COLORS[type] ?? TYPE_COLORS.uncategorised;
 
-  // Drag state
-  type DragState = { mode: "move" | "top" | "bottom"; x0: number; y0: number; s0: number; e0: number; lastX: number; lastY: number; moved: boolean };
+  type DragState = {
+    mode: "move" | "top" | "bottom";
+    x0: number; y0: number; s0: number; e0: number;
+    lastX: number; lastY: number; moved: boolean;
+    currentStart: number;
+  };
   const drag = useRef<DragState | null>(null);
-  // Long-press pending state (touch only)
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingTouch = useRef<{ pointerId: number; x0: number; y0: number; target: Element } | null>(null);
-  const [longPressLifting, setLongPressLifting] = useState(false);
-  const [vis, setVis] = useState<{ dx: number; dy: number; start: number } | null>(null);
+  const [dragPhase, setDragPhase] = useState<null | "lifting" | "dragging">(null);
   const blockRef = useRef<HTMLDivElement>(null);
+  const timeTagRef = useRef<HTMLDivElement>(null);
 
-  // Non-passive touchmove so we can preventDefault() to stop page scroll while dragging.
-  // React's synthetic events are passive and can't call preventDefault on touchmove.
+  // Non-passive touchmove: prevent page scroll while dragging
   useEffect(() => {
     const el = blockRef.current;
     if (!el || !canEdit) return;
@@ -358,14 +360,28 @@ function Block({ slot, main, alts, entityById, col, colCount, wide, canEdit, onG
   const widthPct = 100 / colCount;
   const planned = main.capacity === "planned";
   const dur = slot.end - slot.start;
-  const dragging = vis != null;
+
+  const applyDragTransform = (newStart: number) => {
+    const el = blockRef.current; if (!el) return;
+    const dy = (newStart - slot.start) * PX_PER_MIN;
+    el.style.transform = `translate(0, ${dy}px)`;
+    el.style.zIndex = "40";
+    el.style.opacity = "0.9";
+    if (timeTagRef.current) timeTagRef.current.textContent = fmt(newStart);
+  };
+
+  const clearDragTransform = () => {
+    const el = blockRef.current; if (!el) return;
+    el.style.transform = "";
+    el.style.zIndex = "";
+    el.style.opacity = "";
+  };
 
   const activateDrag = (mode: DragState["mode"], pointerId: number, x0: number, y0: number, target: Element) => {
     (target as HTMLElement).setPointerCapture(pointerId);
-    drag.current = { mode, x0, y0, s0: slot.start, e0: slot.end, lastX: x0, lastY: y0, moved: false };
+    drag.current = { mode, x0, y0, s0: slot.start, e0: slot.end, lastX: x0, lastY: y0, moved: false, currentStart: slot.start };
     if (mode === "move") {
-      setVis({ dx: 0, dy: 0, start: slot.start });
-      setLongPressLifting(false);
+      setDragPhase("dragging");
     }
     onGestureStart?.();
   };
@@ -375,9 +391,8 @@ function Block({ slot, main, alts, entityById, col, colCount, wide, canEdit, onG
     e.stopPropagation();
 
     if (e.pointerType === "touch" && mode === "move") {
-      // Long-press required for touch move
       pendingTouch.current = { pointerId: e.pointerId, x0: e.clientX, y0: e.clientY, target: e.target as Element };
-      setLongPressLifting(true);
+      setDragPhase("lifting");
       longPressTimer.current = setTimeout(() => {
         const pt = pendingTouch.current;
         if (!pt) return;
@@ -387,21 +402,19 @@ function Block({ slot, main, alts, entityById, col, colCount, wide, canEdit, onG
       return;
     }
 
-    // Mouse or touch resize handle — immediate drag
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
-    drag.current = { mode, x0: e.clientX, y0: e.clientY, s0: slot.start, e0: slot.end, lastX: e.clientX, lastY: e.clientY, moved: false };
-    if (mode === "move") setVis({ dx: 0, dy: 0, start: slot.start });
+    drag.current = { mode, x0: e.clientX, y0: e.clientY, s0: slot.start, e0: slot.end, lastX: e.clientX, lastY: e.clientY, moved: false, currentStart: slot.start };
+    if (mode === "move") setDragPhase("dragging");
   };
 
   const move = (e: React.PointerEvent) => {
-    // If long-press is pending and finger moved too much, cancel (let browser scroll)
     if (pendingTouch.current) {
       const { x0, y0 } = pendingTouch.current;
       if (Math.abs(e.clientX - x0) + Math.abs(e.clientY - y0) > 8) {
         clearTimeout(longPressTimer.current!);
         longPressTimer.current = null;
         pendingTouch.current = null;
-        setLongPressLifting(false);
+        setDragPhase(null);
       }
       return;
     }
@@ -409,24 +422,27 @@ function Block({ slot, main, alts, entityById, col, colCount, wide, canEdit, onG
     const d = drag.current; if (!d) return;
     d.lastX = e.clientX; d.lastY = e.clientY;
     if (!d.moved && Math.abs(e.clientY - d.y0) + Math.abs(e.clientX - d.x0) > 4) d.moved = true;
-    const dm = snap((e.clientY - d.y0) / PX_PER_MIN);
+
     if (d.mode === "move") {
-      const start = clamp(d.s0 + dm, DAY_START_H * 60, DAY_END_H * 60 - dur);
-      setVis({ dx: e.clientX - d.x0, dy: e.clientY - d.y0, start });
-    } else if (d.mode === "bottom") {
-      onChange({ day: slot.day, start: slot.start, end: clamp(d.e0 + dm, d.s0 + SNAP, DAY_END_H * 60) });
+      const newStart = clamp(snap(d.s0 + (e.clientY - d.y0) / PX_PER_MIN), DAY_START_H * 60, DAY_END_H * 60 - dur);
+      d.currentStart = newStart;
+      applyDragTransform(newStart);
     } else {
-      onChange({ day: slot.day, start: clamp(d.s0 + dm, DAY_START_H * 60, d.e0 - SNAP), end: slot.end });
+      const dm = snap((e.clientY - d.y0) / PX_PER_MIN);
+      if (d.mode === "bottom") {
+        onChange({ day: slot.day, start: slot.start, end: clamp(d.e0 + dm, d.s0 + SNAP, DAY_END_H * 60) });
+      } else {
+        onChange({ day: slot.day, start: clamp(d.s0 + dm, DAY_START_H * 60, d.e0 - SNAP), end: slot.end });
+      }
     }
   };
 
   const up = (e: React.PointerEvent) => {
-    // Long press pending → was a tap
     if (pendingTouch.current) {
       clearTimeout(longPressTimer.current!);
       longPressTimer.current = null;
       pendingTouch.current = null;
-      setLongPressLifting(false);
+      setDragPhase(null);
       onOpen();
       return;
     }
@@ -436,13 +452,13 @@ function Block({ slot, main, alts, entityById, col, colCount, wide, canEdit, onG
     if (!d) { if (!canEdit) onOpen(); return; }
     if (d.mode === "move") {
       if (d.moved) {
-        const dm = snap((d.lastY - d.y0) / PX_PER_MIN);
-        const start = clamp(d.s0 + dm, DAY_START_H * 60, DAY_END_H * 60 - dur);
+        const start = d.currentStart;
         const colEl = (document.elementFromPoint(d.lastX, d.lastY) as HTMLElement | null)?.closest("[data-day]");
         const day = colEl?.getAttribute("data-day") ?? slot.day;
         onChange({ day, start, end: start + dur });
       }
-      setVis(null);
+      clearDragTransform();
+      setDragPhase(null);
     }
     if (!d.moved) onOpen();
   };
@@ -450,32 +466,28 @@ function Block({ slot, main, alts, entityById, col, colCount, wide, canEdit, onG
   const book = bookingStatusOf(main);
   const bookIcon = book === "done" ? "✅" : book === "needed" ? "📋" : null;
   const done = activityStatusOf(main) === "done";
+  const isLifting = dragPhase === "lifting";
+  const isDragging = dragPhase === "dragging";
 
   return (
     <div
       ref={blockRef}
-      className={`group absolute overflow-hidden rounded-lg border-l-4 ${c.bg} ${c.border} ${c.text} shadow-sm ring-1 ring-black/5 ${planned ? "border-dashed" : ""} transition-transform duration-150`}
+      className={`group absolute overflow-hidden rounded-lg border-l-4 ${c.bg} ${c.border} ${c.text} shadow-sm ring-1 ring-black/5 ${planned ? "border-dashed" : ""}`}
       style={{
         top, height,
         left: `calc(${col * widthPct}% + 2px)`,
         width: `calc(${widthPct}% - 4px)`,
-        // Allow touch scroll while not dragging; touchAction "none" once captured.
-        touchAction: dragging ? "none" : "auto",
-        cursor: canEdit ? (dragging ? "grabbing" : "grab") : "pointer",
-        transform: dragging
-          ? `translate(${vis!.dx}px, ${vis!.dy}px)`
-          : longPressLifting ? "scale(1.04)" : undefined,
-        boxShadow: longPressLifting ? "0 8px 24px rgba(0,0,0,0.18)" : undefined,
-        zIndex: dragging || longPressLifting ? 40 : undefined,
-        opacity: dragging ? 0.9 : 1,
-        pointerEvents: dragging ? "none" : undefined,
+        touchAction: isDragging ? "none" : "auto",
+        cursor: canEdit ? (isDragging ? "grabbing" : "grab") : "pointer",
+        transform: isLifting ? "scale(1.04)" : undefined,
+        boxShadow: isLifting ? "0 8px 24px rgba(0,0,0,0.18)" : undefined,
+        zIndex: isLifting ? 40 : undefined,
       }}
       onPointerDown={down("move")} onPointerMove={move} onPointerUp={up}
       onClick={(e) => e.stopPropagation()}
     >
-      {/* Resize top — mouse-only (touch targets too small) */}
       {canEdit && <div className="absolute inset-x-0 top-0 z-10 hidden h-2 cursor-ns-resize sm:block" onPointerDown={down("top")} onPointerMove={move} onPointerUp={up} />}
-      {dragging && <div className="absolute right-1 top-1 rounded bg-black/70 px-1 text-[9px] font-bold text-white">{fmt(vis!.start)}</div>}
+      <div ref={timeTagRef} className={`absolute right-1 top-1 rounded bg-black/70 px-1 text-[9px] font-bold text-white ${isDragging ? "" : "hidden"}`} />
 
       <div className="px-1.5 py-1">
         <div className="flex items-start gap-1">
@@ -484,7 +496,6 @@ function Block({ slot, main, alts, entityById, col, colCount, wide, canEdit, onG
             <div className={`font-semibold leading-tight ${wide ? "text-sm" : "truncate text-[11px]"} ${done ? "line-through opacity-60" : ""}`}>
               {title}
             </div>
-            {/* Time + area — always shown in wide/day view; height-gated in week view */}
             {(wide || height > 30) && (
               <div className={`opacity-70 ${wide ? "text-xs" : "truncate text-[10px]"}`}>
                 {fmt(slot.start)}{(wide || height > 44) ? `–${fmt(slot.end)}` : ""}
@@ -510,7 +521,6 @@ function Block({ slot, main, alts, entityById, col, colCount, wide, canEdit, onG
         )}
       </div>
 
-      {/* Resize bottom — mouse-only */}
       {canEdit && (
         <div className="absolute inset-x-0 bottom-0 z-10 hidden h-2 cursor-ns-resize sm:block" onPointerDown={down("bottom")} onPointerMove={move} onPointerUp={up}>
           <div className="mx-auto mt-0.5 h-0.5 w-5 rounded-full bg-current opacity-0 group-hover:opacity-30" />
