@@ -102,6 +102,7 @@ export function ItineraryCalendar({
   );
   const [dayIdx, setDayIdx] = useState(0);
   const newCounter = useRef(0);
+  const [justCreatedId, setJustCreatedId] = useState<string | null>(null);
   const dayRefs = useRef<(HTMLDivElement | null)[]>([]);
   const swipeStart = useRef<{ x: number; y: number } | null>(null);
 
@@ -131,6 +132,7 @@ export function ItineraryCalendar({
     const inst: CalInstance = { slotId: id, entityId: `adhoc:${id}`, capacity: "confirmed", note: "" };
     handlers.onAddSlot(slot, inst);
     setDetailSlot(id);
+    setJustCreatedId(id);
   };
 
   // Swipe left/right in day view to navigate between days.
@@ -259,7 +261,7 @@ export function ItineraryCalendar({
       </p>
 
       {detailSlot && slotById.get(detailSlot) && (
-        <DetailSheet slot={slotById.get(detailSlot)!} instances={instances} entityById={entityById} canEdit={canEdit} handlers={handlers} onClose={() => setDetailSlot(null)} />
+        <DetailSheet slot={slotById.get(detailSlot)!} instances={instances} entityById={entityById} canEdit={canEdit} handlers={handlers} isNew={justCreatedId === detailSlot} onClose={() => { setDetailSlot(null); setJustCreatedId(null); }} />
       )}
 
       {stayEditDay && (
@@ -532,13 +534,12 @@ function Block({ slot, main, alts, entityById, col, colCount, wide, canEdit, onG
 
 // --- detail sheet ------------------------------------------------------------
 
-function DetailSheet({ slot, instances, entityById, canEdit, handlers, onClose }: {
-  slot: CalSlot; instances: CalInstance[]; entityById: Map<string, CalEntity>; canEdit: boolean; handlers: CalHandlers; onClose: () => void;
+function DetailSheet({ slot, instances, entityById, canEdit, handlers, isNew, onClose }: {
+  slot: CalSlot; instances: CalInstance[]; entityById: Map<string, CalEntity>; canEdit: boolean; handlers: CalHandlers; isNew?: boolean; onClose: () => void;
 }) {
   const { main, alts } = splitInstances(slot.id, instances);
   const ent = main ? entityById.get(main.entityId) : undefined;
   const adhoc = !ent;
-  const isNew = slot.id.startsWith("new-");
   const [note, setNote] = useState(main?.note ?? "");
   const [label, setLabel] = useState(slot.label);
   const [commentOpen, setCommentOpen] = useState(false);
