@@ -40,7 +40,7 @@ export type PreviewSlot = {
 };
 
 /** Where the trip is based each night (drawn as a day banner, not a block). */
-export type PreviewStay = { name: string; from: string; to: string };
+export type PreviewStay = { name: string; from: string; to: string; address?: string };
 
 export const TRIP_TZ = "America/New_York";
 export const TRIP_DAYS = [
@@ -49,10 +49,10 @@ export const TRIP_DAYS = [
 ];
 
 export const PREVIEW_STAYS: PreviewStay[] = [
-  { name: "BKLYN House Hotel", from: "2026-06-19", to: "2026-06-23" },
-  { name: "Williamstown Airbnb", from: "2026-06-22", to: "2026-06-25" },
-  { name: "Cottage Inn, Grantville", from: "2026-06-24", to: "2026-06-26" },
-  { name: "Hotel 1200", from: "2026-06-25", to: "2026-06-29" },
+  { name: "BKLYN House Hotel", from: "2026-06-19", to: "2026-06-23", address: "9 Beaver St, Brooklyn, NY 11206" },
+  { name: "Williamstown Airbnb", from: "2026-06-22", to: "2026-06-25", address: "287 Luce Rd, Williamstown, MA 01267" },
+  { name: "Cottage Inn, Grantville", from: "2026-06-24", to: "2026-06-26", address: "10200 Allentown Blvd, Grantville, PA 17028" },
+  { name: "Hotel 1200", from: "2026-06-25", to: "2026-06-29", address: "1200 Broadway, Brooklyn, NY 11221" },
 ];
 
 const E = (id: string, name: string, type: EntityType, area?: string, parent?: string): PreviewEntity =>

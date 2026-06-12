@@ -9,6 +9,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { ENTITY_TABS } from "@/lib/entities";
+import { buildTripIcs, downloadIcs } from "@/lib/ics-export";
 import {
   PREVIEW_ENTITIES,
   PREVIEW_SLOTS,
@@ -76,6 +77,17 @@ export function ItineraryGrid() {
     return h.slice(0, -1);
   });
 
+  const exportIcs = () => {
+    const ics = buildTripIcs({
+      calName: "NY Trip — Gooshie",
+      slots: Object.keys(slotTime).map((id) => ({ id, day: slotTime[id].day, start: slotTime[id].start, end: slotTime[id].end, label: labels[id] ?? "Activity" })),
+      instances: instances.map((i) => ({ slotId: i.slotId, entityId: i.entityId, capacity: i.capacity, note: i.note })),
+      entities: new Map(entities.map((e) => [e.id, { name: e.name, type: e.type, area: e.area, parent: e.parent, address: e.address }])),
+      stays: PREVIEW_STAYS,
+    });
+    downloadIcs(ics, "ny-trip-2026.ics");
+  };
+
   const days = view === "week" ? TRIP_DAYS : [TRIP_DAYS[dayIdx]];
   const slotIdsOn = (day: string) => Object.keys(slotTime).filter((id) => slotTime[id].day === day);
 
@@ -115,6 +127,8 @@ export function ItineraryGrid() {
           </div>
           <button onClick={undo} disabled={!history.length} title="Undo"
             className={`rounded-full border px-3 py-1 text-xs font-medium ${history.length ? "border-slate-200 bg-white text-slate-600 hover:bg-slate-50" : "border-slate-100 bg-slate-50 text-slate-300"}`}>↶ Undo</button>
+          <button onClick={exportIcs} title="Export to a .ics calendar file"
+            className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-100">⤓ Export .ics</button>
         </div>
         {view !== "week" && (
           <div className="flex items-center gap-2 text-sm">

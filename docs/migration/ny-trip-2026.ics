@@ -1,0 +1,552 @@
+BEGIN:VCALENDAR
+PRODID:-//Gooshie Travels//Itinerary//EN
+VERSION:2.0
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:NY Trip — Gooshie
+X-WR-TIMEZONE:America/New_York
+BEGIN:VTIMEZONE
+TZID:America/New_York
+BEGIN:DAYLIGHT
+TZOFFSETFROM:-0500
+TZOFFSETTO:-0400
+TZNAME:EDT
+DTSTART:19700308T020000
+RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU
+END:DAYLIGHT
+BEGIN:STANDARD
+TZOFFSETFROM:-0400
+TZOFFSETTO:-0500
+TZNAME:EST
+DTSTART:19701101T020000
+RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU
+END:STANDARD
+END:VTIMEZONE
+BEGIN:VEVENT
+UID:nytrip-thu18-arrival-travel-arrival@gooshie
+DTSTAMP:20260612T004801Z
+SUMMARY:Arrival & Check-in
+DTSTART;TZID=America/New_York:20260618T200000
+DTEND;TZID=America/New_York:20260618T230000
+LOCATION:Arrival & Check-in
+DESCRIPTION:Land JFK/LGA/EWR → East Williamsburg. Late bite near the Airb
+ nb.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:nytrip-fri19-met-museum-met-fifth-avenue@gooshie
+DTSTAMP:20260612T004801Z
+SUMMARY:Met Fifth Avenue
+DTSTART;TZID=America/New_York:20260619T100000
+DTEND;TZID=America/New_York:20260619T130000
+LOCATION:Met Fifth Avenue\, Upper East Side
+DESCRIPTION:Costume Art exhibition. Lunch: Central Park picnic or Cocina 
+ Consuelo.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:nytrip-fri19-seneca-event-seneca-village-juneteenth@gooshie
+DTSTAMP:20260612T004801Z
+SUMMARY:[Plan] Seneca Village Juneteenth
+DTSTART;TZID=America/New_York:20260619T133000
+DTEND;TZID=America/New_York:20260619T140000
+LOCATION:Seneca Village Juneteenth\, Central Park
+DESCRIPTION:Free outdoor performance. Optional 20-min stop.
+STATUS:TENTATIVE
+END:VEVENT
+BEGIN:VEVENT
+UID:nytrip-fri19-studio-museum-studio-museum-in-harlem@gooshie
+DTSTAMP:20260612T004801Z
+SUMMARY:Studio Museum in Harlem
+DTSTART;TZID=America/New_York:20260619T140000
+DTEND;TZID=America/New_York:20260619T170000
+LOCATION:Studio Museum in Harlem\, Harlem
+DESCRIPTION:New Adjaye building. Juneteenth hours 11–8.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:nytrip-fri19-dinner-food-deans@gooshie
+DTSTAMP:20260612T004801Z
+SUMMARY:Dean's
+DTSTART;TZID=America/New_York:20260619T180000
+DTEND;TZID=America/New_York:20260619T200000
+LOCATION:213 6th Ave\, New York\, NY
+DESCRIPTION:DINNER — LOCKED. Oysters / langoustines / Guinness.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:nytrip-fri19-nap-admin-pre-fist-nap-window@gooshie
+DTSTAMP:20260612T004801Z
+SUMMARY:Pre-FIST Nap
+DTSTART;TZID=America/New_York:20260619T200000
+DTEND;TZID=America/New_York:20260619T223000
+LOCATION:Pre-FIST Nap
+DESCRIPTION:Rest before the techno marathon.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:nytrip-fri19-fist-party-fist@gooshie
+DTSTAMP:20260612T004801Z
+SUMMARY:FIST
+DTSTART;TZID=America/New_York:20260619T230000
+DTEND;TZID=America/New_York:20260620T003000
+LOCATION:Basement\, 29 Wyckoff Ave\, Queens\, NY
+DESCRIPTION:FIST 10-Year. URGENT — will sell out.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:nytrip-sat20-brunch-food-win-son-bakery@gooshie
+DTSTAMP:20260612T004801Z
+SUMMARY:Win Son Bakery
+DTSTART;TZID=America/New_York:20260620T110000
+DTEND;TZID=America/New_York:20260620T123000
+LOCATION:Win Son Bakery\, E. Williamsburg
+DESCRIPTION:Scallion pancake sandos.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:nytrip-sat20-parade-event-mermaid-parade@gooshie
+DTSTAMP:20260612T004801Z
+SUMMARY:Mermaid Parade
+DTSTART;TZID=America/New_York:20260620T130000
+DTEND;TZID=America/New_York:20260620T160000
+LOCATION:Mermaid Parade\, Coney Island
+DESCRIPTION:Surf Ave → boardwalk → Steeplechase.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:nytrip-sat20-banya-spa-mermaid-spa@gooshie
+DTSTAMP:20260612T004801Z
+SUMMARY:Mermaid Spa
+DTSTART;TZID=America/New_York:20260620T161500
+DTEND;TZID=America/New_York:20260620T203000
+LOCATION:3703 Mermaid Ave\, Brooklyn\, NY
+DESCRIPTION:Banya + cold plunge\, dinner in robes.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:nytrip-sat20-comedy-show-bushwick-comedy-club@gooshie
+DTSTAMP:20260612T004801Z
+SUMMARY:[Plan] Bushwick Comedy Club
+DTSTART;TZID=America/New_York:20260620T204500
+DTEND;TZID=America/New_York:20260620T214500
+LOCATION:Bushwick Comedy Club\, Bushwick
+DESCRIPTION:Partner pick (MOS).
+STATUS:TENTATIVE
+END:VEVENT
+BEGIN:VEVENT
+UID:nytrip-sat20-bong-food-bong@gooshie
+DTSTAMP:20260612T004801Z
+SUMMARY:Bong
+DTSTART;TZID=America/New_York:20260620T220000
+DTEND;TZID=America/New_York:20260620T230000
+LOCATION:Bushwick\, Brooklyn\, NY
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:nytrip-sun21-newmuseum-museum-new-museum@gooshie
+DTSTAMP:20260612T004801Z
+SUMMARY:New Museum
+DTSTART;TZID=America/New_York:20260621T110000
+DTEND;TZID=America/New_York:20260621T130000
+LOCATION:235 Bowery\, New York\, NY
+DESCRIPTION:New Humans exhibition.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:nytrip-sun21-brunch-food-russ-and-daughters-cafe@gooshie
+DTSTAMP:20260612T004801Z
+SUMMARY:Russ & Daughters Cafe
+DTSTART;TZID=America/New_York:20260621T130000
+DTEND;TZID=America/New_York:20260621T143000
+LOCATION:127 Orchard St\, New York\, NY
+DESCRIPTION:BRUNCH — LOCKED. Arrive 1:30 latest.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:nytrip-sun21-mistersunday-party-mister-sunday-soul-summit@gooshie
+DTSTAMP:20260612T004801Z
+SUMMARY:Mister Sunday: Soul Summit
+DTSTART;TZID=America/New_York:20260621T150000
+DTEND;TZID=America/New_York:20260621T210000
+LOCATION:Mister Sunday: Soul Summit\, Ridgewood
+DESCRIPTION:Soul Summit takeover. Solstice peak.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:nytrip-mon22-rental-travel-drive-brooklyn-new-windsor@gooshie
+DTSTAMP:20260612T004801Z
+SUMMARY:Drive: Brooklyn → New Windsor
+DTSTART;TZID=America/New_York:20260622T070000
+DTEND;TZID=America/New_York:20260622T090000
+LOCATION:Drive: Brooklyn → New Windsor
+DESCRIPTION:Pick up SUV\; drive Rte 9W.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:nytrip-mon22-coffee-food-cornwall-coffee-co@gooshie
+DTSTAMP:20260612T004801Z
+SUMMARY:Cornwall Coffee Co.
+DTSTART;TZID=America/New_York:20260622T090000
+DTEND;TZID=America/New_York:20260622T100000
+LOCATION:Cornwall Coffee Co.\, New Windsor
+DESCRIPTION:Coffee + pastry\, eat in car.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:nytrip-mon22-stormking-museum-storm-king-art-center@gooshie
+DTSTAMP:20260612T004801Z
+SUMMARY:Storm King Art Center
+DTSTART;TZID=America/New_York:20260622T100000
+DTEND;TZID=America/New_York:20260622T130000
+LOCATION:1 Museum Rd\, New Windsor\, NY
+DESCRIPTION:500 acres — Calder / Serra / Maya Lin.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:nytrip-mon22-lunch-food-downstate-newburgh@gooshie
+DTSTAMP:20260612T004801Z
+SUMMARY:[Plan] Downstate (Newburgh)
+DTSTART;TZID=America/New_York:20260622T130000
+DTEND;TZID=America/New_York:20260622T140000
+LOCATION:Downstate (Newburgh)\, Newburgh
+STATUS:TENTATIVE
+END:VEVENT
+BEGIN:VEVENT
+UID:nytrip-mon22-sktrail-hike-storm-king-mountain@gooshie
+DTSTAMP:20260612T004801Z
+SUMMARY:[Plan] Storm King Mountain
+DTSTART;TZID=America/New_York:20260622T140000
+DTEND;TZID=America/New_York:20260622T160000
+LOCATION:Storm King Mountain\, Cornwall
+DESCRIPTION:2.4mi loop — skip if short on time.
+STATUS:TENTATIVE
+END:VEVENT
+BEGIN:VEVENT
+UID:nytrip-mon22-dia-museum-dia-beacon@gooshie
+DTSTAMP:20260612T004801Z
+SUMMARY:[Plan] Dia Beacon
+DTSTART;TZID=America/New_York:20260622T160000
+DTEND;TZID=America/New_York:20260622T170000
+LOCATION:Dia Beacon\, Beacon
+DESCRIPTION:Optional Beacon stop.
+STATUS:TENTATIVE
+END:VEVENT
+BEGIN:VEVENT
+UID:nytrip-mon22-drivenorth-travel-drive-new-windsor-hudson@gooshie
+DTSTAMP:20260612T004801Z
+SUMMARY:Drive: New Windsor → Hudson
+DTSTART;TZID=America/New_York:20260622T170000
+DTEND;TZID=America/New_York:20260622T181500
+LOCATION:Drive: New Windsor → Hudson
+DESCRIPTION:Drive north via Catskills.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:nytrip-mon22-kaaterskill-hike-kaaterskill-falls@gooshie
+DTSTAMP:20260612T004801Z
+SUMMARY:[Plan] Kaaterskill Falls
+DTSTART;TZID=America/New_York:20260622T181500
+DTEND;TZID=America/New_York:20260622T190000
+LOCATION:Kaaterskill Falls\, Catskills
+DESCRIPTION:Optional waterfall. Skip if late.
+STATUS:TENTATIVE
+END:VEVENT
+BEGIN:VEVENT
+UID:nytrip-mon22-debs-food-lil-debs-oasis@gooshie
+DTSTAMP:20260612T004801Z
+SUMMARY:Lil' Deb's Oasis
+DTSTART;TZID=America/New_York:20260622T190000
+DTEND;TZID=America/New_York:20260622T203000
+LOCATION:747 Columbia St\, Hudson\, NY
+DESCRIPTION:DINNER — LOCKED. Open Mon 5–9pm.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:nytrip-mon22-drivebrk-travel-drive-hudson-north-adams@gooshie
+DTSTAMP:20260612T004801Z
+SUMMARY:Drive: Hudson → North Adams
+DTSTART;TZID=America/New_York:20260622T203000
+DTEND;TZID=America/New_York:20260622T220000
+LOCATION:Drive: Hudson → North Adams
+DESCRIPTION:~1h22 to the Berkshires base.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:nytrip-tue23-greylock-hike-mount-greylock@gooshie
+DTSTAMP:20260612T004801Z
+SUMMARY:Mount Greylock
+DTSTART;TZID=America/New_York:20260623T080000
+DTEND;TZID=America/New_York:20260623T140000
+LOCATION:Mount Greylock\, Adams MA
+DESCRIPTION:8.8mi\, 2539ft. Packed lunch at summit.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:nytrip-tue23-clark-museum-clark-art-institute@gooshie
+DTSTAMP:20260612T004801Z
+SUMMARY:[Plan] Clark Art Institute
+DTSTART;TZID=America/New_York:20260623T150000
+DTEND;TZID=America/New_York:20260623T170000
+LOCATION:Clark Art Institute\, Williamstown
+DESCRIPTION:Skip if too tired.
+STATUS:TENTATIVE
+END:VEVENT
+BEGIN:VEVENT
+UID:nytrip-tue23-dinner-food-blue-mango@gooshie
+DTSTAMP:20260612T004801Z
+SUMMARY:Blue Mango
+DTSTART;TZID=America/New_York:20260623T190000
+DTEND;TZID=America/New_York:20260623T210000
+LOCATION:27 Spring St\, Williamstown\, MA
+DESCRIPTION:Reliable post-hike.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:nytrip-wed24-hike-hike-cascade-falls@gooshie
+DTSTAMP:20260612T004801Z
+SUMMARY:[Plan] Cascade Falls
+DTSTART;TZID=America/New_York:20260624T080000
+DTEND;TZID=America/New_York:20260624T120000
+LOCATION:Cascade Falls\, North Adams
+DESCRIPTION:4mi loop or Money Brook Falls.
+STATUS:TENTATIVE
+END:VEVENT
+BEGIN:VEVENT
+UID:nytrip-wed24-massmoca-museum-mass-moca@gooshie
+DTSTAMP:20260612T004801Z
+SUMMARY:MASS MoCA
+DTSTART;TZID=America/New_York:20260624T130000
+DTEND;TZID=America/New_York:20260624T160000
+LOCATION:1040 MASS MoCA Way\, North Adams\, MA
+DESCRIPTION:Sol LeWitt / Kiefer / Turrell.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:nytrip-wed24-dinner-food-no-comply-foods@gooshie
+DTSTAMP:20260612T004801Z
+SUMMARY:No Comply Foods
+DTSTART;TZID=America/New_York:20260624T170000
+DTEND;TZID=America/New_York:20260624T190000
+LOCATION:Great Barrington\, MA
+DESCRIPTION:DINNER — LOCKED. No reservations.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:nytrip-thu25-chocworld-attraction-hersheys-chocolate-world@gooshie
+DTSTAMP:20260612T004801Z
+SUMMARY:Hershey's Chocolate World
+DTSTART;TZID=America/New_York:20260625T090000
+DTEND;TZID=America/New_York:20260625T103000
+LOCATION:Hershey's Chocolate World\, Hershey PA
+DESCRIPTION:Free factory tour. Opens 9am.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:nytrip-thu25-coasters-am-attraction-hersheypark@gooshie
+DTSTAMP:20260612T004801Z
+SUMMARY:Hersheypark
+DTSTART;TZID=America/New_York:20260625T110000
+DTEND;TZID=America/New_York:20260625T121500
+LOCATION:100 Hersheypark Dr\, Hershey\, PA
+DESCRIPTION:AM: Wildcat's Revenge\, Skyrush.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:nytrip-thu25-lunch-food-hersheypark-lunch@gooshie
+DTSTAMP:20260612T004801Z
+SUMMARY:Hersheypark food
+DTSTART;TZID=America/New_York:20260625T121500
+DTEND;TZID=America/New_York:20260625T130000
+LOCATION:Hersheypark food\, Hershey PA
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:nytrip-thu25-coasters-pm-attraction-hersheypark@gooshie
+DTSTAMP:20260612T004801Z
+SUMMARY:Hersheypark
+DTSTART;TZID=America/New_York:20260625T130000
+DTEND;TZID=America/New_York:20260625T154500
+LOCATION:100 Hersheypark Dr\, Hershey\, PA
+DESCRIPTION:PM thrills: Candymonium / Storm Runner.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:nytrip-thu25-waterpark-attraction-hersheypark@gooshie
+DTSTAMP:20260612T004801Z
+SUMMARY:Hersheypark
+DTSTART;TZID=America/New_York:20260625T160000
+DTEND;TZID=America/New_York:20260625T190000
+LOCATION:100 Hersheypark Dr\, Hershey\, PA
+DESCRIPTION:Boardwalk water park.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:nytrip-thu25-drive-travel-drive-hershey-nyc@gooshie
+DTSTAMP:20260612T004801Z
+SUMMARY:Drive: Hershey → NYC
+DTSTART;TZID=America/New_York:20260625T190000
+DTEND;TZID=America/New_York:20260625T223000
+LOCATION:Drive: Hershey → NYC
+DESCRIPTION:I-78 east. Plan B: Philly Gayborhood drink.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:nytrip-thu25-latedinner-food-jr-and-son@gooshie
+DTSTAMP:20260612T004801Z
+SUMMARY:[Plan] JR & Son
+DTSTART;TZID=America/New_York:20260625T223000
+DTEND;TZID=America/New_York:20260625T233000
+LOCATION:JR & Son\, Williamsburg
+DESCRIPTION:Open till 11pm if back in time.
+STATUS:TENTATIVE
+END:VEVENT
+BEGIN:VEVENT
+UID:nytrip-fri26-cloisters-museum-met-cloisters@gooshie
+DTSTAMP:20260612T004801Z
+SUMMARY:Met Cloisters
+DTSTART;TZID=America/New_York:20260626T100000
+DTEND;TZID=America/New_York:20260626T130000
+LOCATION:99 Margaret Corbin Dr\, New York\, NY
+DESCRIPTION:Gardens + Unicorn Tapestries\, Fort Tryon walk.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:nytrip-fri26-lunch-food-cocina-consuelo@gooshie
+DTSTAMP:20260612T004801Z
+SUMMARY:Cocina Consuelo
+DTSTART;TZID=America/New_York:20260626T130000
+DTEND;TZID=America/New_York:20260626T140000
+LOCATION:Cocina Consuelo\, Hamilton Heights
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:nytrip-fri26-highline-sight-the-high-line@gooshie
+DTSTAMP:20260612T004801Z
+SUMMARY:The High Line
+DTSTART;TZID=America/New_York:20260626T143000
+DTEND;TZID=America/New_York:20260626T173000
+LOCATION:New York\, NY
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:nytrip-fri26-vintage-vintage-procell@gooshie
+DTSTAMP:20260612T004801Z
+SUMMARY:Procell
+DTSTART;TZID=America/New_York:20260626T180000
+DTEND;TZID=America/New_York:20260626T190000
+LOCATION:Procell\, LES
+DESCRIPTION:Pick of the day — pair with another if time.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:nytrip-fri26-dragmarch-event-nyc-drag-march@gooshie
+DTSTAMP:20260612T004801Z
+SUMMARY:NYC Drag March
+DTSTART;TZID=America/New_York:20260626T193000
+DTEND;TZID=America/New_York:20260626T210000
+LOCATION:NYC Drag March\, East Village
+DESCRIPTION:Tompkins → Stonewall. Early dinner first.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:nytrip-fri26-joespub-show-joes-pub@gooshie
+DTSTAMP:20260612T004801Z
+SUMMARY:[Plan] Joe's Pub
+DTSTART;TZID=America/New_York:20260626T210000
+DTEND;TZID=America/New_York:20260626T220000
+LOCATION:Joe's Pub\, NoHo
+DESCRIPTION:2Scoops drag show.
+STATUS:TENTATIVE
+END:VEVENT
+BEGIN:VEVENT
+UID:nytrip-fri26-parties-party-pure-honey@gooshie
+DTSTAMP:20260612T004801Z
+SUMMARY:Pure Honey
+DTSTART;TZID=America/New_York:20260626T220000
+DTEND;TZID=America/New_York:20260626T233000
+LOCATION:House of Yes\, 2 Wyckoff Ave\, Brooklyn\, NY
+DESCRIPTION:Pure Honey Pride @ HOY\, 10pm–1am.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:nytrip-sat27-brunch-food-wenwen@gooshie
+DTSTAMP:20260612T004801Z
+SUMMARY:Wenwen
+DTSTART;TZID=America/New_York:20260627T110000
+DTEND;TZID=America/New_York:20260627T123000
+LOCATION:1065 Manhattan Ave\, Brooklyn\, NY
+DESCRIPTION:Taiwanese (BDSM Chicken).
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:nytrip-sat27-riis-sight-jacob-riis-park@gooshie
+DTSTAMP:20260612T004801Z
+SUMMARY:Jacob Riis Park
+DTSTART;TZID=America/New_York:20260627T130000
+DTEND;TZID=America/New_York:20260627T170000
+LOCATION:Jacob Riis Park\, Queens\, NY
+DESCRIPTION:Queer beach Bay 1.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:nytrip-sat27-ladyland-event-ladyland@gooshie
+DTSTAMP:20260612T004801Z
+SUMMARY:Ladyland
+DTSTART;TZID=America/New_York:20260627T190000
+DTEND;TZID=America/New_York:20260627T235900
+LOCATION:Under the K Bridge Park\, Brooklyn\, NY
+DESCRIPTION:Kim Petras / Romy / CupcakKe.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:nytrip-sun28-pride-event-nyc-pride-march@gooshie
+DTSTAMP:20260612T004801Z
+SUMMARY:NYC Pride March & PrideFest
+DTSTART;TZID=America/New_York:20260628T113000
+DTEND;TZID=America/New_York:20260628T170000
+LOCATION:NYC Pride March & PrideFest\, Greenwich Village
+DESCRIPTION:March noon. Brunch S&P\; Buvette after. Flight 7pm+.
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:nytrip-stay-20260619-BKLYNHouseHotel@gooshie
+DTSTAMP:20260612T004801Z
+SUMMARY:🛏 BKLYN House Hotel
+DTSTART;VALUE=DATE:20260619
+DTEND;VALUE=DATE:20260623
+LOCATION:9 Beaver St\, Brooklyn\, NY 11206
+TRANSP:TRANSPARENT
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:nytrip-stay-20260622-WilliamstownAirbnb@gooshie
+DTSTAMP:20260612T004801Z
+SUMMARY:🛏 Williamstown Airbnb
+DTSTART;VALUE=DATE:20260622
+DTEND;VALUE=DATE:20260625
+LOCATION:287 Luce Rd\, Williamstown\, MA 01267
+TRANSP:TRANSPARENT
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:nytrip-stay-20260624-CottageInnGrantville@gooshie
+DTSTAMP:20260612T004801Z
+SUMMARY:🛏 Cottage Inn\, Grantville
+DTSTART;VALUE=DATE:20260624
+DTEND;VALUE=DATE:20260626
+LOCATION:10200 Allentown Blvd\, Grantville\, PA 17028
+TRANSP:TRANSPARENT
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:nytrip-stay-20260625-Hotel1200@gooshie
+DTSTAMP:20260612T004801Z
+SUMMARY:🛏 Hotel 1200
+DTSTART;VALUE=DATE:20260625
+DTEND;VALUE=DATE:20260629
+LOCATION:1200 Broadway\, Brooklyn\, NY 11221
+TRANSP:TRANSPARENT
+STATUS:CONFIRMED
+END:VEVENT
+END:VCALENDAR
