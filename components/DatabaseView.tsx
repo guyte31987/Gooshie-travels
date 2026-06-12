@@ -27,6 +27,7 @@ import {
   getAreas,
   type DBEntity,
 } from "@/lib/db";
+import { subscribePlanInstances } from "@/lib/itinerary";
 import { exportEntities } from "@/lib/export";
 import { TRIPS } from "@/lib/trips";
 
@@ -51,6 +52,7 @@ export function DatabaseView() {
   const [bulkBusy, setBulkBusy] = useState(false);
 
   const searchParams = useSearchParams();
+  const [usedEntityIds, setUsedEntityIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const unsub = subscribeEntities((e) => {
@@ -59,6 +61,19 @@ export function DatabaseView() {
     });
     getAreas().then(setAreas).catch(() => {});
     return unsub;
+  }, []);
+
+  // Track which entity IDs are referenced by any trip's itinerary, so duplicate
+  // DB entries can be told apart (the referenced one is the live/correct one).
+  useEffect(() => {
+    const byTrip = new Map<string, Set<string>>();
+    const unsubs = TRIPS.map((t) =>
+      subscribePlanInstances(t.id, (insts) => {
+        byTrip.set(t.id, new Set(insts.map((i) => i.entityId)));
+        setUsedEntityIds(new Set([...byTrip.values()].flatMap((s) => [...s])));
+      })
+    );
+    return () => unsubs.forEach((u) => u());
   }, []);
 
   // Auto-open an entity card when ?open=<id> is in the URL (e.g. from itinerary).
@@ -74,6 +89,18 @@ export function DatabaseView() {
     [entities]
   );
 
+  // Entities whose normalized name collides with another entity → likely a
+  // duplicate from the two seeding passes (slugId vs preview id).
+  const dupKeys = useMemo(() => {
+    const norm = (n: string) => n.toLowerCase().replace(/[^a-z0-9]+/g, "");
+    const counts = new Map<string, number>();
+    for (const e of entities) counts.set(norm(e.name), (counts.get(norm(e.name)) ?? 0) + 1);
+    return new Set([...counts].filter(([, c]) => c > 1).map(([k]) => k));
+  }, [entities]);
+  const isDup = (name: string) => dupKeys.has(name.toLowerCase().replace(/[^a-z0-9]+/g, ""));
+  const dupCount = useMemo(() => entities.filter((e) => isDup(e.name)).length, [entities, dupKeys]);
+  const [dupOnly, setDupOnly] = useState(false);
+
   const [calSourceOnly, setCalSourceOnly] = useState(false);
   const calSourceCount = entities.filter((e) => e.calendarSource).length;
 
@@ -82,6 +109,7 @@ export function DatabaseView() {
     .filter((e) => !region || e.generalArea === region)
     .filter((e) => !type || e.type === type)
     .filter((e) => !calSourceOnly || e.calendarSource)
+    .filter((e) => !dupOnly || isDup(e.name))
     .filter(
       (e) => !q || `${e.name} ${e.area ?? ""} ${e.notes ?? ""}`.toLowerCase().includes(q.toLowerCase())
     )
@@ -320,6 +348,14 @@ export function DatabaseView() {
                 📅 From calendar <span className={calSourceOnly ? "opacity-70" : "text-amber-400"}>{calSourceCount}</span>
               </button>
             )}
+            {dupCount > 0 && (
+              <button
+                onClick={() => setDupOnly((v) => !v)}
+                className={`rounded-full px-2.5 py-1 font-medium ${dupOnly ? "bg-rose-500 text-white" : "bg-rose-50 text-rose-700 hover:bg-rose-100"}`}
+              >
+                ⚠ Duplicates <span className={dupOnly ? "opacity-70" : "text-rose-400"}>{dupCount}</span>
+              </button>
+            )}
           </div>
 
           <div className="mb-3 flex items-center gap-2 text-xs text-slate-400">
@@ -391,7 +427,21 @@ export function DatabaseView() {
                         from calendar
                       </span>
                     )}
+                    {usedEntityIds.has(e.id) && (
+                      <span className="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700">
+                        ✓ in itinerary
+                      </span>
+                    )}
+                    {isDup(e.name) && (
+                      <span
+                        title={usedEntityIds.has(e.id) ? "Another entity shares this name — but this is the one wired to the itinerary, so keep it." : "Another entity shares this name. If the other one is 'in itinerary', this one is the safe-to-delete duplicate."}
+                        className="rounded-full bg-rose-100 px-1.5 py-0.5 text-[10px] font-medium text-rose-700"
+                      >
+                        ⚠ duplicate
+                      </span>
+                    )}
                   </div>
+                  <div className="mt-0.5 font-mono text-[10px] text-slate-300">{e.id}</div>
                   <div className="mt-0.5 flex flex-wrap gap-x-3 text-xs text-slate-400">
                     {e.generalArea && (
                       <span className="rounded-full bg-slate-100 px-2 py-0.5 font-medium text-slate-600">
