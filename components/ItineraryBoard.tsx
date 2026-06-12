@@ -5,7 +5,7 @@
 // this trip's slots/instances, and persists every edit. Editing is gated to
 // admins/editors; everyone else gets a read-only calendar.
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ItineraryCalendar, type CalEntity, type CalSlot, type CalInstance, type CalHandlers } from "./ItineraryGrid";
 import { useAuth } from "./AuthProvider";
 import { getTrip, tripDays } from "@/lib/trips";
@@ -29,6 +29,12 @@ export function ItineraryBoard({ tripId }: { tripId: string }) {
   const [stays, setStays] = useState<IcsStay[] | null>(null); // null = not yet loaded from Firestore
   const [loaded, setLoaded] = useState(false);
   const [seeding, setSeeding] = useState(false);
+  const [history, setHistory] = useState<{ slots: Slot[]; instances: PlanInstance[] }[]>([]);
+  // Use refs so handlers (captured in closures) always see current values.
+  const slotsRef = useRef(slots);
+  const instancesRef = useRef(instances);
+  useEffect(() => { slotsRef.current = slots; }, [slots]);
+  useEffect(() => { instancesRef.current = instances; }, [instances]);
 
   useEffect(() => {
     const unsubE = subscribeEntities(setDbEntities);
@@ -96,13 +102,35 @@ export function ItineraryBoard({ tripId }: { tripId: string }) {
     );
   }
 
+  const record = () => {
+    setHistory((h) => [...h.slice(-30), { slots: [...slotsRef.current], instances: [...instancesRef.current] }]);
+  };
+
+  const undo = async () => {
+    setHistory((h) => {
+      if (!h.length) return h;
+      const prev = h[h.length - 1];
+      // Re-save all previous slots + instances (Firestore merge is idempotent)
+      prev.slots.forEach((s) => saveSlot(s));
+      prev.instances.forEach((i) => savePlanInstance(i));
+      // Delete anything that was added after the snapshot
+      const prevSlotIds = new Set(prev.slots.map((s) => s.id));
+      const prevInstIds = new Set(prev.instances.map((i) => i.id));
+      slotsRef.current.forEach((s) => { if (!prevSlotIds.has(s.id)) deleteSlot(tripId, s.id, []); });
+      instancesRef.current.forEach((i) => { if (!prevInstIds.has(i.id)) deletePlanInstance(tripId, i.id); });
+      return h.slice(0, -1);
+    });
+  };
+
   const handlers: CalHandlers = {
+    onGestureStart: record,
     onMoveSlot: (id, next) => { const s = slotById.get(id); if (s) saveSlot({ ...s, ...next }); },
     onAddSlot: (slot, inst) => {
+      record();
       saveSlot({ id: slot.id, tripId, day: slot.day, start: slot.start, end: slot.end, label: slot.label });
       savePlanInstance({ id: instanceId(inst.slotId, inst.entityId), tripId, slotId: inst.slotId, entityId: inst.entityId, capacity: inst.capacity, note: inst.note ?? "" });
     },
-    onDeleteSlot: (id, instIds) => { deleteSlot(tripId, id, instIds); },
+    onDeleteSlot: (id, instIds) => { record(); deleteSlot(tripId, id, instIds); },
     onMakeMain: (slotId, entityId) => {
       for (const i of instances.filter((x) => x.slotId === slotId)) {
         const cap = i.entityId === entityId ? "confirmed" : i.capacity !== "planB" ? "planB" : i.capacity;
@@ -153,7 +181,7 @@ export function ItineraryBoard({ tripId }: { tripId: string }) {
       )}
       <ItineraryCalendar calName={`${trip.name} — Gooshie`} days={days} entityById={entityById}
         slots={calSlots} instances={calInstances} stays={stays ?? []}
-        canEdit={canEdit} handlers={handlers} />
+        canEdit={canEdit} handlers={handlers} onUndo={undo} canUndo={history.length > 0} />
     </div>
   );
 }

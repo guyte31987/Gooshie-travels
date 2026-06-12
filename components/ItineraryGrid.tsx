@@ -281,14 +281,26 @@ export function ItineraryCalendar({
 // --- legend / now line -------------------------------------------------------
 
 function Legend() {
+  const [open, setOpen] = useState(false);
   const used = new Set(PREVIEW_ENTITIES.map((e) => e.type));
   const types = ENTITY_TABS.filter((t) => used.has(t.type) || ["food", "museum", "club", "event", "show", "hike", "spa", "accommodation", "travel"].includes(t.type));
   return (
-    <div className="mb-3 flex flex-wrap gap-x-3 gap-y-1.5 rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2">
-      {types.map((t) => {
-        const c = TYPE_COLORS[t.type] ?? TYPE_COLORS.uncategorised;
-        return <span key={t.type} className="inline-flex items-center gap-1 text-[11px] text-slate-600"><span className={`h-2.5 w-2.5 rounded-sm ${c.chip}`} /> {t.emoji} {t.label}</span>;
-      })}
+    <div className="mb-3 rounded-xl border border-slate-100 bg-slate-50/60">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center justify-between px-3 py-2 text-[11px] font-medium text-slate-500"
+      >
+        <span>Colour legend</span>
+        <span className="text-slate-400">{open ? "▲" : "▼"}</span>
+      </button>
+      {open && (
+        <div className="flex flex-wrap gap-x-3 gap-y-1.5 px-3 pb-2">
+          {types.map((t) => {
+            const c = TYPE_COLORS[t.type] ?? TYPE_COLORS.uncategorised;
+            return <span key={t.type} className="inline-flex items-center gap-1 text-[11px] text-slate-600"><span className={`h-2.5 w-2.5 rounded-sm ${c.chip}`} /> {t.emoji} {t.label}</span>;
+          })}
+        </div>
+      )}
     </div>
   );
 }
