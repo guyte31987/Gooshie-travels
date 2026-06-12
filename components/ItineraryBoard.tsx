@@ -167,9 +167,11 @@ export function ItineraryBoard({ tripId }: { tripId: string }) {
         saveEntity({ id: venueId, name: venueName, type: "club", generalArea: suggestGeneralArea(undefined, undefined, venueName) });
         resolvedParentId = venueId;
       }
+      // A club entry with a parent is a party/night, not a standalone venue.
+      const resolvedType = patch.type === "club" && resolvedParentId ? "party" : patch.type;
       saveEntity({
         ...(existing ?? {}),
-        id: entityId, name: patch.name, type: patch.type,
+        id: entityId, name: patch.name, type: resolvedType,
         area: patch.area, address: patch.address, website: patch.website,
         instagram: patch.instagram, hours: patch.hours,
         notes: patch.notes ?? existing?.notes,
