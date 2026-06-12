@@ -11,6 +11,7 @@ import { useAuth } from "./AuthProvider";
 import { getTrip, tripDays } from "@/lib/trips";
 import { subscribeEntities, saveEntity, seedEntitiesIfNew, subscribeTripDoc, saveTripStays, type DBEntity, type TripStay } from "@/lib/db";
 import { suggestGeneralArea } from "@/lib/areas";
+import { slugId } from "@/lib/slug";
 import {
   subscribeSlots, subscribePlanInstances, saveSlot, savePlanInstance, deleteSlot, deletePlanInstance,
   seedItinerary, isItinerarySeeded, instanceId, type Slot, type PlanInstance,
@@ -158,13 +159,21 @@ export function ItineraryBoard({ tripId }: { tripId: string }) {
     },
     onSaveEntity: (entityId, patch) => {
       const existing = dbEntities.find((e) => e.id === entityId);
+      // If a brand-new venue was typed inline, create the venue entity first then link it.
+      let resolvedParentId = patch.parentId ?? existing?.parentId;
+      if (resolvedParentId?.startsWith("new-venue:")) {
+        const venueName = resolvedParentId.slice("new-venue:".length);
+        const venueId = slugId("club", venueName);
+        saveEntity({ id: venueId, name: venueName, type: "club", generalArea: suggestGeneralArea(undefined, undefined, venueName) });
+        resolvedParentId = venueId;
+      }
       saveEntity({
         ...(existing ?? {}),
         id: entityId, name: patch.name, type: patch.type,
         area: patch.area, address: patch.address, website: patch.website,
         instagram: patch.instagram, hours: patch.hours,
         notes: patch.notes ?? existing?.notes,
-        parentId: patch.parentId ?? existing?.parentId,
+        parentId: resolvedParentId,
         generalArea: existing?.generalArea ?? suggestGeneralArea(patch.area, patch.address, patch.name),
       });
     },

@@ -800,14 +800,20 @@ function PlaceEditor({ entityId, ent, fallbackName, clubs, onSave, onCancel }: {
   const [website, setWebsite] = useState(ent?.website ?? "");
   const [instagram, setInstagram] = useState(ent?.instagram ?? "");
   const [hours, setHours] = useState(ent?.hours ?? "");
-  const [parentId, setParentId] = useState<string>(ent?.id ? "" : "");
+  const [parentId, setParentId] = useState<string>("");
+  const [newVenueName, setNewVenueName] = useState("");
   const inp = "w-full rounded-lg border border-slate-300 px-2 py-1 text-sm outline-none focus:border-slate-400";
+
+  const resolvedParentId = parentId === "__new__"
+    ? (newVenueName.trim() ? `new-venue:${newVenueName.trim()}` : "")
+    : parentId;
 
   const save = () => {
     if (!name.trim()) return;
+    if (parentId === "__new__" && !newVenueName.trim()) return;
     onSave({ name: name.trim(), type, area: area.trim() || undefined, address: address.trim() || undefined,
       website: website.trim() || undefined, instagram: instagram.trim() || undefined, hours: hours.trim() || undefined,
-      parentId: (type === "club" && parentId) ? parentId : undefined });
+      parentId: (type === "club" && resolvedParentId) ? resolvedParentId : undefined });
   };
 
   return (
@@ -818,11 +824,17 @@ function PlaceEditor({ entityId, ent, fallbackName, clubs, onSave, onCancel }: {
           {PLACE_TYPE_OPTIONS.map((t) => <option key={t.type} value={t.type}>{t.emoji} {t.label}</option>)}
         </select>
       </div>
-      {type === "club" && clubs && clubs.length > 0 && (
-        <select value={parentId} onChange={(e) => setParentId(e.target.value)} className={inp}>
-          <option value="">No parent venue (this IS the venue)</option>
-          {clubs.map((c) => <option key={c.id} value={c.id}>{c.name}{c.area ? ` — ${c.area}` : ""}</option>)}
-        </select>
+      {type === "club" && (
+        <>
+          <select value={parentId} onChange={(e) => { setParentId(e.target.value); setNewVenueName(""); }} className={inp}>
+            <option value="">This IS the venue (no parent)</option>
+            {(clubs ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}{c.area ? ` — ${c.area}` : ""}</option>)}
+            <option value="__new__">＋ New venue…</option>
+          </select>
+          {parentId === "__new__" && (
+            <input value={newVenueName} onChange={(e) => setNewVenueName(e.target.value)} placeholder="Venue name (e.g. Avant Gardner)" className={inp} autoFocus />
+          )}
+        </>
       )}
       <input value={area} onChange={(e) => setArea(e.target.value)} placeholder="Area / neighbourhood" className={inp} />
       <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Address" className={inp} />
