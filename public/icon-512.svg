@@ -54,7 +54,7 @@
 
   <!-- TRAVELS text arched at top -->
   <path id="arcTop" d="M 82,256 A 170,170 0 0,1 422,256" fill="none"/>
-  <text font-family="'Palatino Linotype','Book Antiqua',Palatino,serif" font-size="32" font-weight="700" letter-spacing="8" fill="url(#goldText)" filter="url(#goldglow)">
+  <text font-family="'Palatino Linotype','Book Antiqua',Palatino,serif" font-size="44" font-weight="700" letter-spacing="8" fill="url(#goldText)" filter="url(#goldglow)">
     <textPath href="#arcTop" startOffset="50%" text-anchor="middle">TRAVELS</textPath>
   </text>
 
