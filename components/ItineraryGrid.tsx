@@ -54,6 +54,7 @@ export type CalHandlers = {
   onAddAlt: (slotId: string, entityId: string) => void;
   onUpdateInstance: (slotId: string, entityId: string, patch: Partial<CalInstance>) => void;
   onRenameSlot: (slotId: string, label: string) => void;
+  onReplaceMain?: (slotId: string, newEntityId: string) => void;
   onSaveEntity?: (entityId: string, patch: EntityPatch) => void;
   onSaveStay?: (stay: IcsStay) => void;
   onDeleteStay?: (from: string) => void;
@@ -631,6 +632,15 @@ function DetailSheet({ slot, instances, entityById, canEdit, handlers, isNew, on
           </div>
         </div>
 
+        {isNew && adhoc && canEdit && handlers.onReplaceMain && handlers.onSaveEntity && (
+          <PrimaryPicker
+            entityById={entityById}
+            excludeIds={new Set([main.entityId])}
+            onPickFromDb={(entityId) => handlers.onReplaceMain!(slot.id, entityId)}
+            onCreate={(patch) => { handlers.onSaveEntity!(main.entityId, patch); }}
+          />
+        )}
+
         {!adhoc && (
           <div className="space-y-1 text-sm">
             <a href={mapsSearch(mapQuery)} target="_blank" rel="noreferrer" className="flex items-start gap-2 text-slate-600 hover:text-ink"><span>📍</span><span className="underline decoration-slate-300">{ent?.address || `Find "${ent?.name}" on Google Maps`}</span></a>
@@ -751,6 +761,58 @@ function OptionRow({ ent, fallbackName, isMain, canEdit, onMakeMain }: { ent?: C
         : canEdit ? <button onClick={onMakeMain} className="rounded-full border border-slate-300 px-2 py-0.5 text-[10px] font-medium text-slate-600 hover:bg-slate-50">make main ⇄</button>
         : <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-400">Plan B</span>}
     </li>
+  );
+}
+
+function PrimaryPicker({ entityById, excludeIds, onPickFromDb, onCreate }: {
+  entityById: Map<string, CalEntity>;
+  excludeIds: Set<string>;
+  onPickFromDb: (entityId: string) => void;
+  onCreate: (patch: EntityPatch) => void;
+}) {
+  const [mode, setMode] = useState<"db" | "new">("db");
+  const [q, setQ] = useState("");
+  const matches = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    if (!needle) return [];
+    return [...entityById.values()]
+      .filter((e) => !excludeIds.has(e.id) && e.type !== "uncategorised")
+      .filter((e) => `${e.name} ${e.area ?? ""}`.toLowerCase().includes(needle))
+      .slice(0, 8);
+  }, [q, entityById, excludeIds]);
+
+  return (
+    <div className="mb-3 rounded-xl border border-indigo-200 bg-indigo-50 p-3">
+      <div className="mb-2.5 inline-flex rounded-md border border-indigo-200 bg-white p-0.5 text-[11px] font-medium">
+        <button onClick={() => setMode("db")} className={`rounded px-2.5 py-0.5 ${mode === "db" ? "bg-indigo-600 text-white" : "text-slate-500"}`}>From database</button>
+        <button onClick={() => setMode("new")} className={`rounded px-2.5 py-0.5 ${mode === "new" ? "bg-indigo-600 text-white" : "text-slate-500"}`}>New place</button>
+      </div>
+      {mode === "db" ? (
+        <div>
+          <input value={q} onChange={(e) => setQ(e.target.value)} autoFocus placeholder="Search by name or area…"
+            className="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-sm outline-none focus:border-indigo-400" />
+          {matches.length > 0 && (
+            <ul className="mt-1.5 space-y-1">
+              {matches.map((e) => (
+                <li key={e.id}>
+                  <button onClick={() => onPickFromDb(e.id)}
+                    className="flex w-full items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-left hover:bg-slate-50">
+                    <span>{emojiOf(e.type)}</span>
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium">{e.name}</span>
+                    {e.area && <span className="shrink-0 text-[11px] text-slate-400">{e.parent ? `@${e.parent}` : e.area}</span>}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          {q.trim() && matches.length === 0 && <p className="mt-1.5 text-[11px] text-slate-500">No match — try "New place" to add it.</p>}
+        </div>
+      ) : (
+        <PlaceEditor entityId="" fallbackName=""
+          onSave={(patch) => onCreate(patch)}
+          onCancel={() => setMode("db")} />
+      )}
+    </div>
   );
 }
 
@@ -1028,6 +1090,7 @@ export function ItineraryGrid() {
     onAddAlt: (slotId, entityId) => { record(); setInstances((p) => p.some((i) => i.slotId === slotId && i.entityId === entityId) ? p : [...p, { slotId, entityId, capacity: "planB", note: "" }]); },
     onUpdateInstance: (slotId, entityId, patch) => { record(); setInstances((p) => p.map((i) => i.slotId === slotId && i.entityId === entityId ? { ...i, ...patch } : i)); },
     onRenameSlot: (slotId, label) => { record(); setSlots((p) => p.map((s) => s.id === slotId ? { ...s, label } : s)); setEntities((p) => p.some((e) => e.id === `adhoc:${slotId}`) ? p : [...p, { id: `adhoc:${slotId}`, name: label, type: "uncategorised" }]); },
+    onReplaceMain: (slotId, newEntityId) => { record(); setInstances((p) => p.map((i) => i.slotId === slotId && i.capacity !== "planB" ? { ...i, entityId: newEntityId } : i)); setEntities((p) => p.filter((e) => e.id !== `adhoc:${slotId}`)); },
     onSaveEntity: (entityId, patch) => { record(); setEntities((p) => p.some((e) => e.id === entityId) ? p.map((e) => e.id === entityId ? { ...e, ...patch } : e) : [...p, { id: entityId, ...patch }]); },
     onSaveStay: (stay) => setPvStays((p) => [...p.filter((s) => s.from !== stay.from), stay].sort((a, b) => a.from.localeCompare(b.from))),
     onDeleteStay: (from) => setPvStays((p) => p.filter((s) => s.from !== from)),

@@ -143,6 +143,15 @@ export function ItineraryBoard({ tripId }: { tripId: string }) {
       if (cur) savePlanInstance({ ...cur, ...patch });
     },
     onRenameSlot: (slotId, label) => { const s = slotById.get(slotId); if (s) saveSlot({ ...s, label }); },
+    onReplaceMain: (slotId, newEntityId) => {
+      const oldEntityId = `adhoc:${slotId}`;
+      const oldInstId = instanceId(slotId, oldEntityId);
+      const cur = instances.find((i) => i.id === oldInstId);
+      if (cur) {
+        deletePlanInstance(tripId, oldInstId);
+        savePlanInstance({ ...cur, id: instanceId(slotId, newEntityId), entityId: newEntityId });
+      }
+    },
     onSaveStay: (stay: IcsStay) => {
       const next = [...(stays ?? []).filter((s) => s.from !== stay.from), stay]
         .sort((a, b) => a.from.localeCompare(b.from));
