@@ -2,7 +2,7 @@
 
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
 import { getAuth, type Auth } from "firebase/auth";
-import { initializeFirestore, getFirestore, type Firestore } from "firebase/firestore";
+import { initializeFirestore, getFirestore, persistentLocalCache, persistentMultipleTabManager, type Firestore } from "firebase/firestore";
 import { getStorage, type FirebaseStorage } from "firebase/storage";
 
 const firebaseConfig = {
@@ -31,7 +31,10 @@ if (firebaseConfigured) {
   authInstance = getAuth(app);
   // ignoreUndefinedProperties so writes with optional/empty fields don't throw.
   try {
-    dbInstance = initializeFirestore(app, { ignoreUndefinedProperties: true });
+    dbInstance = initializeFirestore(app, {
+      ignoreUndefinedProperties: true,
+      localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+    });
   } catch {
     // Already initialized (e.g. hot reload) — fall back to the existing instance.
     dbInstance = getFirestore(app);
