@@ -1,65 +1,97 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#EFF6FF"/>
-      <stop offset="100%" stop-color="#BFDBFE"/>
+    <!-- Navy background gradient -->
+    <radialGradient id="navyBg" cx="42%" cy="38%" r="60%">
+      <stop offset="0%" stop-color="#1e3a6e"/>
+      <stop offset="100%" stop-color="#0d1f3c"/>
+    </radialGradient>
+
+    <!-- Metallic silver ring -->
+    <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#d0d0d0"/>
+      <stop offset="30%" stop-color="#f5f5f5"/>
+      <stop offset="60%" stop-color="#a0a0a0"/>
+      <stop offset="100%" stop-color="#c8c8c8"/>
     </linearGradient>
-    <filter id="gshadow">
-      <feDropShadow dx="0" dy="5" stdDeviation="8" flood-color="#1E3A8A" flood-opacity="0.22"/>
+
+    <!-- Gold gradient for G and text -->
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f5e070"/>
+      <stop offset="30%" stop-color="#c8960c"/>
+      <stop offset="60%" stop-color="#e8c84a"/>
+      <stop offset="100%" stop-color="#a07010"/>
+    </linearGradient>
+
+    <!-- Gold shimmer for TRAVELS text -->
+    <linearGradient id="goldText" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f8eea0"/>
+      <stop offset="50%" stop-color="#c8960c"/>
+      <stop offset="100%" stop-color="#e0b830"/>
+    </linearGradient>
+
+    <filter id="shadow" x="-15%" y="-15%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="8" stdDeviation="14" flood-color="#000" flood-opacity="0.35"/>
+    </filter>
+    <filter id="goldglow">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#c8960c" flood-opacity="0.5"/>
     </filter>
   </defs>
 
-  <!-- Background -->
-  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
-  <rect x="3" y="3" width="506" height="506" rx="94" fill="none" stroke="#93C5FD" stroke-width="2" opacity="0.5"/>
+  <!-- Drop shadow behind coin -->
+  <ellipse cx="262" cy="274" rx="195" ry="195" fill="black" opacity="0.18" filter="url(#shadow)"/>
 
-  <!--
-    G ring: thick stroked circular arc with a gap on the right side.
-    Center (240,256), stroke radius 126, stroke-width 60
-    → outer edge 186 from center, inner edge 96 from center.
+  <!-- Outer silver ring -->
+  <circle cx="252" cy="256" r="222" fill="url(#ring)"/>
 
-    Full circumference = 2π×126 = 791.7px
-    Gap angle = 104° → gap length = 104/360 × 791.7 = 228.5px
-    Arc length = 791.7 − 228.5 = 563.2px
+  <!-- Inner dark ring edge -->
+  <circle cx="252" cy="256" r="205" fill="#1a1a2e"/>
 
-    rotate(52°) shifts the arc start to 52° CW so the gap is centred on the right.
-  -->
-  <g filter="url(#gshadow)">
-    <circle
-      cx="240" cy="256" r="126"
-      fill="none"
-      stroke="#1B4FD8"
-      stroke-width="60"
-      stroke-dasharray="563.2 228.5"
-      stroke-linecap="butt"
-      transform="rotate(52, 240, 256)"
-    />
+  <!-- Navy face -->
+  <circle cx="252" cy="256" r="198" fill="url(#navyBg)"/>
 
-    <!-- Crossbar: spans from inner edge (240+96=336) to outer edge (240+186=426), centred at y=256, height=48 -->
-    <rect x="331" y="232" width="100" height="48" fill="#1B4FD8"/>
+  <!-- Subtle inner highlight -->
+  <circle cx="252" cy="256" r="198" fill="none" stroke="#2a4a8a" stroke-width="2"/>
+
+  <!-- TRAVELS text arched at top -->
+  <path id="arcTop" d="M 82,256 A 170,170 0 0,1 422,256" fill="none"/>
+  <text font-family="'Palatino Linotype','Book Antiqua',Palatino,serif" font-size="32" font-weight="700" letter-spacing="8" fill="url(#goldText)" filter="url(#goldglow)">
+    <textPath href="#arcTop" startOffset="50%" text-anchor="middle">TRAVELS</textPath>
+  </text>
+
+  <!-- Large gold G -->
+  <text
+    x="252"
+    y="340"
+    font-family="'Palatino Linotype','Book Antiqua',Palatino,serif"
+    font-size="248"
+    font-weight="700"
+    text-anchor="middle"
+    fill="url(#gold)"
+    filter="url(#goldglow)"
+  >G</text>
+
+  <!-- Compass rose inside G (at crossbar level ~y=270, x=310) -->
+  <g transform="translate(318,272) scale(0.9)">
+    <!-- Star compass rose -->
+    <polygon points="0,-18 4,-4 18,0 4,4 0,18 -4,4 -18,0 -4,-4" fill="#c8c8d8" opacity="0.7"/>
+    <polygon points="0,-10 2.5,-2.5 10,0 2.5,2.5 0,10 -2.5,2.5 -10,0 -2.5,-2.5" fill="#e8e8f0" opacity="0.5"/>
+    <!-- Centre dot -->
+    <circle cx="0" cy="0" r="3" fill="#d4af37" opacity="0.9"/>
   </g>
 
-  <!-- "travels" italic serif, centred at G centre, sitting at crossbar level -->
-  <text
-    x="240"
-    y="268"
-    font-family="'Georgia', 'Palatino Linotype', serif"
-    font-size="38"
-    font-weight="400"
-    font-style="italic"
-    letter-spacing="4"
-    text-anchor="middle"
-    fill="white"
-    opacity="0.95"
-  >travels</text>
-
-  <!-- Airplane emoji bottom-right -->
-  <text
-    x="418"
-    y="440"
-    font-size="68"
-    text-anchor="middle"
-    dominant-baseline="middle"
-  >✈</text>
+  <!-- Small compass bottom-right (hanging off circle edge) -->
+  <g transform="translate(408,408)">
+    <circle cx="0" cy="0" r="34" fill="#f0e8d0" stroke="#8B6914" stroke-width="2.5"/>
+    <circle cx="0" cy="0" r="28" fill="#e8dfc0"/>
+    <!-- Compass cardinal lines -->
+    <line x1="0" y1="-24" x2="0" y2="24" stroke="#555" stroke-width="1.2" opacity="0.6"/>
+    <line x1="-24" y1="0" x2="24" y2="0" stroke="#555" stroke-width="1.2" opacity="0.6"/>
+    <!-- North needle (red) -->
+    <polygon points="0,-20 4,0 0,4 -4,0" fill="#c0392b"/>
+    <!-- South needle (blue) -->
+    <polygon points="0,20 4,0 0,-4 -4,0" fill="#2471a3"/>
+    <!-- Centre -->
+    <circle cx="0" cy="0" r="3.5" fill="#8B6914"/>
+  </g>
 
 </svg>
