@@ -1,99 +1,68 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#E0F2FE;stop-opacity:1" />
-      <stop offset="60%" style="stop-color:#BFDBFE;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#FFFFFF;stop-opacity:1" />
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#EFF6FF"/>
+      <stop offset="100%" stop-color="#BFDBFE"/>
     </linearGradient>
-    <filter id="dropShadow" x="-10%" y="-10%" width="120%" height="120%">
-      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#1B4FD8" flood-opacity="0.25"/>
-    </filter>
-    <filter id="textShadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="1" stdDeviation="2" flood-color="#1B3A9A" flood-opacity="0.6"/>
-    </filter>
-    <filter id="planeShadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="1" dy="1" stdDeviation="1.5" flood-color="#1B4FD8" flood-opacity="0.3"/>
+    <filter id="gshadow">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#1E3A8A" flood-opacity="0.25"/>
     </filter>
   </defs>
 
-  <!-- Rounded square background -->
-  <rect x="0" y="0" width="512" height="512" rx="80" ry="80" fill="url(#bgGradient)"/>
+  <!-- Background -->
+  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
+  <rect x="3" y="3" width="506" height="506" rx="94" fill="none" stroke="#93C5FD" stroke-width="2" opacity="0.5"/>
 
-  <!-- Subtle inner border/glow -->
-  <rect x="4" y="4" width="504" height="504" rx="78" ry="78" fill="none" stroke="#93C5FD" stroke-width="2" opacity="0.6"/>
+  <!--
+    G shape: annular arc with crossbar
+    Center: (245, 252)
+    Outer radius: 158, Inner radius: 98
+    Gap on right side: ±52°
+    cos52=0.6157  sin52=0.7880
 
-  <!-- Large bold "G" - drawn as a path for maximum control -->
-  <!-- G centered slightly left: center around x=230, y=265 -->
-  <!-- Using a thick stroke-based arc approach with a rectangular crossbar notch -->
-  <g filter="url(#dropShadow)">
-    <!-- G outer arc: large circle arc from top-right, going counterclockwise to bottom-right -->
-    <!-- We'll build the G from a path -->
+    Outer arc points:
+      Top gap (angle -52°): 245+158*0.6157, 252-158*0.7880 = 342.3, 127.5 → 342,128
+      Bot gap (angle +52°): 342, 376
+
+    Inner arc points:
+      Top gap: 245+98*0.6157, 252-98*0.7880 = 305.3, 174.8 → 305,175
+      Bot gap: 305,329
+  -->
+  <g filter="url(#gshadow)">
+    <!-- Annular G body: outer arc CCW then inner arc CW -->
     <path d="
-      M 340,148
-      A 148,148 0 1,0 340,368
-      L 340,280
-      L 245,280
-      L 245,318
-      L 295,318
-      L 295,345
-      A 110,110 0 1,1 307,168
+      M 342,128
+      A 158,158 0 1 0 342,376
+      L 305,329
+      A 98,98  0 1 1 305,175
       Z
-    "
-    fill="none"
-    stroke="#1B4FD8"
-    stroke-width="0"
-    />
+    " fill="#1B4FD8"/>
 
-    <!-- Better G: filled path -->
-    <!-- Outer radius ~148, inner radius ~94, center at (230, 258) -->
-    <path d="
-      M 352,152
-      C 352,152 310,104 230,104
-      C 144,104 82,166 82,258
-      C 82,350 144,412 230,412
-      C 316,412 378,350 378,268
-      L 378,248
-      L 242,248
-      L 242,294
-      L 328,294
-      C 318,338 280,364 230,364
-      C 172,364 132,320 132,258
-      C 132,196 172,152 230,152
-      C 270,152 300,170 318,198
-      Z
-    "
-    fill="#1B4FD8"
-    />
+    <!-- Crossbar: from inner edge (x=305) to outer edge (x=342), vertically centred at y=252, height 46 -->
+    <rect x="300" y="229" width="47" height="46" fill="#1B4FD8"/>
   </g>
 
-  <!-- "travels" text centered horizontally, at the crossbar level ~y=271 -->
-  <!-- Crossbar sits roughly at y=248 to y=294, midpoint y=271 -->
+  <!-- "travels" — elegant thin caps, sitting right on the crossbar midline -->
   <text
-    x="256"
-    y="274"
-    font-family="'Arial', 'Helvetica Neue', sans-serif"
-    font-size="34"
-    font-weight="700"
-    letter-spacing="4"
+    x="245"
+    y="261"
+    font-family="'Georgia', 'Palatino', 'Times New Roman', serif"
+    font-size="36"
+    font-weight="400"
+    font-style="italic"
+    letter-spacing="5"
     text-anchor="middle"
     fill="white"
-    filter="url(#textShadow)"
-    style="text-transform: uppercase;"
-  >TRAVELS</text>
+    opacity="0.95"
+  >travels</text>
 
-  <!-- Small airplane in upper-right area, inside the G curve region -->
-  <!-- Positioned around x=355, y=155 -->
-  <g transform="translate(348, 148) rotate(-35) scale(0.9)" filter="url(#planeShadow)">
-    <!-- Airplane body -->
-    <ellipse cx="0" cy="0" rx="22" ry="7" fill="white"/>
-    <!-- Nose -->
-    <path d="M 22,0 L 30,-3 L 30,3 Z" fill="white"/>
-    <!-- Tail fin -->
-    <path d="M -18,-7 L -22,-18 L -10,-7 Z" fill="white"/>
-    <!-- Wings -->
-    <path d="M -2,-7 L 6,-26 L 14,-7 Z" fill="white"/>
-    <!-- Small tail wing -->
-    <path d="M -16,7 L -12,16 L -6,7 Z" fill="white"/>
-  </g>
+  <!-- Airplane emoji bottom-right corner -->
+  <text
+    x="430"
+    y="445"
+    font-size="62"
+    text-anchor="middle"
+    dominant-baseline="middle"
+  >✈</text>
 
 </svg>
