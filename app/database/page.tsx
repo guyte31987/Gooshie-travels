@@ -5,7 +5,7 @@ import { DatabaseView } from "@/components/DatabaseView";
 
 export default function DatabasePage() {
   return (
-    <RequireAccess need="editor">
+    <RequireAccess>
       <DatabaseView />
     </RequireAccess>
   );

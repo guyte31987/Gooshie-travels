@@ -32,7 +32,8 @@ import { exportEntities } from "@/lib/export";
 import { TRIPS } from "@/lib/trips";
 
 export function DatabaseView() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, role } = useAuth();
+  const canEdit = isAdmin || role === "editor";
   const [entities, setEntities] = useState<DBEntity[]>([]);
   const [areas, setAreas] = useState<string[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -348,12 +349,14 @@ export function DatabaseView() {
                 </option>
               ))}
             </select>
-            <button
-              onClick={() => setEditing("new")}
-              className="rounded-lg bg-ink px-3 py-2 text-sm font-medium text-white hover:bg-ink/90"
-            >
-              + Add
-            </button>
+            {canEdit && (
+              <button
+                onClick={() => setEditing("new")}
+                className="rounded-lg bg-ink px-3 py-2 text-sm font-medium text-white hover:bg-ink/90"
+              >
+                + Add
+              </button>
+            )}
             <button
               onClick={() => (selectMode ? exitSelect() : setSelectMode(true))}
               className={`rounded-lg border px-3 py-2 text-sm font-medium ${
@@ -364,7 +367,7 @@ export function DatabaseView() {
             >
               {selectMode ? "Done" : "Select"}
             </button>
-            {isAdmin && (
+            {canEdit && (
               <button
                 onClick={backfillCurated}
                 disabled={backfilling}
@@ -374,7 +377,7 @@ export function DatabaseView() {
                 {backfilling ? "Adding…" : "Add curated places"}
               </button>
             )}
-            {isAdmin && (
+            {canEdit && (
               <button
                 onClick={backfillItineraryEntities}
                 disabled={backfilling}
@@ -384,7 +387,7 @@ export function DatabaseView() {
                 {backfilling ? "Adding…" : "Fix itinerary IDs"}
               </button>
             )}
-            {isAdmin && dupCount > 0 && (
+            {canEdit && dupCount > 0 && (
               <button
                 onClick={mergeDuplicates}
                 disabled={merging}
@@ -534,15 +537,18 @@ export function DatabaseView() {
                 </button>
                 {!selectMode && (
                   <div className="flex shrink-0 gap-1 mt-0.5">
-                    {isAdmin && !PARKED_TYPES.has(e.type) && (
+                    {canEdit && !PARKED_TYPES.has(e.type) && (
                       <ParkSelect onPark={(t) => saveEntity({ ...e, type: t })} />
                     )}
+                    {canEdit && (
                     <button
                       onClick={() => setEditing(e)}
                       className="rounded border border-slate-300 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"
                     >
                       Edit
                     </button>
+                    )}
+                    {canEdit && (
                     <button
                       onClick={() => {
                         if (confirm(`Delete ${e.name} from the database?`)) deleteEntity(e.id);
@@ -551,6 +557,7 @@ export function DatabaseView() {
                     >
                       Del
                     </button>
+                    )}
                   </div>
                 )}
               </li>
@@ -564,7 +571,7 @@ export function DatabaseView() {
         <div className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white/95 px-4 py-3 shadow-[0_-2px_10px_rgba(0,0,0,0.06)] backdrop-blur">
           <div className="mx-auto flex max-w-2xl flex-wrap items-center gap-2">
             <span className="text-sm font-medium text-slate-700">{selectedVisible.length} selected</span>
-            {isAdmin && (
+            {canEdit && (
               <select
                 value=""
                 onChange={(e) => { if (e.target.value) bulkPark(e.target.value as EntityType); }}
