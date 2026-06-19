@@ -4,9 +4,9 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import {
   GoogleAuthProvider,
   signInWithPopup,
-  signInWithEmailLink,
-  sendSignInLinkToEmail,
-  isSignInWithEmailLink,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
   signOut as fbSignOut,
   onAuthStateChanged,
   type User,
@@ -14,8 +14,6 @@ import {
 import { auth, firebaseConfigured } from "@/lib/firebase";
 import { resolveAccess, type AccessState } from "@/lib/access";
 import type { Role } from "@/lib/members";
-
-const EMAIL_KEY = "gooshie:emailForSignIn";
 
 type AuthContextValue = {
   user: User | null;
@@ -25,10 +23,13 @@ type AuthContextValue = {
   loading: boolean;
   configured: boolean;
   signInWithGoogle: () => Promise<void>;
-  sendMagicLink: (email: string) => Promise<void>;
+  signInWithPassword: (email: string, password: string) => Promise<void>;
+  signUpWithPassword: (email: string, password: string) => Promise<void>;
+  sendPasswordReset: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
   refreshAccess: () => Promise<void>;
   error: string | null;
+  setError: (msg: string | null) => void;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -56,21 +57,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
       return;
     }
-
-    // Complete a magic-link sign-in if we arrived via the email link.
-    if (isSignInWithEmailLink(auth, window.location.href)) {
-      let email = window.localStorage.getItem(EMAIL_KEY);
-      if (!email) email = window.prompt("Confirm the email you used to request the link") || "";
-      if (email) {
-        signInWithEmailLink(auth, email, window.location.href)
-          .then(() => {
-            window.localStorage.removeItem(EMAIL_KEY);
-            window.history.replaceState({}, "", window.location.pathname);
-          })
-          .catch((e) => setError(e.message));
-      }
-    }
-
     const unsub = onAuthStateChanged(auth, async (u) => {
       setUser(u);
       await loadAccess(u);
@@ -93,17 +79,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const sendMagicLink = async (email: string) => {
+  const signInWithPassword = async (email: string, password: string) => {
     if (!auth) return;
     setError(null);
     try {
-      await sendSignInLinkToEmail(auth, email, {
-        url: window.location.origin,
-        handleCodeInApp: true,
-      });
-      window.localStorage.setItem(EMAIL_KEY, email);
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch (e: unknown) {
+      const code = (e as { code?: string }).code;
+      if (code === "auth/invalid-credential" || code === "auth/wrong-password" || code === "auth/user-not-found") {
+        setError("Wrong email or password. First time? Use 'Forgot password' to set one.");
+      } else {
+        setError(e instanceof Error ? e.message : "Sign-in failed");
+      }
+      throw e;
+    }
+  };
+
+  const signUpWithPassword = async (email: string, password: string) => {
+    if (!auth) return;
+    setError(null);
+    try {
+      await createUserWithEmailAndPassword(auth, email, password);
+    } catch (e: unknown) {
+      const code = (e as { code?: string }).code;
+      if (code === "auth/email-already-in-use") {
+        setError("An account with this email already exists. Try signing in.");
+      } else {
+        setError(e instanceof Error ? e.message : "Could not create account");
+      }
+      throw e;
+    }
+  };
+
+  const sendPasswordReset = async (email: string) => {
+    if (!auth) return;
+    setError(null);
+    try {
+      await sendPasswordResetEmail(auth, email);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not send the link");
+      setError(e instanceof Error ? e.message : "Could not send reset email");
       throw e;
     }
   };
@@ -122,10 +136,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loading,
         configured: firebaseConfigured,
         signInWithGoogle,
-        sendMagicLink,
+        signInWithPassword,
+        signUpWithPassword,
+        sendPasswordReset,
         signOut,
         refreshAccess,
         error,
+        setError,
       }}
     >
       {children}
