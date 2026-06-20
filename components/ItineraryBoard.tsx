@@ -66,7 +66,7 @@ export function ItineraryBoard({ tripId }: { tripId: string }) {
   }, [dbEntities]);
 
   const calSlots: CalSlot[] = useMemo(() => slots.map((s) => ({ id: s.id, day: s.day, start: s.start, end: s.end, label: s.label })), [slots]);
-  const calInstances: CalInstance[] = useMemo(() => instances.map((i) => ({ slotId: i.slotId, entityId: i.entityId, capacity: i.capacity, note: i.note, status: i.status, bookingStatus: i.bookingStatus, needsBooking: i.needsBooking, booked: i.booked, photos: i.photos })), [instances]);
+  const calInstances: CalInstance[] = useMemo(() => instances.map((i) => ({ slotId: i.slotId, entityId: i.entityId, capacity: i.capacity, note: i.note, status: i.status, bookingStatus: i.bookingStatus, needsBooking: i.needsBooking, booked: i.booked, photos: i.photos, ratings: (i as any).ratings })), [instances]);
   const slotById = useMemo(() => new Map(slots.map((s) => [s.id, s])), [slots]);
 
   if (!trip) return <p className="py-12 text-center text-sm text-slate-400">Trip not found.</p>;
@@ -186,7 +186,7 @@ export function ItineraryBoard({ tripId }: { tripId: string }) {
 
   return (
     <div>
-      <ItineraryCalendar calName={`${trip.name} — Gooshie`} days={days} entityById={entityById}
+      <ItineraryCalendar calName={`${trip.name} — Gooshie`} tripId={tripId} days={days} entityById={entityById}
         slots={calSlots} instances={calInstances} stays={stays ?? []}
         canEdit={canEdit} handlers={handlers} onUndo={undo} canUndo={history.length > 0} />
     </div>

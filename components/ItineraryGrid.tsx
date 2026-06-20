@@ -9,7 +9,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ENTITY_TABS, type EntityType } from "@/lib/entities";
 import { buildTripIcs, downloadIcs, type IcsStay } from "@/lib/ics-export";
-import { activityStatusOf, bookingStatusOf, type ActivityStatus, type BookingStatus, type Capacity } from "@/lib/itinerary";
+import { activityStatusOf, bookingStatusOf, setInstanceRating, type ActivityStatus, type BookingStatus, type Capacity } from "@/lib/itinerary";
+import { useAuth } from "./AuthProvider";
 import { useBackClose } from "@/lib/useBackClose";
 import { Comments } from "./Comments";
 import { PhotoGallery } from "./PhotoGallery";
@@ -37,7 +38,7 @@ export type CalEntity = {
   area?: string; parent?: string; address?: string; website?: string; instagram?: string; phone?: string; hours?: string;
 };
 export type CalSlot = { id: string; day: string; start: number; end: number; label: string };
-export type CalInstance = { slotId: string; entityId: string; capacity: Capacity; note?: string; status?: ActivityStatus; bookingStatus?: BookingStatus; needsBooking?: boolean; booked?: boolean; photos?: string[] };
+export type CalInstance = { slotId: string; entityId: string; capacity: Capacity; note?: string; status?: ActivityStatus; bookingStatus?: BookingStatus; needsBooking?: boolean; booked?: boolean; photos?: string[]; ratings?: Record<string, { score: number; name: string }> };
 
 /** Editable place fields surfaced inside the itinerary popup (writes to the DB). */
 export type EntityPatch = {
@@ -109,9 +110,10 @@ function splitInstances(slotId: string, instances: CalInstance[]) {
 // =============================================================================
 
 export function ItineraryCalendar({
-  calName, days, entityById, slots, instances, stays, canEdit, handlers, onUndo, canUndo,
+  calName, tripId, days, entityById, slots, instances, stays, canEdit, handlers, onUndo, canUndo,
 }: {
   calName: string;
+  tripId?: string;
   days: string[];
   entityById: Map<string, CalEntity>;
   slots: CalSlot[];
@@ -281,7 +283,7 @@ export function ItineraryCalendar({
       </p>
 
       {detailSlot && slotById.get(detailSlot) && (
-        <DetailSheet slot={slotById.get(detailSlot)!} instances={instances} entityById={entityById} canEdit={canEdit} handlers={handlers} isNew={justCreatedId === detailSlot} onClose={() => { setDetailSlot(null); setJustCreatedId(null); }} />
+        <DetailSheet slot={slotById.get(detailSlot)!} instances={instances} entityById={entityById} canEdit={canEdit} handlers={handlers} isNew={justCreatedId === detailSlot} tripId={tripId} onClose={() => { setDetailSlot(null); setJustCreatedId(null); }} />
       )}
 
       {stayEditDay && (
@@ -574,8 +576,8 @@ function Block({ slot, main, alts, entityById, col, colCount, wide, canEdit, onG
 
 // --- detail sheet ------------------------------------------------------------
 
-function DetailSheet({ slot, instances, entityById, canEdit, handlers, isNew, onClose }: {
-  slot: CalSlot; instances: CalInstance[]; entityById: Map<string, CalEntity>; canEdit: boolean; handlers: CalHandlers; isNew?: boolean; onClose: () => void;
+function DetailSheet({ slot, instances, entityById, canEdit, handlers, isNew, tripId, onClose }: {
+  slot: CalSlot; instances: CalInstance[]; entityById: Map<string, CalEntity>; canEdit: boolean; handlers: CalHandlers; isNew?: boolean; tripId?: string; onClose: () => void;
 }) {
   const { main, alts } = splitInstances(slot.id, instances);
   const ent = main ? entityById.get(main.entityId) : undefined;
@@ -694,6 +696,10 @@ function DetailSheet({ slot, instances, entityById, canEdit, handlers, isNew, on
                   />
                 </div>
               )}
+            </div>
+
+            <div>
+              {tripId && <CalRatingWidget tripId={tripId} instanceDocId={`${slot.id}__${main.entityId}`} entityId={main.entityId} ratings={main.ratings} />}
             </div>
 
             <div>
@@ -894,6 +900,62 @@ const BOOKING_CYCLE: { value: BookingStatus; emoji: string; label: string }[] = 
   { value: "needed", emoji: "📋", label: "Booking needed" },
   { value: "done", emoji: "✅", label: "Booked" },
 ];
+
+function CalRatingWidget({ tripId, instanceDocId, entityId, ratings }: {
+  tripId: string;
+  instanceDocId: string;
+  entityId: string;
+  ratings?: Record<string, { score: number; name: string }>;
+}) {
+  const { user } = useAuth();
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const allRatings = ratings ?? {};
+  const email = (user?.email ?? "").toLowerCase();
+  const myName = user?.displayName || user?.email || "Me";
+  const myRating = email ? allRatings[email] : undefined;
+  const others = Object.entries(allRatings).filter(([k]) => k !== email);
+
+  const save = async () => {
+    if (!email) return;
+    const val = draft.trim();
+    const score = val === "" ? null : Math.min(10, Math.max(0, Math.round(parseFloat(val) * 10) / 10));
+    if (val !== "" && isNaN(score as number)) { setEditing(false); return; }
+    setBusy(true);
+    try { await setInstanceRating(tripId, instanceDocId, entityId, email, myName, score); }
+    finally { setBusy(false); setEditing(false); }
+  };
+
+  return (
+    <div>
+      <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Rating</p>
+      <div className="flex flex-wrap items-center gap-2">
+        {editing ? (
+          <form onSubmit={(e) => { e.preventDefault(); save(); }} className="flex items-center gap-1">
+            <input autoFocus type="number" min={0} max={10} step={0.5} value={draft}
+              onChange={(e) => setDraft(e.target.value)} onBlur={save} disabled={busy} placeholder="0–10"
+              className="w-20 rounded-lg border border-slate-300 px-2 py-1 text-xs outline-none focus:border-slate-500" />
+            <button type="button" onClick={() => setEditing(false)} className="text-[11px] text-slate-400 hover:text-slate-600">cancel</button>
+          </form>
+        ) : (
+          <button onClick={() => { setDraft(myRating?.score?.toString() ?? ""); setEditing(true); }}
+            className="flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-[11px] font-medium text-slate-600 hover:bg-slate-100">
+            <span className="text-amber-500">★</span>
+            <span>{myRating ? myRating.score.toFixed(1) : "Rate"}</span>
+            {myRating && <span className="text-slate-400">(you)</span>}
+          </button>
+        )}
+        {others.map(([, r]) => (
+          <span key={r.name} className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] text-slate-500">
+            <span className="text-amber-500">★</span> {r.score.toFixed(1)} <span className="font-medium">{r.name}</span>
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function CycleBadge<T extends string>({ value, options, disabled, onChange }: {
   value: T; options: { value: T; emoji: string; label: string }[]; disabled?: boolean; onChange: (v: T) => void;
