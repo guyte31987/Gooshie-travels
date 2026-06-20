@@ -130,7 +130,11 @@ export function ItineraryCalendar({
   const [view, setView] = useState<"week" | "day">(() =>
     typeof window !== "undefined" && window.innerWidth < 768 ? "day" : "week"
   );
-  const [dayIdx, setDayIdx] = useState(0);
+  const [dayIdx, setDayIdx] = useState(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    const idx = days.indexOf(today);
+    return idx >= 0 ? idx : 0;
+  });
   const newCounter = useRef(0);
   const [justCreatedId, setJustCreatedId] = useState<string | null>(null);
   const dayRefs = useRef<(HTMLDivElement | null)[]>([]);
