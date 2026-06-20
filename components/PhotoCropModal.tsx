@@ -32,8 +32,6 @@ export function PhotoCropModal({
     setCroppedArea(croppedAreaPixels);
   }, []);
 
-  const rotate = () => setRotation((r) => (r + 90) % 360);
-
   const handleConfirm = async () => {
     if (!croppedArea) return;
     setBusy(true);
@@ -64,11 +62,17 @@ export function PhotoCropModal({
       <div className="flex flex-col gap-3 bg-black/80 p-4 text-white">
         {/* Rotate */}
         <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-400">Rotate</span>
-          <button onClick={rotate} className="rounded bg-white/10 px-3 py-1 text-xs font-medium hover:bg-white/20">
-            ↻ 90°
-          </button>
-          {rotation !== 0 && <span className="text-xs text-slate-400">{rotation}°</span>}
+          <span className="shrink-0 text-xs text-slate-400">Rotate</span>
+          <input
+            type="range"
+            min={0}
+            max={360}
+            step={1}
+            value={rotation}
+            onChange={(e) => setRotation(Number(e.target.value))}
+            className="flex-1"
+          />
+          <span className="w-9 shrink-0 text-right text-xs tabular-nums text-slate-300">{rotation}°</span>
         </div>
 
         {/* Aspect ratio */}
