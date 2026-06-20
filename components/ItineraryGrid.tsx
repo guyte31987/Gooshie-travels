@@ -131,8 +131,7 @@ export function ItineraryCalendar({
     typeof window !== "undefined" && window.innerWidth < 768 ? "day" : "week"
   );
   const [dayIdx, setDayIdx] = useState(() => {
-    const today = new Date().toISOString().slice(0, 10);
-    const idx = days.indexOf(today);
+    const idx = days.indexOf(localToday());
     return idx >= 0 ? idx : 0;
   });
   const newCounter = useRef(0);
@@ -342,9 +341,14 @@ function Legend() {
   );
 }
 
+function localToday(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 function NowLine({ day, days }: { day: string; days: string[] }) {
   const now = new Date();
-  const today = now.toISOString().slice(0, 10);
+  const today = localToday();
   const target = days.includes(today) ? today : today < days[0] ? days[0] : days[days.length - 1];
   if (day !== target) return null;
   const mins = now.getHours() * 60 + now.getMinutes();
