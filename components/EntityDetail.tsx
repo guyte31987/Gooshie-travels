@@ -9,7 +9,7 @@ import { PhotoGallery } from "./PhotoGallery";
 import { useTripData, useOptionalTripData, TripDataProvider } from "./TripData";
 import { useAuth } from "./AuthProvider";
 import { saveEntity, type DBEntity } from "@/lib/db";
-import { savePlanInstance, activityStatusOf, bookingStatusOf, type PlanInstance, type ActivityStatus, type BookingStatus } from "@/lib/itinerary";
+import { savePlanInstance, setInstanceRating, activityStatusOf, bookingStatusOf, type PlanInstance, type ActivityStatus, type BookingStatus } from "@/lib/itinerary";
 import { TRIPS } from "@/lib/trips";
 import { useBackClose } from "@/lib/useBackClose";
 
@@ -71,6 +71,11 @@ export function EntityDetail({
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-lg">{type?.emoji}</span>
               <h2 className="text-lg font-semibold">{entity.name}</h2>
+              {entity.avgRating != null && (
+                <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
+                  ★ {entity.avgRating.toFixed(1)}
+                </span>
+              )}
               {entity.closed && (
                 <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[11px] font-semibold text-rose-700">
                   CLOSED
@@ -439,6 +444,13 @@ function Appearance({
             </div>
           )}
 
+          {/* Ratings */}
+          {override && (
+            <div className="border-t border-slate-100 pt-2">
+              <RatingWidget instance={override} entityId={entity.id} tripId={tripId} />
+            </div>
+          )}
+
           {/* Entity instance comments */}
           <div className="border-t border-slate-100 pt-2">
             <Comments instanceId={instanceId} label="Comments on this visit" />
@@ -542,6 +554,85 @@ function BookingForm({
           </button>
         </>
       )}
+    </div>
+  );
+}
+
+function RatingWidget({
+  instance,
+  entityId,
+  tripId,
+}: {
+  instance: PlanInstance;
+  entityId: string;
+  tripId: string;
+}) {
+  const { user } = useAuth();
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const ratings = (instance as PlanInstance & { ratings?: Record<string, { score: number; name: string }> }).ratings ?? {};
+  const email = (user?.email ?? "").toLowerCase();
+  const myName = user?.displayName || user?.email || "Me";
+  const myRating = email ? ratings[email] : undefined;
+  const others = Object.entries(ratings).filter(([k]) => k !== email);
+
+  const openEdit = () => { setDraft(myRating?.score?.toString() ?? ""); setEditing(true); };
+
+  const save = async () => {
+    if (!email) return;
+    const val = draft.trim();
+    const score = val === "" ? null : Math.min(10, Math.max(0, Math.round(parseFloat(val) * 10) / 10));
+    if (val !== "" && isNaN(score as number)) { setEditing(false); return; }
+    setBusy(true);
+    try {
+      await setInstanceRating(tripId, instance.id, entityId, email, myName, score);
+    } finally {
+      setBusy(false);
+      setEditing(false);
+    }
+  };
+
+  return (
+    <div>
+      <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Rating</p>
+      <div className="flex flex-wrap items-center gap-2">
+        {/* Own rating */}
+        {editing ? (
+          <form onSubmit={(e) => { e.preventDefault(); save(); }} className="flex items-center gap-1">
+            <input
+              autoFocus
+              type="number"
+              min={0}
+              max={10}
+              step={0.5}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onBlur={save}
+              disabled={busy}
+              placeholder="0–10"
+              className="w-20 rounded-lg border border-slate-300 px-2 py-1 text-xs outline-none focus:border-slate-500"
+            />
+            <button type="button" onClick={() => setEditing(false)} className="text-[11px] text-slate-400 hover:text-slate-600">cancel</button>
+          </form>
+        ) : (
+          <button
+            onClick={openEdit}
+            className="flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-[11px] font-medium text-slate-600 hover:bg-slate-100"
+          >
+            <span className="text-amber-500">★</span>
+            <span>{myRating ? myRating.score.toFixed(1) : "Rate"}</span>
+            {myRating && <span className="text-slate-400">(you)</span>}
+          </button>
+        )}
+        {/* Others' ratings */}
+        {others.map(([, r]) => (
+          <span key={r.name} className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] text-slate-500">
+            <span className="text-amber-500">★</span> {r.score.toFixed(1)} <span className="font-medium">{r.name}</span>
+          </span>
+        ))}
+      </div>
     </div>
   );
 }

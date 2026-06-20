@@ -119,6 +119,8 @@ export type Entity = {
   transient?: boolean;
   parentId?: string;
   photos?: string[];
+  avgRating?: number;
+  ratingCount?: number;
   slots: TripSlot[];
 };
 

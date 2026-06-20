@@ -64,6 +64,10 @@ export type DBEntity = {
   parentId?: string;
   /** Firebase Storage download URLs for entity photos. */
   photos?: string[];
+  /** Denormalised average of all per-user instance ratings (0–10). */
+  avgRating?: number;
+  /** Total number of individual user-instance ratings contributing to avgRating. */
+  ratingCount?: number;
 };
 
 export type StoredAppearance = {

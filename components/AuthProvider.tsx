@@ -8,6 +8,7 @@ import {
   createUserWithEmailAndPassword,
   sendPasswordResetEmail,
   signOut as fbSignOut,
+  updateProfile,
   onAuthStateChanged,
   type User,
 } from "firebase/auth";
@@ -27,6 +28,7 @@ type AuthContextValue = {
   signUpWithPassword: (email: string, password: string) => Promise<void>;
   sendPasswordReset: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
+  updateDisplayName: (name: string) => Promise<void>;
   refreshAccess: () => Promise<void>;
   error: string | null;
   setError: (msg: string | null) => void;
@@ -126,6 +128,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (auth) await fbSignOut(auth);
   };
 
+  const updateDisplayName = async (name: string) => {
+    if (!auth?.currentUser) return;
+    await updateProfile(auth.currentUser, { displayName: name });
+    // Force a re-render by updating the user reference.
+    setUser({ ...auth.currentUser });
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -140,6 +149,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signUpWithPassword,
         sendPasswordReset,
         signOut,
+        updateDisplayName,
         refreshAccess,
         error,
         setError,

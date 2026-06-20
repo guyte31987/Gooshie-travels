@@ -11,6 +11,7 @@ import {
   doc,
   getDocs,
   onSnapshot,
+  runTransaction,
   serverTimestamp,
   setDoc,
   writeBatch,
@@ -53,6 +54,8 @@ export type PlanInstance = {
   bookingOffsetDays?: number;
   /** Firebase Storage download URLs for visit photos. */
   photos?: string[];
+  /** Per-user ratings for this visit. Key is the user's email. */
+  ratings?: Record<string, { score: number; name: string }>;
 };
 
 export const instanceId = (slotId: string, entityId: string) => `${slotId}__${entityId}`;
@@ -109,6 +112,55 @@ export async function deleteSlot(tripId: string, slotId: string, instanceIds: st
   batch.delete(doc(db, slotsPath(tripId), slotId));
   for (const id of instanceIds) batch.delete(doc(db, instPath(tripId), id));
   await batch.commit();
+}
+
+// --- ratings ----------------------------------------------------------------
+
+/**
+ * Set (or clear) the current user's rating for a plan instance, then update
+ * the entity's denormalised avgRating/ratingCount atomically via a transaction.
+ * Pass score=null to remove the rating.
+ */
+export async function setInstanceRating(
+  tripId: string,
+  instanceDocId: string,
+  entityId: string,
+  userEmail: string,
+  userName: string,
+  score: number | null
+): Promise<void> {
+  if (!db) return;
+  const instRef = doc(db, instPath(tripId), instanceDocId);
+  const entityRef = doc(db, "entities", entityId);
+
+  await runTransaction(db, async (tx) => {
+    const [instSnap, entitySnap] = await Promise.all([tx.get(instRef), tx.get(entityRef)]);
+
+    const instData = instSnap.data() as (PlanInstance & { ratings?: Record<string, { score: number; name: string }> }) | undefined;
+    const entityData = entitySnap.data() as { avgRating?: number; ratingCount?: number } | undefined;
+
+    const oldRatings: Record<string, { score: number; name: string }> = instData?.ratings ?? {};
+    const oldUserScore = oldRatings[userEmail]?.score ?? null;
+
+    const newRatings = { ...oldRatings };
+    if (score === null) {
+      delete newRatings[userEmail];
+    } else {
+      newRatings[userEmail] = { score, name: userName };
+    }
+
+    tx.set(instRef, { ratings: newRatings, updatedAt: serverTimestamp() }, { merge: true });
+
+    // Incrementally update the entity's running average.
+    const oldCount = entityData?.ratingCount ?? 0;
+    const oldTotal = (entityData?.avgRating ?? 0) * oldCount;
+    let newTotal = oldTotal;
+    let newCount = oldCount;
+    if (oldUserScore !== null) { newTotal -= oldUserScore; newCount--; }
+    if (score !== null) { newTotal += score; newCount++; }
+    const newAvg = newCount > 0 ? Math.round((newTotal / newCount) * 10) / 10 : null;
+    tx.set(entityRef, { avgRating: newAvg, ratingCount: newCount, updatedAt: serverTimestamp() }, { merge: true });
+  });
 }
 
 // --- seed -------------------------------------------------------------------
