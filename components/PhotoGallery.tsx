@@ -22,8 +22,8 @@ export function PhotoGallery({
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
 
-  const handleUploaded = async (url: string) => {
-    await onPhotosChange([...photos, url]);
+  const handleUploaded = async (urls: string[]) => {
+    await onPhotosChange([...photos, ...urls]);
   };
 
   const handleDelete = async (url: string) => {

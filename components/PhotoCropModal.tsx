@@ -23,6 +23,7 @@ export function PhotoCropModal({
 }) {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
+  const [rotation, setRotation] = useState(0);
   const [aspect, setAspect] = useState<number | undefined>(1);
   const [croppedArea, setCroppedArea] = useState<Area | null>(null);
   const [busy, setBusy] = useState(false);
@@ -31,11 +32,13 @@ export function PhotoCropModal({
     setCroppedArea(croppedAreaPixels);
   }, []);
 
+  const rotate = () => setRotation((r) => (r + 90) % 360);
+
   const handleConfirm = async () => {
     if (!croppedArea) return;
     setBusy(true);
     try {
-      const cropped = await cropImage(imageSrc, croppedArea);
+      const cropped = await cropImage(imageSrc, croppedArea, rotation);
       const compressed = await compressImage(cropped);
       onConfirm(compressed);
     } finally {
@@ -50,6 +53,7 @@ export function PhotoCropModal({
           image={imageSrc}
           crop={crop}
           zoom={zoom}
+          rotation={rotation}
           aspect={aspect}
           onCropChange={setCrop}
           onZoomChange={setZoom}
@@ -58,6 +62,15 @@ export function PhotoCropModal({
       </div>
 
       <div className="flex flex-col gap-3 bg-black/80 p-4 text-white">
+        {/* Rotate */}
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-slate-400">Rotate</span>
+          <button onClick={rotate} className="rounded bg-white/10 px-3 py-1 text-xs font-medium hover:bg-white/20">
+            ↻ 90°
+          </button>
+          {rotation !== 0 && <span className="text-xs text-slate-400">{rotation}°</span>}
+        </div>
+
         {/* Aspect ratio */}
         <div className="flex items-center gap-2">
           <span className="text-xs text-slate-400">Ratio</span>
