@@ -388,7 +388,7 @@ function Appearance({
                 <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Status</p>
                 <StatusButtons value={activityStatusOf(override)} disabled={!canEdit}
                   onChange={(v) => persist({ status: v as ActivityStatus })}
-                  options={[["planned", "Planned"], ["scheduled", "Scheduled"], ["done", "✓ Done"]]} />
+                  options={[["planned", "💡"], ["scheduled", "📅"], ["done", "✓"], ["notDone", "✗"]]} />
               </div>
               <div>
                 <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Booking</p>

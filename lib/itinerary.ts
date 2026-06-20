@@ -21,7 +21,7 @@ import { db } from "./firebase";
 export type Capacity = "confirmed" | "planned" | "planB";
 
 /** Where the activity itself stands (separate from booking). */
-export type ActivityStatus = "planned" | "scheduled" | "done";
+export type ActivityStatus = "planned" | "scheduled" | "done" | "notDone";
 /** Whether a reservation is needed and where it stands. */
 export type BookingStatus = "walkin" | "needed" | "done";
 

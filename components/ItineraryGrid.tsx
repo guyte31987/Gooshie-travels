@@ -390,7 +390,9 @@ function Block({ slot, main, alts, entityById, col, colCount, wide, canEdit, onG
   const top = (slot.start - DAY_START_H * 60) * PX_PER_MIN;
   const height = Math.max(22, (slot.end - slot.start) * PX_PER_MIN);
   const widthPct = 100 / colCount;
-  const planned = main.capacity === "planned";
+  const status = activityStatusOf(main);
+  const tentative = status === "planned";
+  const notDone = status === "notDone";
   const dur = slot.end - slot.start;
 
   const applyDragTransform = (newStart: number) => {
@@ -505,14 +507,14 @@ function Block({ slot, main, alts, entityById, col, colCount, wide, canEdit, onG
 
   const book = bookingStatusOf(main);
   const bookIcon = book === "done" ? "✅" : book === "needed" ? "📋" : null;
-  const done = activityStatusOf(main) === "done";
+  const done = status === "done";
   const isLifting = dragPhase === "lifting";
   const isDragging = dragPhase === "dragging";
 
   return (
     <div
       ref={blockRef}
-      className={`group absolute overflow-hidden rounded-lg border-l-4 ${c.bg} ${c.border} ${c.text} shadow-sm ring-1 ring-black/5 ${planned ? "border-dashed" : ""}`}
+      className={`group absolute overflow-hidden rounded-lg border-l-4 ${c.bg} ${c.border} ${c.text} shadow-sm ring-1 ring-black/5 ${tentative ? "border-dashed" : ""}`}
       style={{
         top, height,
         left: `calc(${col * widthPct}% + 2px)`,
@@ -533,7 +535,7 @@ function Block({ slot, main, alts, entityById, col, colCount, wide, canEdit, onG
         <div className="flex items-start gap-1">
           <span className={`leading-tight ${wide ? "text-sm" : "text-[11px]"}`}>{emojiOf(type)}</span>
           <div className="min-w-0 flex-1">
-            <div className={`font-semibold leading-tight ${wide ? "text-sm" : "truncate text-[11px]"} ${done ? "line-through opacity-60" : ""}`}>
+            <div className={`font-semibold leading-tight ${wide ? "text-sm" : "truncate text-[11px]"} ${notDone ? "line-through opacity-50" : ""}`}>
               {title}
             </div>
             {(wide || height > 30) && (
@@ -545,8 +547,8 @@ function Block({ slot, main, alts, entityById, col, colCount, wide, canEdit, onG
           </div>
           <div className="flex shrink-0 items-center gap-0.5">
             {done && <span className={wide ? "text-xs" : "text-[10px]"} title="Done">✓</span>}
+            {notDone && <span className={wide ? "text-xs" : "text-[10px]"} title="Didn't happen">✗</span>}
             {bookIcon && <span className={wide ? "text-xs" : "text-[10px]"}>{bookIcon}</span>}
-            {planned && <span className="rounded bg-black/10 px-1 text-[8px] font-bold uppercase">plan</span>}
             {alts.length > 0 && <span className={`rounded-full ${c.chip} px-1 text-[9px] font-bold text-white`}>+{alts.length}</span>}
           </div>
         </div>
@@ -882,9 +884,10 @@ function AltAdder({ entityById, excludeIds, onPick, onCreate, canCreate }: {
 }
 
 const STATUS_CYCLE: { value: ActivityStatus; emoji: string; label: string }[] = [
-  { value: "planned", emoji: "💡", label: "Planned" },
+  { value: "planned", emoji: "💡", label: "Tentative" },
   { value: "scheduled", emoji: "📅", label: "Scheduled" },
-  { value: "done", emoji: "✔️", label: "Done" },
+  { value: "done", emoji: "✓", label: "Done" },
+  { value: "notDone", emoji: "✗", label: "Didn't happen" },
 ];
 const BOOKING_CYCLE: { value: BookingStatus; emoji: string; label: string }[] = [
   { value: "walkin", emoji: "🚶", label: "Walk-in" },
