@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { PhotoCropModal } from "./PhotoCropModal";
 import { uploadPhoto, photoPath, type PhotoContext } from "@/lib/storage";
+import imageCompression from "browser-image-compression";
 import { compressImage } from "@/lib/imageUtils";
 
 export function PhotoUpload({
@@ -23,6 +24,7 @@ export function PhotoUpload({
   const [srcForCrop, setSrcForCrop] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
@@ -37,19 +39,26 @@ export function PhotoUpload({
       return;
     }
 
-    // Multiple files → compress & upload directly (no crop)
+    // Multiple files → compress & upload directly (no crop), preserving original format
     setUploading(true);
+    setError(null);
     setProgress({ done: 0, total: files.length });
     const urls: string[] = [];
     try {
       for (let i = 0; i < files.length; i++) {
-        const blob = await compressImage(files[i]);
+        const compressed = await imageCompression(files[i], {
+          maxSizeMB: 1,
+          maxWidthOrHeight: 1600,
+          useWebWorker: true,
+        });
         const path = photoPath(context, contextId);
-        const url = await uploadPhoto(path, blob);
+        const url = await uploadPhoto(path, compressed);
         urls.push(url);
         setProgress({ done: i + 1, total: files.length });
       }
       onUploaded(urls);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Upload failed");
     } finally {
       setUploading(false);
       setProgress(null);
@@ -86,6 +95,8 @@ export function PhotoUpload({
       >
         {progress ? `Uploading ${progress.done}/${progress.total}…` : uploading ? "Uploading…" : `📷 ${label}`}
       </button>
+
+      {error && <p className="mt-1 text-[11px] text-rose-500">{error}</p>}
 
       {srcForCrop && (
         <PhotoCropModal
