@@ -6,6 +6,18 @@ import { uploadPhoto, photoPath, type PhotoContext } from "@/lib/storage";
 import imageCompression from "browser-image-compression";
 import { compressImage } from "@/lib/imageUtils";
 
+const CONCURRENCY = 3;
+
+async function compressAndUpload(file: File, context: PhotoContext, contextId: string): Promise<string> {
+  const compressed = await imageCompression(file, {
+    maxSizeMB: 1,
+    maxWidthOrHeight: 1600,
+    useWebWorker: true,
+  });
+  const path = photoPath(context, contextId);
+  return uploadPhoto(path, compressed);
+}
+
 export function PhotoUpload({
   context,
   contextId,
@@ -32,29 +44,30 @@ export function PhotoUpload({
     if (!files.length) return;
 
     if (files.length === 1) {
-      // Single file → crop modal
       const reader = new FileReader();
       reader.onload = () => setSrcForCrop(reader.result as string);
       reader.readAsDataURL(files[0]);
       return;
     }
 
-    // Multiple files → compress & upload directly (no crop), preserving original format
+    // Batch: upload up to CONCURRENCY files in parallel, track progress
     setUploading(true);
     setError(null);
     setProgress({ done: 0, total: files.length });
-    const urls: string[] = [];
+
+    let done = 0;
+    const urls: string[] = new Array(files.length);
+
     try {
-      for (let i = 0; i < files.length; i++) {
-        const compressed = await imageCompression(files[i], {
-          maxSizeMB: 1,
-          maxWidthOrHeight: 1600,
-          useWebWorker: true,
-        });
-        const path = photoPath(context, contextId);
-        const url = await uploadPhoto(path, compressed);
-        urls.push(url);
-        setProgress({ done: i + 1, total: files.length });
+      // Process in chunks of CONCURRENCY
+      for (let i = 0; i < files.length; i += CONCURRENCY) {
+        const chunk = files.slice(i, i + CONCURRENCY);
+        const results = await Promise.all(
+          chunk.map((f) => compressAndUpload(f, context, contextId))
+        );
+        results.forEach((url, j) => { urls[i + j] = url; });
+        done += chunk.length;
+        setProgress({ done, total: files.length });
       }
       onUploaded(urls);
     } catch (e) {
@@ -68,10 +81,13 @@ export function PhotoUpload({
   const handleCropConfirm = async (blob: Blob) => {
     setSrcForCrop(null);
     setUploading(true);
+    setError(null);
     try {
       const path = photoPath(context, contextId);
       const url = await uploadPhoto(path, blob);
       onUploaded([url]);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Upload failed");
     } finally {
       setUploading(false);
     }
