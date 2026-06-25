@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { ENTITY_TABS, type EntityType } from "@/lib/entities";
 import { saveEntity, saveAreas, subscribeEntities, type DBEntity } from "@/lib/db";
 import { slugId } from "@/lib/slug";
+import { requestEnrichment, type EnrichedFields } from "@/lib/enrich";
 import { useBackClose } from "@/lib/useBackClose";
 
 const FIELDS: { key: keyof DBEntity; label: string; textarea?: boolean }[] = [
@@ -33,8 +34,40 @@ export function EntityForm({
     entity ?? { id: "", name: "", type: "food", generalArea: "" }
   );
   const [busy, setBusy] = useState(false);
+  const [enriching, setEnriching] = useState(false);
+  const [enrichError, setEnrichError] = useState<string | null>(null);
   const [clubEntities, setClubEntities] = useState<DBEntity[]>([]);
   useBackClose(true, onClose);
+
+  // Auto-fill only blank fields, so anything you've already typed is preserved.
+  // The result is a draft in the form — you still review and click Save.
+  const autoFill = async () => {
+    if (!form.name.trim()) return;
+    setEnriching(true);
+    setEnrichError(null);
+    try {
+      const fields = await requestEnrichment({
+        name: form.name.trim(),
+        type: form.type,
+        context: form.generalArea || undefined,
+      });
+      setForm((f) => {
+        const next = { ...f };
+        (Object.keys(fields) as (keyof EnrichedFields)[]).forEach((k) => {
+          const cur = next[k as keyof DBEntity];
+          const empty = cur === undefined || cur === null || String(cur).trim() === "";
+          if (empty && fields[k] !== undefined) {
+            (next as Record<string, unknown>)[k] = fields[k];
+          }
+        });
+        return next;
+      });
+    } catch (e) {
+      setEnrichError(e instanceof Error ? e.message : "Auto-fill failed.");
+    } finally {
+      setEnriching(false);
+    }
+  };
 
   useEffect(() => {
     const unsub = subscribeEntities((all) =>
@@ -75,12 +108,24 @@ export function EntityForm({
 
         <div className="space-y-3">
           <Field label="Name">
-            <input
-              value={form.name}
-              onChange={(e) => set("name", e.target.value)}
-              className="input"
-              autoFocus
-            />
+            <div className="flex gap-2">
+              <input
+                value={form.name}
+                onChange={(e) => set("name", e.target.value)}
+                className="input"
+                autoFocus
+              />
+              <button
+                type="button"
+                onClick={autoFill}
+                disabled={enriching || !form.name.trim()}
+                title="Look up address, hours, website… with AI. Fills blank fields only; you review before saving."
+                className="shrink-0 rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+              >
+                {enriching ? "…" : "✨ Auto-fill"}
+              </button>
+            </div>
+            {enrichError && <p className="mt-1 text-xs text-amber-700">{enrichError}</p>}
           </Field>
 
           <div className="grid grid-cols-2 gap-3">
