@@ -44,13 +44,14 @@ export function ImportDialog({
   };
 
   const apply = async () => {
-    if (!preview?.patches.length) return;
+    if (!preview || (!preview.patches.length && !preview.creates.length)) return;
     setBusy(true);
     try {
-      await applyImport(preview.patches);
+      await applyImport(preview.patches, preview.creates);
       const log: ImportLog = {
         at: new Date().toISOString(),
         updated: preview.patches.length,
+        created: preview.creates.length,
         noChange: preview.noChange,
         unmatched: preview.unmatched.length,
         skippedNoId: preview.skipped,
@@ -77,7 +78,12 @@ export function ImportDialog({
         {done !== null ? (
           <div className="space-y-4">
             <div className="rounded-lg bg-emerald-50 p-4 text-sm text-emerald-800">
-              ✅ Updated {done.updated} {done.updated === 1 ? "entity" : "entities"}.
+              ✅ {done.created > 0 && (
+                <>Created {done.created} new {done.created === 1 ? "place" : "places"}{done.updated > 0 ? ", " : ". "}</>
+              )}
+              {(done.updated > 0 || done.created === 0) && (
+                <>Updated {done.updated} {done.updated === 1 ? "entity" : "entities"}.</>
+              )}
               {done.noChange > 0 && <span className="text-emerald-600"> · {done.noChange} unchanged</span>}
             </div>
             {done.flagged.length > 0 && <FlaggedBlock flagged={done.flagged} />}
@@ -110,6 +116,7 @@ export function ImportDialog({
                   Last import · {new Date(lastLog.at).toLocaleString()}
                 </p>
                 <p className="mt-0.5 text-slate-500">
+                  {lastLog.created > 0 && `${lastLog.created} created · `}
                   {lastLog.updated} updated · {lastLog.noChange} unchanged
                   {lastLog.unmatched > 0 && ` · ${lastLog.unmatched} unmatched`}
                   {lastLog.flagged.length > 0 && (
@@ -137,6 +144,9 @@ export function ImportDialog({
             {text.trim() && preview && (
               <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs">
                 <div className="flex flex-wrap gap-x-4 gap-y-1 font-medium text-slate-600">
+                  {preview.creates.length > 0 && (
+                    <span className="text-emerald-700">{preview.creates.length} new</span>
+                  )}
                   <span className="text-emerald-700">{preview.patches.length} to update</span>
                   <span>{preview.noChange} unchanged</span>
                   {preview.flagged.length > 0 && (
@@ -149,6 +159,31 @@ export function ImportDialog({
                     <span className="text-slate-400">{preview.skipped} rows without id</span>
                   )}
                 </div>
+
+                {preview.creates.length > 0 && (
+                  <div className="mt-2 border-t border-slate-200 pt-1.5">
+                    <p className="mb-1 font-medium text-emerald-700">New places to create</p>
+                    <ul className="max-h-56 space-y-2 overflow-y-auto">
+                      {preview.creates.slice(0, 60).map((c) => (
+                        <li key={c.id} className="border-t border-slate-100 pt-1.5 first:border-t-0">
+                          <span className="font-medium text-slate-700">{c.name}</span>{" "}
+                          <span className="text-slate-400">({c.type})</span>
+                          <ul className="mt-0.5 space-y-0.5 pl-1 text-slate-500">
+                            {c.fields.map((f) => (
+                              <li key={f.field}>
+                                <span className="font-medium text-slate-600">{f.field}:</span>{" "}
+                                <span className="text-emerald-600">{trunc(f.to)}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </li>
+                      ))}
+                      {preview.creates.length > 60 && (
+                        <li className="text-slate-400">…and {preview.creates.length - 60} more</li>
+                      )}
+                    </ul>
+                  </div>
+                )}
 
                 {preview.patches.length > 0 && (
                   <ul className="mt-2 max-h-64 space-y-2 overflow-y-auto">
@@ -197,10 +232,10 @@ export function ImportDialog({
               </button>
               <button
                 onClick={apply}
-                disabled={busy || !preview?.patches.length}
+                disabled={busy || (!preview?.patches.length && !preview?.creates.length)}
                 className="rounded-lg bg-ink px-4 py-2 text-sm font-medium text-white hover:bg-ink/90 disabled:opacity-50"
               >
-                {busy ? "Importing…" : `Import ${preview?.patches.length ?? 0}`}
+                {busy ? "Importing…" : importLabel(preview)}
               </button>
             </div>
           </div>
@@ -232,3 +267,13 @@ function FlaggedBlock({ flagged }: { flagged: { name: string; field: string; val
 }
 
 const trunc = (s: string, n = 48) => (s.length > n ? `${s.slice(0, n)}…` : s);
+
+/** "Create 2 · Update 5" style button label reflecting both buckets. */
+function importLabel(preview: ImportPreview | null): string {
+  const creates = preview?.creates.length ?? 0;
+  const updates = preview?.patches.length ?? 0;
+  const parts: string[] = [];
+  if (creates) parts.push(`Create ${creates}`);
+  if (updates) parts.push(`Update ${updates}`);
+  return parts.length ? parts.join(" · ") : "Import";
+}

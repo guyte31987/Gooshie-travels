@@ -201,6 +201,7 @@ export type ImportLogChange = { name: string; fields: string[] };
 export type ImportLog = {
   at: string;
   updated: number;
+  created: number;
   noChange: number;
   unmatched: number;
   skippedNoId: number;

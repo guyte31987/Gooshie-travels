@@ -9,6 +9,12 @@
 import { doc, serverTimestamp, setDoc } from "firebase/firestore";
 import { db } from "./firebase";
 import type { DBEntity } from "./db";
+import { ENTITY_TABS, type EntityType } from "./entities";
+import { slugId } from "./slug";
+
+// The entity types an import is allowed to create. Mirrors the picker (ENTITY_TABS)
+// and deliberately excludes the legacy "party" synonym — new data uses "club".
+const VALID_TYPES = new Set<string>(ENTITY_TABS.map((t) => t.type));
 
 /**
  * Parse CSV text into rows of cells. Handles quoted fields, escaped double
@@ -68,9 +74,19 @@ export type ImportPatch = {
   changes: ImportChange[];
   patch: Partial<DBEntity>;
 };
+export type ImportCreate = {
+  id: string;
+  name: string;
+  type: EntityType;
+  /** The fields that will be set on the new entity, for preview display. */
+  fields: ImportChange[];
+  /** The ready-to-write entity. */
+  entity: DBEntity;
+};
 export type ImportPreview = {
   patches: ImportPatch[];
-  unmatched: string[]; // ids present in the CSV but not in the Database
+  creates: ImportCreate[]; // rows whose id is new → create a brand-new entity
+  unmatched: string[]; // ids present in the CSV but not creatable (no Name/Type)
   skipped: number;     // data rows with no id cell
   noChange: number;    // matched rows that would change nothing
   flagged: ImportFlag[]; // cells that looked like "N/A"/unknown placeholders (ignored)
@@ -93,15 +109,18 @@ const isInstagramUrl = (v: string) => /(?:^|\/\/|\.)instagr(?:am\.com|\.am)\//i.
  * Returns the per-entity patches so the UI can preview before applying.
  */
 export function planImport(rows: string[][], existing: DBEntity[]): ImportPreview {
-  if (rows.length < 2) return { patches: [], unmatched: [], skipped: 0, noChange: 0, flagged: [] };
+  if (rows.length < 2) return { patches: [], creates: [], unmatched: [], skipped: 0, noChange: 0, flagged: [] };
   const [header, ...body] = rows;
   const cols = header.map((h) => h.trim().toLowerCase());
   const idCol = cols.indexOf("id");
+  const nameCol = cols.indexOf("name");
+  const typeCol = cols.indexOf("type");
   // Only lift an Instagram link out of the Website column when there's no
   // dedicated instagram column — otherwise trust the explicit column.
   const hasInstagramCol = cols.includes("instagram");
   const byId = new Map(existing.map((e) => [e.id, e]));
   const patches: ImportPatch[] = [];
+  const creates: ImportCreate[] = [];
   const unmatched: string[] = [];
   const flagged: ImportFlag[] = [];
   let skipped = 0;
@@ -111,7 +130,13 @@ export function planImport(rows: string[][], existing: DBEntity[]): ImportPrevie
     const id = idCol >= 0 ? (r[idCol] ?? "").trim() : "";
     if (!id) { skipped++; continue; }
     const ent = byId.get(id);
-    if (!ent) { unmatched.push(id); continue; }
+    if (!ent) {
+      // New id → try to create a brand-new entity (needs a Name and a valid Type).
+      const create = planCreate(r, cols, nameCol, typeCol, hasInstagramCol, byId, flagged);
+      if (create) creates.push(create);
+      else unmatched.push(id);
+      continue;
+    }
 
     const patch: Partial<DBEntity> = {};
     const changes: ImportChange[] = [];
@@ -148,12 +173,73 @@ export function planImport(rows: string[][], existing: DBEntity[]): ImportPrevie
     else noChange++;
   }
 
-  return { patches, unmatched, skipped, noChange, flagged };
+  return { patches, creates, unmatched, skipped, noChange, flagged };
 }
 
-/** Write the planned patches to Firestore (merge — only the changed fields). */
-export async function applyImport(patches: ImportPatch[]): Promise<void> {
+/**
+ * Build a new-entity create from a CSV row whose id isn't in the Database yet.
+ * Requires a non-blank Name and a valid Type; the id is recomputed canonically
+ * via slugId so it stays consistent regardless of what the CSV's id cell said.
+ * Returns undefined when the row can't be turned into an entity (→ unmatched).
+ */
+function planCreate(
+  r: string[],
+  cols: string[],
+  nameCol: number,
+  typeCol: number,
+  hasInstagramCol: boolean,
+  byId: Map<string, DBEntity>,
+  flagged: ImportFlag[]
+): ImportCreate | undefined {
+  const name = nameCol >= 0 ? (r[nameCol] ?? "").trim() : "";
+  const type = (typeCol >= 0 ? (r[typeCol] ?? "").trim().toLowerCase() : "") as EntityType;
+  if (!name || !VALID_TYPES.has(type)) return undefined;
+
+  const id = slugId(type, name);
+  // Don't shadow an entity that already exists under the canonical id (the CSV's
+  // id cell may have been off); fall through to unmatched so it's visible.
+  if (byId.has(id)) return undefined;
+
+  const entity: DBEntity = { id, name, type, calendarSource: false };
+  const fields: ImportChange[] = [];
+
+  cols.forEach((col, idx) => {
+    const map = FIELD_MAP[col];
+    if (!map) return;
+    const raw = (r[idx] ?? "").trim();
+    if (raw === "") return;
+    if (isPlaceholder(raw)) { flagged.push({ id, name, field: col, value: raw }); return; }
+
+    let key = map.key;
+    let label = col;
+    if (key === "website" && !hasInstagramCol && isInstagramUrl(raw)) { key = "instagram"; label = "instagram"; }
+
+    let value: string | number = raw;
+    if (map.numeric) {
+      const n = Number(raw);
+      if (!Number.isFinite(n)) return;
+      value = n;
+    }
+    (entity as Record<string, unknown>)[key] = value;
+    fields.push({ field: label, from: "", to: String(value) });
+  });
+
+  return { id, name, type, fields, entity };
+}
+
+/**
+ * Write the planned changes to Firestore. Updates merge only the changed fields;
+ * creates write the whole new entity (merge so a concurrent create can't fail).
+ */
+export async function applyImport(patches: ImportPatch[], creates: ImportCreate[] = []): Promise<void> {
   if (!db) return;
+  for (const c of creates) {
+    await setDoc(
+      doc(db, "entities", c.id),
+      { ...c.entity, updatedAt: serverTimestamp() },
+      { merge: true }
+    );
+  }
   for (const p of patches) {
     await setDoc(
       doc(db, "entities", p.id),
