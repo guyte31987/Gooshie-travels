@@ -37,6 +37,8 @@ const LIFT_HINT_MS = 160;
 export type CalEntity = {
   id: string; name: string; type: EntityType;
   area?: string; parent?: string; address?: string; website?: string; instagram?: string; phone?: string; hours?: string;
+  /** The entity's favourited photos (shown in the Database). */
+  photos?: string[];
 };
 export type CalSlot = { id: string; day: string; start: number; end: number; label: string };
 export type CalInstance = { slotId: string; entityId: string; capacity: Capacity; note?: string; status?: ActivityStatus; bookingStatus?: BookingStatus; needsBooking?: boolean; booked?: boolean; photos?: string[]; ratings?: Record<string, { score: number; name: string }> };
@@ -55,6 +57,8 @@ export type CalHandlers = {
   onMakeMain: (slotId: string, entityId: string) => void;
   onAddAlt: (slotId: string, entityId: string) => void;
   onUpdateInstance: (slotId: string, entityId: string, patch: Partial<CalInstance>) => void;
+  /** Promote/demote one of a visit's photos to the entity (its Database gallery). */
+  onToggleEntityPhoto?: (entityId: string, url: string, next: boolean) => void;
   onRenameSlot: (slotId: string, label: string) => void;
   onReplaceMain?: (slotId: string, newEntityId: string) => void;
   onSaveEntity?: (entityId: string, patch: EntityPatch) => void;
@@ -702,7 +706,12 @@ function DetailSheet({ slot, instances, entityById, canEdit, handlers, isNew, tr
                     onPhotosChange={async (photos) => {
                       handlers.onUpdateInstance(slot.id, main.entityId, { photos });
                     }}
+                    favourites={ent ? new Set(ent.photos ?? []) : undefined}
+                    onToggleFavourite={ent && handlers.onToggleEntityPhoto
+                      ? async (url, next) => handlers.onToggleEntityPhoto!(ent.id, url, next)
+                      : undefined}
                   />
+                  {ent && <p className="mt-1 text-[10px] text-slate-400">★ favourites show on the place in the Database; the rest stay on this visit.</p>}
                 </div>
               )}
             </div>

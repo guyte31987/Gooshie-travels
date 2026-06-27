@@ -208,6 +208,7 @@ export function EntityDetail({
             context="entity"
             contextId={entity.id}
             canEdit={canEdit}
+            removeOnly
             onPhotosChange={async (photos) => {
               await saveEntity({ id: entity.id, name: entity.name, type: entity.type, generalArea: entity.generalArea, area: entity.area, address: entity.address, website: entity.website, instagram: entity.instagram, lat: entity.lat, lng: entity.lng, hours: entity.hours, price: entity.price, source: entity.source, booking: entity.booking, notes: entity.notes, closed: entity.closed, bestDay: entity.bestDay, needsBooking: entity.needsBooking, parentId: entity.parentId, photos });
             }}
@@ -440,7 +441,14 @@ function Appearance({
                 onPhotosChange={async (photos) => {
                   await savePlanInstance({ ...override, photos });
                 }}
+                favourites={new Set(entity.photos ?? [])}
+                onToggleFavourite={async (url, next) => {
+                  const cur = entity.photos ?? [];
+                  const photos = next ? [...cur, url] : cur.filter((p) => p !== url);
+                  await saveEntity({ id: entity.id, name: entity.name, type: entity.type, photos });
+                }}
               />
+              <p className="mt-1 text-[10px] text-slate-400">★ favourites show on the place in the Database; the rest stay on this visit.</p>
             </div>
           )}
 

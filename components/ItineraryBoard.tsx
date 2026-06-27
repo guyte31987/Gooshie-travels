@@ -60,6 +60,7 @@ export function ItineraryBoard({ tripId }: { tripId: string }) {
         id: e.id, name: e.name, type: e.type,
         area: e.area || e.generalArea, parent: e.parentId ? nameOf.get(e.parentId) : undefined,
         address: e.address, website: e.website, instagram: e.instagram, hours: e.hours,
+        photos: e.photos,
       });
     }
     return m;
@@ -143,6 +144,13 @@ export function ItineraryBoard({ tripId }: { tripId: string }) {
       if (cur) savePlanInstance({ ...cur, ...patch });
     },
     onRenameSlot: (slotId, label) => { const s = slotById.get(slotId); if (s) saveSlot({ ...s, label }); },
+    onToggleEntityPhoto: (entityId, url, next) => {
+      const existing = dbEntities.find((e) => e.id === entityId);
+      if (!existing) return;
+      const cur = existing.photos ?? [];
+      const photos = next ? [...new Set([...cur, url])] : cur.filter((p) => p !== url);
+      saveEntity({ ...existing, photos });
+    },
     onReplaceMain: (slotId, newEntityId) => {
       const oldEntityId = `adhoc:${slotId}`;
       const oldInstId = instanceId(slotId, oldEntityId);
