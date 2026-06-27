@@ -285,22 +285,28 @@ export const PREVIEW_INSTANCES: PreviewInstance[] = [
   { slotId: "sun28-pride", entityId: "event-nyc-pride-march", capacity: "confirmed", note: "March noon. Brunch S&P; Buvette after. Flight 7pm+." },
 ];
 
-/** Per-type colour for grid blocks: [bg, border, text, dot]. */
-export const TYPE_COLORS: Record<string, { bg: string; border: string; text: string; chip: string }> = {
-  food: { bg: "bg-amber-50", border: "border-amber-400", text: "text-amber-900", chip: "bg-amber-400" },
-  vintage: { bg: "bg-yellow-50", border: "border-yellow-400", text: "text-yellow-900", chip: "bg-yellow-400" },
-  museum: { bg: "bg-violet-50", border: "border-violet-400", text: "text-violet-900", chip: "bg-violet-400" },
-  club: { bg: "bg-fuchsia-50", border: "border-fuchsia-400", text: "text-fuchsia-900", chip: "bg-fuchsia-400" },
-  party: { bg: "bg-fuchsia-50", border: "border-fuchsia-500", text: "text-fuchsia-900", chip: "bg-fuchsia-500" },
-  bar: { bg: "bg-rose-50", border: "border-rose-400", text: "text-rose-900", chip: "bg-rose-400" },
-  spa: { bg: "bg-teal-50", border: "border-teal-400", text: "text-teal-900", chip: "bg-teal-400" },
-  sight: { bg: "bg-sky-50", border: "border-sky-400", text: "text-sky-900", chip: "bg-sky-400" },
-  attraction: { bg: "bg-orange-50", border: "border-orange-400", text: "text-orange-900", chip: "bg-orange-400" },
-  hike: { bg: "bg-green-50", border: "border-green-500", text: "text-green-900", chip: "bg-green-500" },
-  show: { bg: "bg-purple-50", border: "border-purple-400", text: "text-purple-900", chip: "bg-purple-400" },
-  event: { bg: "bg-pink-50", border: "border-pink-500", text: "text-pink-900", chip: "bg-pink-500" },
-  accommodation: { bg: "bg-indigo-50", border: "border-indigo-400", text: "text-indigo-900", chip: "bg-indigo-400" },
-  travel: { bg: "bg-slate-100", border: "border-slate-400", text: "text-slate-700", chip: "bg-slate-400" },
-  admin: { bg: "bg-zinc-100", border: "border-zinc-400", text: "text-zinc-600", chip: "bg-zinc-400" },
-  uncategorised: { bg: "bg-slate-50", border: "border-slate-300", text: "text-slate-600", chip: "bg-slate-300" },
+/**
+ * Per-type muted category colour (redesign brief "Category colours"). `hex` is
+ * the canonical colour for the 5px spine / dot; bg/border/text/chip are the
+ * matching arbitrary-value Tailwind classes consumed by lists & grid blocks.
+ * Hexes for bar/show/event/accommodation/admin/uncategorised are muted defaults
+ * I picked to fill the types the brief left unspecified — flagged for review.
+ */
+export const TYPE_COLORS: Record<string, { hex: string; bg: string; border: string; text: string; chip: string }> = {
+  food: { hex: "#C0683A", bg: "bg-[#C0683A]/[0.10]", border: "border-[#C0683A]", text: "text-[#8a4524]", chip: "bg-[#C0683A]" },
+  vintage: { hex: "#B08A2E", bg: "bg-[#B08A2E]/[0.10]", border: "border-[#B08A2E]", text: "text-[#7d6120]", chip: "bg-[#B08A2E]" },
+  museum: { hex: "#7E5A86", bg: "bg-[#7E5A86]/[0.10]", border: "border-[#7E5A86]", text: "text-[#5a3f61]", chip: "bg-[#7E5A86]" },
+  club: { hex: "#A8456A", bg: "bg-[#A8456A]/[0.10]", border: "border-[#A8456A]", text: "text-[#7c314d]", chip: "bg-[#A8456A]" },
+  party: { hex: "#A8456A", bg: "bg-[#A8456A]/[0.10]", border: "border-[#A8456A]", text: "text-[#7c314d]", chip: "bg-[#A8456A]" },
+  bar: { hex: "#8E5A6E", bg: "bg-[#8E5A6E]/[0.10]", border: "border-[#8E5A6E]", text: "text-[#653f4f]", chip: "bg-[#8E5A6E]" },
+  spa: { hex: "#3F7E80", bg: "bg-[#3F7E80]/[0.10]", border: "border-[#3F7E80]", text: "text-[#2c5a5b]", chip: "bg-[#3F7E80]" },
+  sight: { hex: "#5A7891", bg: "bg-[#5A7891]/[0.10]", border: "border-[#5A7891]", text: "text-[#405668]", chip: "bg-[#5A7891]" },
+  attraction: { hex: "#5A7891", bg: "bg-[#5A7891]/[0.10]", border: "border-[#5A7891]", text: "text-[#405668]", chip: "bg-[#5A7891]" },
+  hike: { hex: "#5E7445", bg: "bg-[#5E7445]/[0.10]", border: "border-[#5E7445]", text: "text-[#435430]", chip: "bg-[#5E7445]" },
+  show: { hex: "#6E4A78", bg: "bg-[#6E4A78]/[0.10]", border: "border-[#6E4A78]", text: "text-[#4e3456]", chip: "bg-[#6E4A78]" },
+  event: { hex: "#A86A4A", bg: "bg-[#A86A4A]/[0.10]", border: "border-[#A86A4A]", text: "text-[#7c4c34]", chip: "bg-[#A86A4A]" },
+  accommodation: { hex: "#5A6E80", bg: "bg-[#5A6E80]/[0.10]", border: "border-[#5A6E80]", text: "text-[#40505d]", chip: "bg-[#5A6E80]" },
+  travel: { hex: "#8A8175", bg: "bg-[#8A8175]/[0.10]", border: "border-[#8A8175]", text: "text-[#615b52]", chip: "bg-[#8A8175]" },
+  admin: { hex: "#9A9082", bg: "bg-[#9A9082]/[0.10]", border: "border-[#9A9082]", text: "text-[#6d655b]", chip: "bg-[#9A9082]" },
+  uncategorised: { hex: "#A89F90", bg: "bg-[#A89F90]/[0.10]", border: "border-[#A89F90]", text: "text-[#766f63]", chip: "bg-[#A89F90]" },
 };

@@ -11,6 +11,7 @@ import { ENTITY_TABS, type EntityType } from "@/lib/entities";
 import { buildTripIcs, downloadIcs, type IcsStay } from "@/lib/ics-export";
 import { requestEnrichment } from "@/lib/enrich";
 import { activityStatusOf, bookingStatusOf, setInstanceRating, type ActivityStatus, type BookingStatus, type Capacity } from "@/lib/itinerary";
+import { ACTIVITY_PILL, BOOKING_PILL } from "@/lib/statusStyles";
 import { useAuth } from "./AuthProvider";
 import { useBackClose } from "@/lib/useBackClose";
 import { Comments } from "./Comments";
@@ -521,15 +522,20 @@ function Block({ slot, main, alts, entityById, col, colCount, wide, canEdit, onG
   };
 
   const book = bookingStatusOf(main);
-  const bookIcon = book === "done" ? "✅" : book === "needed" ? "📋" : null;
+  const bookPill = book !== "walkin" ? BOOKING_PILL[book] : null;
   const done = status === "done";
   const isLifting = dragPhase === "lifting";
   const isDragging = dragPhase === "dragging";
+  // Activity status drives the block's weight: Cancelled = hollow spine + flat
+  // bg, Done = muted/desaturated, otherwise the full category colour.
+  const stateCls = notDone
+    ? "border-l-4 border-[#d8a99c] bg-[#f6f2ea] text-[#b0a795]"
+    : `border-l-4 ${c.border} ${done ? "bg-fill-soft saturate-50 text-secondary" : `${c.bg} ${c.text}`}`;
 
   return (
     <div
       ref={blockRef}
-      className={`group absolute overflow-hidden rounded-lg border-l-4 ${c.bg} ${c.border} ${c.text} shadow-sm ring-1 ring-black/5 ${tentative ? "border-dashed" : ""}`}
+      className={`group absolute overflow-hidden rounded-lg ${stateCls} shadow-sm ring-1 ring-black/5 ${tentative ? "border-dashed" : ""}`}
       style={{
         top, height,
         left: `calc(${col * widthPct}% + 2px)`,
@@ -555,15 +561,14 @@ function Block({ slot, main, alts, entityById, col, colCount, wide, canEdit, onG
             </div>
             {(wide || height > 30) && (
               <div className={`opacity-70 ${wide ? "text-xs" : "truncate text-[10px]"}`}>
-                {fmt(slot.start)}{(wide || height > 44) ? `–${fmt(slot.end)}` : ""}
+                {fmt(slot.start)}{(wide || height > 44) ? `–${fmt(slot.end)}` : ""}{tentative ? "?" : ""}
                 {entity?.parent ? ` · @${entity.parent}` : entity?.area ? ` · ${entity.area}` : ""}
               </div>
             )}
           </div>
           <div className="flex shrink-0 items-center gap-0.5">
-            {done && <span className={wide ? "text-xs" : "text-[10px]"} title="Done">✓</span>}
-            {notDone && <span className={wide ? "text-xs" : "text-[10px]"} title="Didn't happen">✗</span>}
-            {bookIcon && <span className={wide ? "text-xs" : "text-[10px]"}>{bookIcon}</span>}
+            {done && <span className={wide ? "text-xs text-[#9aa386]" : "text-[10px] text-[#9aa386]"} title="Done">✓</span>}
+            {bookPill && <span className={`rounded-full px-1.5 py-px text-[8px] font-semibold leading-none ${bookPill.className}`}>{bookPill.short}</span>}
             {alts.length > 0 && <span className={`rounded-full ${c.chip} px-1 text-[9px] font-bold text-white`}>+{alts.length}</span>}
           </div>
         </div>
@@ -907,17 +912,12 @@ function AltAdder({ entityById, excludeIds, onPick, onCreate, canCreate }: {
   );
 }
 
-const STATUS_CYCLE: { value: ActivityStatus; emoji: string; label: string }[] = [
-  { value: "planned", emoji: "💡", label: "Tentative" },
-  { value: "scheduled", emoji: "📅", label: "Scheduled" },
-  { value: "done", emoji: "✓", label: "Done" },
-  { value: "notDone", emoji: "✗", label: "Didn't happen" },
-];
-const BOOKING_CYCLE: { value: BookingStatus; emoji: string; label: string }[] = [
-  { value: "walkin", emoji: "🚶", label: "Walk-in" },
-  { value: "needed", emoji: "📋", label: "Booking needed" },
-  { value: "done", emoji: "✅", label: "Booked" },
-];
+const STATUS_CYCLE: { value: ActivityStatus; label: string; className: string }[] = (
+  ["planned", "scheduled", "done", "notDone"] as ActivityStatus[]
+).map((v) => ({ value: v, label: ACTIVITY_PILL[v].label, className: ACTIVITY_PILL[v].className }));
+const BOOKING_CYCLE: { value: BookingStatus; label: string; className: string }[] = (
+  ["walkin", "needed", "done"] as BookingStatus[]
+).map((v) => ({ value: v, label: BOOKING_PILL[v].label, className: BOOKING_PILL[v].className }));
 
 function CalRatingWidget({ tripId, instanceDocId, entityId, ratings }: {
   tripId: string;
@@ -976,15 +976,15 @@ function CalRatingWidget({ tripId, instanceDocId, entityId, ratings }: {
 }
 
 function CycleBadge<T extends string>({ value, options, disabled, onChange }: {
-  value: T; options: { value: T; emoji: string; label: string }[]; disabled?: boolean; onChange: (v: T) => void;
+  value: T; options: { value: T; label: string; className: string }[]; disabled?: boolean; onChange: (v: T) => void;
 }) {
   const cur = options.find((o) => o.value === value) ?? options[0];
   const next = () => { const i = options.findIndex((o) => o.value === value); onChange(options[(i + 1) % options.length].value); };
   return (
     <button type="button" disabled={disabled} onClick={next}
       title={disabled ? cur.label : `${cur.label} — tap to change`}
-      className={`rounded-full bg-slate-100 px-1.5 py-0.5 text-sm leading-none ${disabled ? "cursor-default" : "hover:bg-slate-200"}`}>
-      {cur.emoji}
+      className={`rounded-full px-2 py-0.5 text-[10px] font-semibold leading-none ${cur.className} ${disabled ? "cursor-default" : "hover:opacity-80"}`}>
+      {cur.label}
     </button>
   );
 }
