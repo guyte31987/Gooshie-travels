@@ -1009,10 +1009,12 @@ function PlaceEditor({ entityId, ent, fallbackName, clubs, onSave, onCancel }: {
   const [website, setWebsite] = useState(ent?.website ?? "");
   const [instagram, setInstagram] = useState(ent?.instagram ?? "");
   const [hours, setHours] = useState(ent?.hours ?? "");
+  const [notes, setNotes] = useState("");
   const [parentId, setParentId] = useState<string>("");
   const [newVenueName, setNewVenueName] = useState("");
   const [enriching, setEnriching] = useState(false);
   const [enrichError, setEnrichError] = useState<string | null>(null);
+  const [enriched, setEnriched] = useState(false);
   const inp = "w-full rounded-lg border border-slate-300 px-2 py-1 text-sm outline-none focus:border-slate-400";
 
   // AI auto-fill: look up the place by name + type and fill any blank fields.
@@ -1028,12 +1030,17 @@ function PlaceEditor({ entityId, ent, fallbackName, clubs, onSave, onCancel }: {
       if (f.website && !website.trim()) setWebsite(f.website);
       if (f.instagram && !instagram.trim()) setInstagram(f.instagram);
       if (f.hours && !hours.trim()) setHours(f.hours);
+      if (f.notes && !notes.trim()) setNotes(f.notes);
+      setEnriched(true);
     } catch (e) {
       setEnrichError(e instanceof Error ? e.message : "Auto-fill failed.");
     } finally {
       setEnriching(false);
     }
   };
+
+  // A one-tap way to eyeball whether the auto-filled facts are right.
+  const verifyQuery = (address.trim() || `${name.trim()}${area.trim() ? " " + area.trim() : ""}`).trim();
 
   const resolvedParentId = parentId === "__new__"
     ? (newVenueName.trim() ? `new-venue:${newVenueName.trim()}` : "")
@@ -1044,6 +1051,7 @@ function PlaceEditor({ entityId, ent, fallbackName, clubs, onSave, onCancel }: {
     if (parentId === "__new__" && !newVenueName.trim()) return;
     onSave({ name: name.trim(), type, area: area.trim() || undefined, address: address.trim() || undefined,
       website: website.trim() || undefined, instagram: instagram.trim() || undefined, hours: hours.trim() || undefined,
+      notes: notes.trim() || undefined,
       parentId: (type === "club" && resolvedParentId) ? resolvedParentId : undefined });
   };
 
@@ -1082,6 +1090,13 @@ function PlaceEditor({ entityId, ent, fallbackName, clubs, onSave, onCancel }: {
         <input value={instagram} onChange={(e) => setInstagram(e.target.value)} placeholder="@instagram" className={inp} />
       </div>
       <input value={hours} onChange={(e) => setHours(e.target.value)} placeholder="Hours" className={inp} />
+      <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="Summary / why it's worth it" className={inp} />
+      {enriched && verifyQuery && (
+        <a href={mapsSearch(verifyQuery)} target="_blank" rel="noreferrer"
+          className="inline-flex items-center gap-1 text-[11px] font-medium text-indigo-600 hover:underline">
+          🔍 Double-check on Google Maps ↗
+        </a>
+      )}
       <div className="flex justify-end gap-2 pt-1">
         <button onClick={onCancel} className="rounded-lg border border-slate-300 px-3 py-1 text-xs font-medium text-slate-600 hover:bg-white">Cancel</button>
         <button onClick={save} disabled={!name.trim()} className="rounded-lg bg-ink px-3 py-1 text-xs font-medium text-white disabled:opacity-50">Save place</button>
