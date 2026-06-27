@@ -9,6 +9,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ENTITY_TABS, type EntityType } from "@/lib/entities";
 import { buildTripIcs, downloadIcs, type IcsStay } from "@/lib/ics-export";
+import { requestEnrichment } from "@/lib/enrich";
 import { activityStatusOf, bookingStatusOf, setInstanceRating, type ActivityStatus, type BookingStatus, type Capacity } from "@/lib/itinerary";
 import { useAuth } from "./AuthProvider";
 import { useBackClose } from "@/lib/useBackClose";
@@ -1010,7 +1011,29 @@ function PlaceEditor({ entityId, ent, fallbackName, clubs, onSave, onCancel }: {
   const [hours, setHours] = useState(ent?.hours ?? "");
   const [parentId, setParentId] = useState<string>("");
   const [newVenueName, setNewVenueName] = useState("");
+  const [enriching, setEnriching] = useState(false);
+  const [enrichError, setEnrichError] = useState<string | null>(null);
   const inp = "w-full rounded-lg border border-slate-300 px-2 py-1 text-sm outline-none focus:border-slate-400";
+
+  // AI auto-fill: look up the place by name + type and fill any blank fields.
+  // Result is a draft in this form — you still review and click "Save place".
+  const autoFill = async () => {
+    if (!name.trim()) return;
+    setEnriching(true);
+    setEnrichError(null);
+    try {
+      const f = await requestEnrichment({ name: name.trim(), type, context: area || undefined });
+      if (f.area && !area.trim()) setArea(f.area);
+      if (f.address && !address.trim()) setAddress(f.address);
+      if (f.website && !website.trim()) setWebsite(f.website);
+      if (f.instagram && !instagram.trim()) setInstagram(f.instagram);
+      if (f.hours && !hours.trim()) setHours(f.hours);
+    } catch (e) {
+      setEnrichError(e instanceof Error ? e.message : "Auto-fill failed.");
+    } finally {
+      setEnriching(false);
+    }
+  };
 
   const resolvedParentId = parentId === "__new__"
     ? (newVenueName.trim() ? `new-venue:${newVenueName.trim()}` : "")
@@ -1031,6 +1054,14 @@ function PlaceEditor({ entityId, ent, fallbackName, clubs, onSave, onCancel }: {
         <select value={type} onChange={(e) => setType(e.target.value as EntityType)} className={inp}>
           {PLACE_TYPE_OPTIONS.map((t) => <option key={t.type} value={t.type}>{t.emoji} {t.label}</option>)}
         </select>
+      </div>
+      <div className="flex items-center gap-2">
+        <button type="button" onClick={autoFill} disabled={enriching || !name.trim()}
+          title="Look up address, hours, website… with AI. Fills blank fields only; you review before saving."
+          className="rounded-lg border border-indigo-200 bg-white px-2.5 py-1 text-xs font-medium text-indigo-600 hover:bg-indigo-50 disabled:opacity-50">
+          {enriching ? "Looking up…" : "✨ Auto-fill details"}
+        </button>
+        {enrichError && <span className="text-[11px] text-amber-700">{enrichError}</span>}
       </div>
       {type === "club" && (
         <>
