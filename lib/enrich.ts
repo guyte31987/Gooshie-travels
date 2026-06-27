@@ -39,7 +39,11 @@ export const ENRICH_SCHEMA = {
     lat: { type: "number", description: "Decimal latitude" },
     lng: { type: "number", description: "Decimal longitude" },
     website: { type: "string", description: "Official website URL" },
-    instagram: { type: "string", description: "Instagram handle or profile URL" },
+    instagram: {
+      type: "string",
+      description:
+        "The place's real official Instagram as a full https://instagram.com/<handle> URL or an @handle. Only include if you are confident it is the actual account — never a guessed handle or a search query. Omit if unsure.",
+    },
     hours: { type: "string", description: "Opening hours, free text" },
     price: { type: "string", description: "Price level $ to $$$$, or a range" },
     booking: { type: "string", description: "How to book, e.g. Resident Advisor, walk-in" },
@@ -62,7 +66,28 @@ export function buildEnrichPrompt(req: EnrichRequest): string {
     `- If you cannot confidently identify the place at all, return an empty object {}.`,
     `- Coordinates should be the venue's own location if you know it; omit if approximate.`,
     `- "notes" is one short line on why it's worth visiting — not a description dump.`,
+    `- For "instagram": only give the real official account as an @handle or instagram.com URL. If you don't actually know the exact handle, OMIT it — do NOT guess one or return a search phrase.`,
+    `- For "website": only a real official URL you're confident exists; otherwise omit.`,
   ].join("\n");
+}
+
+/**
+ * Accept an Instagram value only if it's a real handle or instagram.com URL,
+ * normalised to a clean profile URL. Anything with spaces, a search phrase, or
+ * an invalid handle is rejected (→ undefined) so guesses never reach the form.
+ */
+export function sanitizeInstagram(v: unknown): string | undefined {
+  if (typeof v !== "string") return undefined;
+  let s = v.trim();
+  if (!s || /\s/.test(s)) return undefined; // search phrases have spaces
+  // Pull the handle out of a URL if present.
+  const urlMatch = s.match(/instagram\.com\/([^/?#]+)/i);
+  if (urlMatch) s = urlMatch[1];
+  s = s.replace(/^@/, "");
+  // Valid IG handle: letters, numbers, dot, underscore; 1–30 chars.
+  if (!/^[A-Za-z0-9._]{1,30}$/.test(s)) return undefined;
+  if (!/[A-Za-z0-9]/.test(s)) return undefined; // not only dots/underscores
+  return `https://instagram.com/${s}`;
 }
 
 /** Drop empty strings / non-finite numbers so blanks never reach the DB. */
@@ -75,7 +100,7 @@ export function cleanEnriched(raw: Record<string, unknown>): EnrichedFields {
   out.lat = num(raw.lat);
   out.lng = num(raw.lng);
   out.website = str(raw.website);
-  out.instagram = str(raw.instagram);
+  out.instagram = sanitizeInstagram(raw.instagram);
   out.hours = str(raw.hours);
   out.price = str(raw.price);
   out.booking = str(raw.booking);
