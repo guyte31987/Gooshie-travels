@@ -953,8 +953,9 @@ function CalRatingWidget({ tripId, instanceDocId, entityId, ratings }: {
         {editing ? (
           <form onSubmit={(e) => { e.preventDefault(); save(); }} className="flex items-center gap-1">
             <input autoFocus type="number" min={0} max={10} step={0.1} value={draft}
-              onChange={(e) => setDraft(e.target.value)} onBlur={save} disabled={busy} placeholder="0–10"
+              onChange={(e) => setDraft(e.target.value)} disabled={busy} placeholder="0–10"
               className="w-20 rounded-lg border border-slate-300 px-2 py-1 text-xs outline-none focus:border-slate-500" />
+            <button type="submit" disabled={busy} className="rounded-lg bg-ink px-2.5 py-1 text-[11px] font-medium text-white disabled:opacity-50">Save</button>
             <button type="button" onClick={() => setEditing(false)} className="text-[11px] text-slate-400 hover:text-slate-600">cancel</button>
           </form>
         ) : (
