@@ -39,11 +39,10 @@ export const ENRICH_SCHEMA = {
     lat: { type: "number", description: "Decimal latitude" },
     lng: { type: "number", description: "Decimal longitude" },
     website: { type: "string", description: "Official website URL" },
-    instagram: {
-      type: "string",
-      description:
-        "The place's real official Instagram as a full https://instagram.com/<handle> URL or an @handle. Only include if you are confident it is the actual account — never a guessed handle or a search query. Omit if unsure.",
-    },
+    // NOTE: Instagram is deliberately NOT requested. Without web access the model
+    // fabricates plausible-but-wrong handles, and a wrong handle is worse than a
+    // blank one. The UI offers a "Find Instagram" search link to grab the real
+    // handle by hand instead. (Re-add this if/when search grounding is enabled.)
     hours: { type: "string", description: "Opening hours, free text" },
     price: { type: "string", description: "Price level $ to $$$$, or a range" },
     booking: { type: "string", description: "How to book, e.g. Resident Advisor, walk-in" },
@@ -66,7 +65,6 @@ export function buildEnrichPrompt(req: EnrichRequest): string {
     `- If you cannot confidently identify the place at all, return an empty object {}.`,
     `- Coordinates should be the venue's own location if you know it; omit if approximate.`,
     `- "notes" is one short line on why it's worth visiting — not a description dump.`,
-    `- For "instagram": only give the real official account as an @handle or instagram.com URL. If you don't actually know the exact handle, OMIT it — do NOT guess one or return a search phrase.`,
     `- For "website": only a real official URL you're confident exists; otherwise omit.`,
   ].join("\n");
 }
@@ -100,6 +98,8 @@ export function cleanEnriched(raw: Record<string, unknown>): EnrichedFields {
   out.lat = num(raw.lat);
   out.lng = num(raw.lng);
   out.website = str(raw.website);
+  // Instagram is not auto-filled — only accept it if a future grounded model
+  // returns a genuinely valid handle/URL; guesses are dropped by sanitize.
   out.instagram = sanitizeInstagram(raw.instagram);
   out.hours = str(raw.hours);
   out.price = str(raw.price);

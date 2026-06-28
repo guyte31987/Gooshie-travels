@@ -1098,6 +1098,13 @@ function PlaceEditor({ entityId, ent, fallbackName, clubs, onSave, onCancel }: {
         <input value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="Website" className={inp} />
         <input value={instagram} onChange={(e) => setInstagram(e.target.value)} placeholder="@instagram" className={inp} />
       </div>
+      {!instagram.trim() && name.trim() && (
+        <a href={`https://www.google.com/search?q=${encodeURIComponent(`${name.trim()} ${area.trim()} instagram`)}`}
+          target="_blank" rel="noreferrer"
+          className="inline-flex items-center gap-1 text-[11px] font-medium text-pink-600 hover:underline">
+          🔎 Find Instagram ↗ <span className="font-normal text-slate-400">(AI can't reliably guess handles)</span>
+        </a>
+      )}
       <input value={hours} onChange={(e) => setHours(e.target.value)} placeholder="Hours" className={inp} />
       <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="Summary / why it's worth it" className={inp} />
       {enriched && verifyQuery && (
