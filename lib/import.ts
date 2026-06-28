@@ -228,6 +228,28 @@ function planCreate(
 }
 
 /**
+ * Export all entities to a CSV string in the exact format planImport() expects.
+ * Paste into AI Studio / Gemini, ask it to fill the blank columns, then re-import.
+ * Columns: id, name, type, region, area, address, lat, lng, website, instagram,
+ *          hours, price, booking, notes
+ */
+export function exportEntitiesCsv(entities: DBEntity[]): string {
+  const HEADERS = ["id", "name", "type", "region", "area", "address", "lat", "lng", "website", "instagram", "hours", "price", "booking", "notes"];
+  const q = (v: string | number | undefined | null) => {
+    if (v == null || v === "") return "";
+    const s = String(v);
+    return s.includes(",") || s.includes('"') || s.includes("\n") ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const sorted = [...entities].sort((a, b) => a.type.localeCompare(b.type) || a.name.localeCompare(b.name));
+  const rows = sorted.map((e) => [
+    q(e.id), q(e.name), q(e.type), q(e.generalArea), q(e.area),
+    q(e.address), q(e.lat), q(e.lng), q(e.website), q(e.instagram),
+    q(e.hours), q(e.price), q(e.booking), q(e.notes),
+  ].join(","));
+  return [HEADERS.join(","), ...rows].join("\n");
+}
+
+/**
  * Write the planned changes to Firestore. Updates merge only the changed fields;
  * creates write the whole new entity (merge so a concurrent create can't fail).
  */

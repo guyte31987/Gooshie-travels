@@ -7,7 +7,7 @@ import {
   type DBEntity,
   type ImportLog,
 } from "@/lib/db";
-import { parseCsv, planImport, applyImport, type ImportPreview } from "@/lib/import";
+import { parseCsv, planImport, applyImport, exportEntitiesCsv, type ImportPreview } from "@/lib/import";
 import { useBackClose } from "@/lib/useBackClose";
 
 export function ImportDialog({
@@ -70,9 +70,24 @@ export function ImportDialog({
       <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-white p-5 shadow-xl sm:rounded-2xl">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold">Import enriched CSV</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
-            ✕
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                const csv = exportEntitiesCsv(entities);
+                const blob = new Blob([csv], { type: "text/csv" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "gooshie-database.csv";
+                a.click();
+                URL.revokeObjectURL(url);
+              }}
+              className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
+            >
+              Export CSV
+            </button>
+            <button onClick={onClose} className="text-slate-400 hover:text-slate-600">✕</button>
+          </div>
         </div>
 
         {done !== null ? (
@@ -103,10 +118,10 @@ export function ImportDialog({
         ) : (
           <div className="space-y-4">
             <p className="text-xs text-slate-500">
-              Paste (or upload) the CSV you exported and filled in. Rows are matched back by the{" "}
-              <code className="rounded bg-slate-100 px-1">id</code> column. Geo, address, hours,
-              price, website, instagram and booking are overwritten; notes are only filled when
-              empty. An Instagram link in the Website column is moved to Instagram automatically.
+              Click <strong>Export CSV</strong> to download all entities, paste it into{" "}
+              <a href="https://aistudio.google.com" target="_blank" rel="noreferrer" className="underline">AI Studio</a>{" "}
+              and ask Gemini to fill the blank columns, then paste or upload the result back here.
+              Rows are matched by <code className="rounded bg-slate-100 px-1">id</code>; notes are only filled when empty.
             </p>
 
             {/* Previous import — reviewable history */}
