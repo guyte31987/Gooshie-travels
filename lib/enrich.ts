@@ -39,10 +39,7 @@ export const ENRICH_SCHEMA = {
     lat: { type: "number", description: "Decimal latitude" },
     lng: { type: "number", description: "Decimal longitude" },
     website: { type: "string", description: "Official website URL" },
-    // NOTE: Instagram is deliberately NOT requested. Without web access the model
-    // fabricates plausible-but-wrong handles, and a wrong handle is worse than a
-    // blank one. The UI offers a "Find Instagram" search link to grab the real
-    // handle by hand instead. (Re-add this if/when search grounding is enabled.)
+    instagram: { type: "string", description: "Instagram handle or profile URL, e.g. @bossa or https://instagram.com/bossa" },
     hours: { type: "string", description: "Opening hours, free text" },
     price: { type: "string", description: "Price level $ to $$$$, or a range" },
     booking: { type: "string", description: "How to book, e.g. Resident Advisor, walk-in" },
@@ -66,6 +63,7 @@ export function buildEnrichPrompt(req: EnrichRequest): string {
     `- Coordinates should be the venue's own location if you know it; omit if approximate.`,
     `- "notes" is one short line on why it's worth visiting — not a description dump.`,
     `- For "website": only a real official URL you're confident exists; otherwise omit.`,
+    `- For "instagram": the official account handle (e.g. @bossa) or profile URL. Only include if you can verify it via search; omit if uncertain.`,
   ].join("\n");
 }
 

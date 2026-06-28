@@ -1,7 +1,7 @@
-// POST /api/enrich — asks Gemini (free tier, gemini-2.5-flash) to fill objective
-// facts for a place given its name + type. Returns { fields } for the client to
-// show in an approval card; NOTHING is written to the Database here. The Gemini
-// key lives server-side only (GEMINI_API_KEY) and never reaches the browser.
+// POST /api/enrich — asks Gemini (paid tier, gemini-2.5-flash + search grounding)
+// to fill objective facts for a place given its name + type. Returns { fields }
+// for the client to show in an approval card; NOTHING is written to the Database
+// here. The Gemini key lives server-side only (GEMINI_API_KEY), never the browser.
 
 import { NextResponse } from "next/server";
 import {
@@ -51,6 +51,7 @@ export async function POST(request: Request) {
       headers: { "Content-Type": "application/json", "x-goog-api-key": key },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
+        tools: [{ googleSearch: {} }],
         generationConfig: {
           responseMimeType: "application/json",
           responseSchema: ENRICH_SCHEMA,
