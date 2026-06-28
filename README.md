@@ -47,6 +47,30 @@ Import the repo in Vercel (Hobby/free), add the env vars above, deploy. After th
 
 Add a document to the `allowlist` collection with the **lowercased email** as the document ID (any field/value is fine — existence is what's checked). That email can then sign in without waiting.
 
+## Trip Recap (public sharing)
+
+At the end of a trip you can publish a **public recap page** — a curated highlight
+reel anyone can open with the link, no login.
+
+- **Build it** — on a trip, open the **Recap** tab (editors/admins only). Tick the
+  places to feature, set a rating + recommendation blurb for each, pick which
+  photos and comments to include, add a title/intro and a cover photo.
+- **Publish** — hit **Publish**. The chosen photos are copied into a public
+  gallery and the page goes live at `/r/<slug>`. Everything you didn't pick stays
+  private. **Unpublish** takes it back offline.
+- **Share** — copy the link from the Recap tab. The page is server-rendered with
+  rich link previews (cover image + title), has clickable place details, and a
+  full recommendations list visitors can filter by category and sort by rating.
+
+This needs a **Firebase service account** (`FIREBASE_SERVICE_ACCOUNT`) so the
+server can render public pages and copy photos — see the env table below. Also
+re-paste `firestore.rules` and `storage.rules` after adding the recap feature
+(they add public read for `recaps/*` and the `public/*` Storage prefix).
+
+| Variable | What |
+| --- | --- |
+| `FIREBASE_SERVICE_ACCOUNT` | Firebase console → Project settings → Service accounts → *Generate new private key*. Paste the JSON (or base64 of it). Server-side only. |
+
 ## Roadmap
 
 - **Phase 2** — Planning tab (restaurant/vintage/booking lists) + Leaflet/OpenStreetMap map with toggleable layers + entity matching.

@@ -17,6 +17,7 @@ should use them consistently.
 | **Sync / Re-sync** | Pulling the trip's calendar and refreshing Instances — respecting Locks. Automatic on load + daily; "Re-sync now" forces it. |
 | **Sync Report / Conflicts** | The admin view of unresolved items: plan-vs-calendar mismatches, closed venues in the plan, unmappable locations, uncategorized events. Each can be dismissed. |
 | **Comment** | A text note on an Instance. **Media** = photos/video on an Instance (Phase 3). |
+| **Recap** | A curated, **published snapshot** of a finished Trip, open to anyone with the link (no login). The admin picks which Entities to feature and their ratings, recommendation blurbs, photos, and comments. Lives at `/r/<slug>`; stored in `recaps/{slug}`, separate from the private Database so only what's chosen is ever public. |
 
 ## Relationships, in one line
 **Database** holds **Entities**. A **Trip** includes some Entities (**Membership**),
