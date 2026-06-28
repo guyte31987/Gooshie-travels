@@ -88,6 +88,14 @@ service cloud.firestore {
       allow write: if isEditor();
     }
 
+    // Public Trip Recaps — the curated, published snapshot. Anyone (no auth) can
+    // read; only editors can write. The public /r/[slug] page renders via the
+    // Admin SDK, so this public read only matters for any client-side reads.
+    match /recaps/{slug} {
+      allow read: if true;
+      allow write: if isEditor();
+    }
+
     // Comments on instances/appearances — any member can read and post; the
     // author or an admin can delete.
     match /comments/{id} {

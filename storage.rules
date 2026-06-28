@@ -23,5 +23,13 @@ service firebase.storage {
       allow write: if isAuth();
       allow delete: if isAuth();
     }
+
+    // Published recap photos — copied here (server-side) at publish time so they
+    // load for the public /r/[slug] page. Public read; writes are server-only via
+    // the Admin SDK, which bypasses these rules, so no client write is allowed.
+    match /public/{allPaths=**} {
+      allow read: if true;
+      allow write, delete: if false;
+    }
   }
 }
