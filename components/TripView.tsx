@@ -5,13 +5,17 @@ import Link from "next/link";
 import { AppHeader } from "./AppHeader";
 import { ItineraryBoard } from "./ItineraryBoard";
 import { PlanningTab } from "./PlanningTab";
+import { RecapBuilder } from "./RecapBuilder";
 import { TripDataProvider } from "./TripData";
+import { useAuth } from "./AuthProvider";
 import { getTrip } from "@/lib/trips";
 
-type Tab = "itinerary" | "planning";
+type Tab = "itinerary" | "planning" | "recap";
 
 export function TripView({ tripId }: { tripId: string }) {
   const trip = getTrip(tripId);
+  const { isAdmin, role } = useAuth();
+  const canEdit = isAdmin || role === "editor";
   const [tab, setTab] = useState<Tab>("itinerary");
 
   if (!trip) {
@@ -39,12 +43,20 @@ export function TripView({ tripId }: { tripId: string }) {
             <TabBtn active={tab === "planning"} onClick={() => setTab("planning")}>
               Trip DB
             </TabBtn>
+            {canEdit && (
+              <TabBtn active={tab === "recap"} onClick={() => setTab("recap")}>
+                Recap
+              </TabBtn>
+            )}
           </nav>
         </div>
 
         <main>
           {tab === "itinerary" && <ItineraryBoard tripId={trip.id} />}
           {tab === "planning" && <PlanningTab />}
+          {tab === "recap" && (
+            <RecapBuilder tripId={trip.id} tripName={trip.name} dateLabel={trip.dateLabel} />
+          )}
         </main>
       </div>
     </TripDataProvider>
