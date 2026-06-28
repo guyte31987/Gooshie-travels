@@ -1022,6 +1022,7 @@ function PlaceEditor({ entityId, ent, fallbackName, clubs, onSave, onCancel }: {
   const [notes, setNotes] = useState("");
   const [parentId, setParentId] = useState<string>("");
   const [newVenueName, setNewVenueName] = useState("");
+  const [mapsUrl, setMapsUrl] = useState("");
   const [enriching, setEnriching] = useState(false);
   const [enrichError, setEnrichError] = useState<string | null>(null);
   const [enriched, setEnriched] = useState(false);
@@ -1034,7 +1035,8 @@ function PlaceEditor({ entityId, ent, fallbackName, clubs, onSave, onCancel }: {
     setEnriching(true);
     setEnrichError(null);
     try {
-      const f = await requestEnrichment({ name: name.trim(), type, context: area || undefined });
+      const contextParts = [area.trim(), mapsUrl.trim()].filter(Boolean);
+      const f = await requestEnrichment({ name: name.trim(), type, context: contextParts.join(" | ") || undefined });
       if (f.area && !area.trim()) setArea(f.area);
       if (f.address && !address.trim()) setAddress(f.address);
       if (f.website && !website.trim()) setWebsite(f.website);
@@ -1073,6 +1075,9 @@ function PlaceEditor({ entityId, ent, fallbackName, clubs, onSave, onCancel }: {
           {PLACE_TYPE_OPTIONS.map((t) => <option key={t.type} value={t.type}>{t.emoji} {t.label}</option>)}
         </select>
       </div>
+      <input value={mapsUrl} onChange={(e) => setMapsUrl(e.target.value)}
+        placeholder="Google Maps link (optional — helps AI find the exact place)"
+        className={inp + " text-xs text-slate-500"} />
       <div className="flex items-center gap-2">
         <button type="button" onClick={autoFill} disabled={enriching || !name.trim()}
           title="Look up address, hours, website… with AI. Fills blank fields only; you review before saving."
