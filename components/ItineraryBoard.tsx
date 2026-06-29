@@ -90,7 +90,7 @@ export function ItineraryBoard({ tripId }: { tripId: string }) {
       <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
         <p className="text-sm text-slate-500">No itinerary yet for this trip.</p>
         {canEdit && (
-          <button onClick={seed} disabled={seeding} className="mt-3 rounded-lg bg-ink px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
+          <button onClick={seed} disabled={seeding} className="mt-3 rounded-lg bg-rust px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
             {seeding ? "Seeding…" : "Seed from the reviewed mapping"}
           </button>
         )}

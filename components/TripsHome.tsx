@@ -14,10 +14,10 @@ export function TripsHome() {
           <li key={t.id}>
             <Link
               href={`/trip/${t.id}`}
-              className="block rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-slate-300 hover:shadow"
+              className="block rounded-2xl border border-border-card bg-sheet p-5 shadow-sm transition hover:border-slate-300 hover:shadow"
             >
               <div className="flex items-baseline justify-between gap-2">
-                <h2 className="text-lg font-semibold">{t.name}</h2>
+                <h2 className="font-display text-lg font-semibold">{t.name}</h2>
                 <span className="text-slate-300">→</span>
               </div>
               <p className="mt-0.5 text-sm text-slate-500">{t.dateLabel}</p>

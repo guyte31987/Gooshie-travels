@@ -129,7 +129,7 @@ export function Comments({
             <button
               type="submit"
               disabled={busy || (!text.trim() && !pendingPhotoBlob)}
-              className="rounded-lg bg-ink px-3 py-1.5 text-sm font-medium text-white hover:bg-ink/90 disabled:opacity-40"
+              className="rounded-lg bg-rust px-3 py-1.5 text-sm font-medium text-white hover:bg-rust/90 disabled:opacity-40"
             >
               {busy ? "…" : "Post"}
             </button>
@@ -318,7 +318,7 @@ function CommentItem({
                 type="button"
                 onClick={saveEdit}
                 disabled={busy}
-                className="rounded-lg bg-ink px-2.5 py-1 text-xs font-medium text-white disabled:opacity-40"
+                className="rounded-lg bg-rust px-2.5 py-1 text-xs font-medium text-white disabled:opacity-40"
               >
                 {busy ? "Saving…" : "Save"}
               </button>

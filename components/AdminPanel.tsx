@@ -73,7 +73,7 @@ export function AdminPanel() {
               </option>
             ))}
           </select>
-          <button className="rounded-lg bg-ink px-4 py-2 text-sm font-medium text-white hover:bg-ink/90">
+          <button className="rounded-lg bg-rust px-4 py-2 text-sm font-medium text-white hover:bg-rust/90">
             Pre-approve
           </button>
         </form>

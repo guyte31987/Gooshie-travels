@@ -217,7 +217,7 @@ export function EntityForm({
           <button
             onClick={save}
             disabled={busy || !form.name.trim()}
-            className="rounded-lg bg-ink px-4 py-2 text-sm font-medium text-white hover:bg-ink/90 disabled:opacity-50"
+            className="rounded-lg bg-rust px-4 py-2 text-sm font-medium text-white hover:bg-rust/90 disabled:opacity-50"
           >
             {busy ? "Saving…" : "Save"}
           </button>

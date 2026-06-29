@@ -110,7 +110,7 @@ export function ImportDialog({
             )}
             <button
               onClick={onClose}
-              className="w-full rounded-lg bg-ink px-4 py-2 text-sm font-medium text-white hover:bg-ink/90"
+              className="w-full rounded-lg bg-rust px-4 py-2 text-sm font-medium text-white hover:bg-rust/90"
             >
               Done
             </button>
@@ -248,7 +248,7 @@ export function ImportDialog({
               <button
                 onClick={apply}
                 disabled={busy || (!preview?.patches.length && !preview?.creates.length)}
-                className="rounded-lg bg-ink px-4 py-2 text-sm font-medium text-white hover:bg-ink/90 disabled:opacity-50"
+                className="rounded-lg bg-rust px-4 py-2 text-sm font-medium text-white hover:bg-rust/90 disabled:opacity-50"
               >
                 {busy ? "Importing…" : importLabel(preview)}
               </button>

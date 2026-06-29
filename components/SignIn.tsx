@@ -105,13 +105,13 @@ export function SignIn() {
         <div className="mb-5 flex rounded-lg border border-slate-200 p-1 text-sm font-medium">
           <button
             onClick={() => switchMode("signin")}
-            className={`flex-1 rounded-md py-1.5 transition ${mode === "signin" ? "bg-ink text-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+            className={`flex-1 rounded-md py-1.5 transition ${mode === "signin" ? "bg-rust text-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
           >
             Sign in
           </button>
           <button
             onClick={() => switchMode("signup")}
-            className={`flex-1 rounded-md py-1.5 transition ${mode === "signup" ? "bg-ink text-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+            className={`flex-1 rounded-md py-1.5 transition ${mode === "signup" ? "bg-rust text-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
           >
             Request access
           </button>
@@ -140,7 +140,7 @@ export function SignIn() {
             <button
               type="submit"
               disabled={!configured || busy}
-              className="w-full rounded-lg bg-ink px-4 py-2.5 text-sm font-medium text-white transition hover:bg-ink/90 disabled:opacity-50"
+              className="w-full rounded-lg bg-rust px-4 py-2.5 text-sm font-medium text-white transition hover:bg-rust/90 disabled:opacity-50"
             >
               {busy ? "Signing in…" : "Sign in"}
             </button>
@@ -185,7 +185,7 @@ export function SignIn() {
             <button
               type="submit"
               disabled={!configured || busy}
-              className="w-full rounded-lg bg-ink px-4 py-2.5 text-sm font-medium text-white transition hover:bg-ink/90 disabled:opacity-50"
+              className="w-full rounded-lg bg-rust px-4 py-2.5 text-sm font-medium text-white transition hover:bg-rust/90 disabled:opacity-50"
             >
               {busy ? "Creating account…" : "Request access"}
             </button>
@@ -219,7 +219,7 @@ export function SignIn() {
               <button
                 type="submit"
                 disabled={!configured || busy}
-                className="w-full rounded-lg bg-ink px-4 py-2.5 text-sm font-medium text-white transition hover:bg-ink/90 disabled:opacity-50"
+                className="w-full rounded-lg bg-rust px-4 py-2.5 text-sm font-medium text-white transition hover:bg-rust/90 disabled:opacity-50"
               >
                 {busy ? "Sending…" : "Send reset email"}
               </button>

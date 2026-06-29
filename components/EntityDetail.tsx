@@ -556,7 +556,7 @@ function BookingForm({
               });
               onClose();
             }}
-            className="rounded-lg bg-ink px-3 py-1 text-xs font-medium text-white"
+            className="rounded-lg bg-rust px-3 py-1 text-xs font-medium text-white"
           >
             Save
           </button>
