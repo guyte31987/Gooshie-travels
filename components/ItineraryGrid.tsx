@@ -422,10 +422,10 @@ export function ItineraryCalendar({
 
 // --- list view ---------------------------------------------------------------
 
-function fmt24(min: number): { h: string; m: string } {
-  const h = Math.floor(min / 60) % 24;
-  const m = min % 60;
-  return { h: String(h), m: `:${String(m).padStart(2, "0")}` };
+function fmt24(min: number): string {
+  const h = String(Math.floor(min / 60) % 24).padStart(2, "0");
+  const m = String(min % 60).padStart(2, "0");
+  return `${h}:${m}`;
 }
 
 function ListView({ days, slots, instances, entityById, stays, onOpen }: {
@@ -480,7 +480,8 @@ function ListView({ days, slots, instances, entityById, stays, onOpen }: {
                 const book = bookingStatusOf(main);
                 const bookPill = book !== "walkin" ? BOOKING_PILL[book] : null;
                 const title = ent?.name ?? slot.label;
-                const { h, m } = fmt24(slot.start);
+                const startTime = fmt24(slot.start);
+                const endTime = fmt24(slot.end);
 
                 // Spine style: tentative = dashed, notDone = hollow (border only), else solid
                 // Spine: solid for normal, dashed for tentative/notDone.
@@ -503,10 +504,10 @@ function ListView({ days, slots, instances, entityById, stays, onOpen }: {
                     className={`group w-full ${spineClass} rounded-r-xl bg-white py-3 pl-3 pr-3 text-left shadow-sm ring-1 ring-black/[0.06] transition hover:shadow-md`}
                   >
                     <div className="flex items-start gap-3">
-                      {/* Stacked 24h time */}
-                      <div className="w-10 shrink-0 text-right">
-                        <span className={`block font-mono text-base font-semibold leading-none ${notDone || done ? "text-secondary" : c.text}`}>{h}</span>
-                        <span className="font-mono text-[11px] leading-none text-faint">{m}</span>
+                      {/* Stacked start/end times */}
+                      <div className="w-12 shrink-0 text-right">
+                        <span className={`block font-mono text-[13px] font-semibold leading-tight ${notDone || done ? "text-secondary" : c.text}`}>{startTime}</span>
+                        <span className="block font-mono text-[11px] leading-tight text-faint">{endTime}</span>
                       </div>
 
                       {/* Content */}
