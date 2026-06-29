@@ -841,6 +841,15 @@ function Block({ slot, main, alts, entityById, col, colCount, wide, canEdit, onG
   );
 }
 
+function SectionToggle({ label, open, onToggle }: { label: string; open: boolean; onToggle: () => void }) {
+  return (
+    <button onClick={onToggle} className="flex w-full items-center justify-between text-[11px] font-semibold uppercase tracking-widest text-faint hover:text-secondary">
+      <span>{label}</span>
+      <span className="text-base font-light leading-none">{open ? "−" : "+"}</span>
+    </button>
+  );
+}
+
 // --- detail sheet ------------------------------------------------------------
 
 function DetailSheet({ slot, instances, entityById, canEdit, handlers, isNew, tripId, onClose }: {
@@ -879,6 +888,7 @@ function DetailSheet({ slot, instances, entityById, canEdit, handlers, isNew, tr
   if (!main) return null;
 
   const bookingPill = BOOKING_PILL[bookingStatusOf(main) as keyof typeof BOOKING_PILL];
+  const isDone = activityStatusOf(main) === "done";
   const locationLabel = ent?.parent ? `@${ent.parent}` : ent?.area ?? "";
   const timeLineParts = [
     `${fmt(slot.start)} – ${fmt(slot.end)}`,
@@ -893,12 +903,10 @@ function DetailSheet({ slot, instances, entityById, canEdit, handlers, isNew, tr
         {/* Top: category chip row + close/edit */}
         <div className="mb-3 flex items-start justify-between gap-2">
           <div className="flex flex-wrap items-center gap-1.5">
-            {/* Category dot chip */}
             <span className={`inline-flex items-center gap-1.5 rounded-full ${c.bg} ${c.text} px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide`}>
               <span className={`inline-block h-2 w-2 rounded-full ${c.chip}`} />
-              {emojiOf(type)} {type}
+              {type}
             </span>
-            {/* Status badges */}
             <CycleBadge value={activityStatusOf(main)} options={STATUS_CYCLE} disabled={!canEdit}
               onChange={(v) => handlers.onUpdateInstance(slot.id, main.entityId, { status: v })} />
             <CycleBadge value={bookingStatusOf(main)} options={BOOKING_CYCLE} disabled={!canEdit}
@@ -907,11 +915,11 @@ function DetailSheet({ slot, instances, entityById, canEdit, handlers, isNew, tr
           <div className="flex shrink-0 items-center gap-1">
             {canEdit && handlers.onSaveEntity && (
               <button onClick={() => setEditPlace((o) => !o)} title={adhoc ? "Categorise & add details" : "Edit place details"}
-                className={`rounded-lg border px-2 py-1 text-sm ${editPlace ? "border-slate-400 bg-slate-100" : "border-slate-200"} ${adhoc ? "text-indigo-600" : "text-slate-500"} hover:bg-slate-50`}>
-                {adhoc ? "🏷" : "✏️"}
+                className={`rounded-lg border px-2 py-1 text-xs font-medium ${editPlace ? "border-slate-400 bg-slate-100 text-ink" : "border-slate-200 text-slate-500"} hover:bg-slate-50`}>
+                {adhoc ? "Tag" : "Edit"}
               </button>
             )}
-            <button onClick={cancel} className="px-1 text-slate-400 hover:text-slate-600">✕</button>
+            <button onClick={cancel} className="ml-1 px-1 text-slate-400 hover:text-slate-600">✕</button>
           </div>
         </div>
 
@@ -940,12 +948,10 @@ function DetailSheet({ slot, instances, entityById, canEdit, handlers, isNew, tr
         {/* Info rows — structured label/value table */}
         {!adhoc && (ent?.address || ent?.hours || ent?.website || ent?.instagram || ent?.phone) && (
           <div className="mt-4 space-y-2 rounded-xl bg-fill-soft px-4 py-3 text-sm">
-            {(ent?.address || true) && (
-              <a href={mapsSearch(mapQuery)} target="_blank" rel="noreferrer" className="flex items-start gap-3 hover:opacity-80">
-                <span className="w-14 shrink-0 font-mono text-[10px] font-semibold uppercase tracking-widest text-faint pt-0.5">Address</span>
-                <span className="text-ink underline decoration-slate-300">{ent?.address || `Find "${ent?.name}" on Maps`}</span>
-              </a>
-            )}
+            <a href={mapsSearch(mapQuery)} target="_blank" rel="noreferrer" className="flex items-start gap-3 hover:opacity-80">
+              <span className="w-14 shrink-0 font-mono text-[10px] font-semibold uppercase tracking-widest text-faint pt-0.5">Address</span>
+              <span className="text-ink underline decoration-slate-300">{ent?.address || `Find "${ent?.name}" on Maps`}</span>
+            </a>
             {ent?.hours && (
               <div className="flex items-start gap-3">
                 <span className="w-14 shrink-0 font-mono text-[10px] font-semibold uppercase tracking-widest text-faint pt-0.5">Hours</span>
@@ -974,31 +980,39 @@ function DetailSheet({ slot, instances, entityById, canEdit, handlers, isNew, tr
           </div>
         )}
 
+        {/* Notes — only shown when there's content or editable */}
         <div className="mt-4 space-y-3">
           {/* Visit note */}
-          <div>
-            <button onClick={() => setNoteOpen((o) => !o)} className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 hover:text-slate-600">
-              📝 Visit note {noteOpen ? "▲" : "▼"}
-            </button>
-            {noteOpen ? (
-              canEdit ? (
-                <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-400" placeholder="Notes for this visit…" />
-              ) : <p className="mt-1 whitespace-pre-line text-sm text-slate-700">{main.note || <span className="text-slate-400">No note.</span>}</p>
-            ) : (
-              <p className="truncate text-sm text-slate-600">{main.note || <span className="text-slate-400">{canEdit ? "Add a visit note…" : "No note."}</span>}</p>
-            )}
-          </div>
+          {(note || canEdit) && (
+            <div>
+              {noteOpen ? (
+                canEdit ? (
+                  <textarea autoFocus value={note} onChange={(e) => setNote(e.target.value)} rows={3}
+                    onBlur={() => { if (!note) setNoteOpen(false); }}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-400"
+                    placeholder="Notes for this visit…" />
+                ) : <p className="whitespace-pre-line text-sm text-body">{note}</p>
+              ) : note ? (
+                <button onClick={() => setNoteOpen(true)} className="w-full text-left">
+                  <p className="line-clamp-2 text-sm text-body">{note}</p>
+                  <span className="text-[11px] text-faint hover:text-secondary">Edit note</span>
+                </button>
+              ) : canEdit ? (
+                <button onClick={() => setNoteOpen(true)} className="text-[11px] text-faint hover:text-secondary">
+                  + add visit note
+                </button>
+              ) : null}
+            </div>
+          )}
 
-          {/* Entity note — collapsed text, tap to edit */}
+          {/* Entity note */}
           {ent && (canEdit || ent.notes) && (
-            <div className="border-t border-slate-100 pt-3">
-              <button onClick={() => setEntityNoteOpen((o) => !o)} className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 hover:text-slate-600">
-                🏷 About this place {entityNoteOpen ? "▲" : "▼"}
-              </button>
+            <div className={note || canEdit ? "border-t border-border-divider pt-3" : ""}>
               {entityNoteOpen ? (
                 canEdit ? (
-                  <div className="mt-1 space-y-1.5">
-                    <textarea value={entityNote} onChange={(e) => setEntityNote(e.target.value)} rows={2}
+                  <div className="space-y-1.5">
+                    <textarea autoFocus value={entityNote} onChange={(e) => setEntityNote(e.target.value)} rows={2}
+                      onBlur={() => { if (!entityNote) setEntityNoteOpen(false); }}
                       className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400"
                       placeholder="Why it's worth visiting…" />
                     {entityNote !== (ent.notes ?? "") && (
@@ -1006,32 +1020,39 @@ function DetailSheet({ slot, instances, entityById, canEdit, handlers, isNew, tr
                         if (!handlers.onSaveEntityNote) return;
                         setEntityNoteSaving(true);
                         try { await Promise.resolve(handlers.onSaveEntityNote(ent.id, entityNote.trim())); }
-                        finally { setEntityNoteSaving(false); }
+                        finally { setEntityNoteSaving(false); setEntityNoteOpen(false); }
                       }} className="rounded-lg bg-rust px-3 py-1 text-xs font-medium text-white disabled:opacity-50">
-                        {entityNoteSaving ? "Saving…" : "Save note"}
+                        {entityNoteSaving ? "Saving…" : "Save"}
                       </button>
                     )}
                   </div>
-                ) : <p className="mt-1 text-sm text-slate-600">{ent.notes || <span className="text-slate-400">No note.</span>}</p>
-              ) : (
-                <p className="truncate text-sm text-slate-600">{ent.notes || <span className="text-slate-400">{canEdit ? "Add a note…" : ""}</span>}</p>
-              )}
+                ) : <p className="text-sm text-body">{ent.notes}</p>
+              ) : ent.notes ? (
+                <button onClick={() => setEntityNoteOpen(true)} className="w-full text-left">
+                  <p className="line-clamp-2 text-sm text-body italic">{ent.notes}</p>
+                  {canEdit && <span className="text-[11px] text-faint hover:text-secondary">Edit</span>}
+                </button>
+              ) : canEdit ? (
+                <button onClick={() => setEntityNoteOpen(true)} className="text-[11px] text-faint hover:text-secondary">
+                  + add place note
+                </button>
+              ) : null}
             </div>
           )}
         </div>
 
-        {ent && (
-          <div className="mt-4 border-t border-slate-100 pt-3 space-y-3">
-            {/* Rating */}
-            <div>
-              {tripId && <CalRatingWidget tripId={tripId} instanceDocId={`${slot.id}__${main.entityId}`} entityId={main.entityId} ratings={main.ratings} />}
-            </div>
+        {/* Rating — always visible when done */}
+        {ent && tripId && isDone && (
+          <div className="mt-4 border-t border-border-divider pt-3">
+            <CalRatingWidget tripId={tripId} instanceDocId={`${slot.id}__${main.entityId}`} entityId={main.entityId} ratings={main.ratings} />
+          </div>
+        )}
 
+        {ent && (
+          <div className="mt-1 space-y-0">
             {/* Photos */}
-            <div>
-              <button onClick={() => setPhotosOpen((o) => !o)} className="text-sm text-slate-500 hover:text-slate-700">
-                📷 Photos{main.photos?.length ? ` (${main.photos.length})` : ""} {photosOpen ? "▲" : "▼"}
-              </button>
+            <div className="border-t border-border-divider pt-3 mt-3">
+              <SectionToggle label={`Photos${main.photos?.length ? ` (${main.photos.length})` : ""}`} open={photosOpen} onToggle={() => setPhotosOpen((o) => !o)} />
               {photosOpen && (
                 <div className="mt-2">
                   <PhotoGallery
@@ -1047,16 +1068,14 @@ function DetailSheet({ slot, instances, entityById, canEdit, handlers, isNew, tr
                       ? async (url, next) => handlers.onToggleEntityPhoto!(ent.id, url, next)
                       : undefined}
                   />
-                  {ent && <p className="mt-1 text-[10px] text-slate-400">★ favourites show on the place in the Database; the rest stay on this visit.</p>}
+                  {ent && <p className="mt-1 text-[10px] text-faint">Starred favourites appear on the place in the Database.</p>}
                 </div>
               )}
             </div>
 
             {/* Comments */}
-            <div>
-              <button onClick={() => setCommentOpen((o) => !o)} className="text-sm text-slate-500 hover:text-slate-700">
-                💬 Comments {commentOpen ? "▲" : "▼"}
-              </button>
+            <div className="border-t border-border-divider pt-3 mt-3">
+              <SectionToggle label="Comments" open={commentOpen} onToggle={() => setCommentOpen((o) => !o)} />
               {commentOpen && (
                 <div className="mt-2">
                   <Comments instanceId={`${slot.id}__${main.entityId}`} />
@@ -1066,10 +1085,8 @@ function DetailSheet({ slot, instances, entityById, canEdit, handlers, isNew, tr
           </div>
         )}
 
-        <div className="mt-4">
-          <button onClick={() => setAltsOpen((o) => !o)} className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 hover:text-slate-600">
-            ⚖️ Competing options{alts.length ? ` (${alts.length + 1})` : ""} {altsOpen ? "▲" : "▼"}
-          </button>
+        <div className="mt-3 border-t border-border-divider pt-3">
+          <SectionToggle label={`Alternatives${alts.length ? ` (${alts.length + 1})` : ""}`} open={altsOpen} onToggle={() => setAltsOpen((o) => !o)} />
           {altsOpen && (
             <div className="mt-2">
               <ul className="space-y-1.5">
