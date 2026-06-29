@@ -38,6 +38,7 @@ const LIFT_HINT_MS = 160;
 export type CalEntity = {
   id: string; name: string; type: EntityType;
   area?: string; parent?: string; address?: string; website?: string; instagram?: string; phone?: string; hours?: string;
+  notes?: string;
   /** The entity's favourited photos (shown in the Database). */
   photos?: string[];
 };
@@ -63,6 +64,7 @@ export type CalHandlers = {
   onRenameSlot: (slotId: string, label: string) => void;
   onReplaceMain?: (slotId: string, newEntityId: string) => void;
   onSaveEntity?: (entityId: string, patch: EntityPatch) => void;
+  onSaveEntityNote?: (entityId: string, note: string) => void;
   onSaveStay?: (stay: IcsStay) => void;
   onDeleteStay?: (from: string) => void;
   onGestureStart?: () => void;
@@ -688,6 +690,8 @@ function DetailSheet({ slot, instances, entityById, canEdit, handlers, isNew, tr
   const ent = main ? entityById.get(main.entityId) : undefined;
   const adhoc = !ent;
   const [note, setNote] = useState(main?.note ?? "");
+  const [entityNote, setEntityNote] = useState(ent?.notes ?? "");
+  const [entityNoteSaving, setEntityNoteSaving] = useState(false);
   const [label, setLabel] = useState(slot.label);
   const [commentOpen, setCommentOpen] = useState(false);
   const [editPlace, setEditPlace] = useState(false);
@@ -769,21 +773,56 @@ function DetailSheet({ slot, instances, entityById, canEdit, handlers, isNew, tr
           </div>
         )}
 
-        <div className="mt-4">
-          <button onClick={() => setNoteOpen((o) => !o)} className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 hover:text-slate-600">
-            📝 Note {noteOpen ? "▲" : "▼"}
-          </button>
-          {noteOpen ? (
-            canEdit ? (
-              <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-400" placeholder="Notes for this visit…" />
-            ) : <p className="mt-1 whitespace-pre-line text-sm text-slate-700">{main.note || <span className="text-slate-400">No note.</span>}</p>
-          ) : (
-            <p className="truncate text-sm text-slate-600">{main.note || <span className="text-slate-400">{canEdit ? "Add a note…" : "No note."}</span>}</p>
+        <div className="mt-4 space-y-3">
+          {/* Visit note */}
+          <div>
+            <button onClick={() => setNoteOpen((o) => !o)} className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 hover:text-slate-600">
+              📝 Visit note {noteOpen ? "▲" : "▼"}
+            </button>
+            {noteOpen ? (
+              canEdit ? (
+                <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-400" placeholder="Notes for this visit…" />
+              ) : <p className="mt-1 whitespace-pre-line text-sm text-slate-700">{main.note || <span className="text-slate-400">No note.</span>}</p>
+            ) : (
+              <p className="truncate text-sm text-slate-600">{main.note || <span className="text-slate-400">{canEdit ? "Add a visit note…" : "No note."}</span>}</p>
+            )}
+          </div>
+
+          {/* Entity note — inline editable, saved independently */}
+          {ent && (
+            <div className="border-t border-slate-100 pt-3">
+              <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">About this place</p>
+              {canEdit ? (
+                <div className="space-y-1.5">
+                  <textarea value={entityNote} onChange={(e) => setEntityNote(e.target.value)} rows={2}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400"
+                    placeholder="Why it's worth visiting…" />
+                  {entityNote !== (ent.notes ?? "") && (
+                    <button disabled={entityNoteSaving} onClick={async () => {
+                      if (!handlers.onSaveEntityNote) return;
+                      setEntityNoteSaving(true);
+                      try { await Promise.resolve(handlers.onSaveEntityNote(ent.id, entityNote.trim())); }
+                      finally { setEntityNoteSaving(false); }
+                    }} className="rounded-lg bg-ink px-3 py-1 text-xs font-medium text-white disabled:opacity-50">
+                      {entityNoteSaving ? "Saving…" : "Save note"}
+                    </button>
+                  )}
+                </div>
+              ) : (
+                entityNote ? <p className="text-sm text-slate-600">{entityNote}</p> : null
+              )}
+            </div>
           )}
         </div>
 
         {ent && (
           <div className="mt-4 border-t border-slate-100 pt-3 space-y-3">
+            {/* Rating */}
+            <div>
+              {tripId && <CalRatingWidget tripId={tripId} instanceDocId={`${slot.id}__${main.entityId}`} entityId={main.entityId} ratings={main.ratings} />}
+            </div>
+
+            {/* Photos */}
             <div>
               <button onClick={() => setPhotosOpen((o) => !o)} className="text-sm text-slate-500 hover:text-slate-700">
                 📷 Photos{main.photos?.length ? ` (${main.photos.length})` : ""} {photosOpen ? "▲" : "▼"}
@@ -808,10 +847,7 @@ function DetailSheet({ slot, instances, entityById, canEdit, handlers, isNew, tr
               )}
             </div>
 
-            <div>
-              {tripId && <CalRatingWidget tripId={tripId} instanceDocId={`${slot.id}__${main.entityId}`} entityId={main.entityId} ratings={main.ratings} />}
-            </div>
-
+            {/* Comments */}
             <div>
               <button onClick={() => setCommentOpen((o) => !o)} className="text-sm text-slate-500 hover:text-slate-700">
                 💬 Comments {commentOpen ? "▲" : "▼"}
@@ -822,8 +858,6 @@ function DetailSheet({ slot, instances, entityById, canEdit, handlers, isNew, tr
                 </div>
               )}
             </div>
-
-            <a href={`/database?open=${encodeURIComponent(ent.id)}`} className="block text-sm font-medium text-indigo-600 hover:underline">{emojiOf(type)} Edit {ent.name} in Database →</a>
           </div>
         )}
 
