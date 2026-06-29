@@ -495,12 +495,12 @@ function ListView({ days, slots, instances, entityById, stays, onOpen }: {
                 // normal/done → solid left spine, thin category-coloured border
                 const cardBase = `group w-full rounded-xl bg-white py-3.5 pl-3 pr-4 text-left transition hover:shadow-md ${notDone || tentative ? "opacity-50" : "shadow-sm"}`;
                 const cardStyle = tentative
-                  ? { border: `1.5px dashed ${c.hex}` }
+                  ? { border: `2px dashed ${c.hex}` }
                   : notDone
-                  ? { borderLeft: `4px dashed ${c.hex}`, border: `1px solid #e3ddd0`, borderLeftWidth: "4px" }
-                  : { borderLeft: `4px solid ${c.hex}`, border: `1px solid ${c.hex}40`, borderLeftWidth: "4px" };
+                  ? { borderLeft: `5px dashed ${c.hex}`, border: `1px solid #e3ddd0`, borderLeftWidth: "5px" }
+                  : { borderLeft: `5px solid ${c.hex}`, border: `1.5px solid ${c.hex}70`, borderLeftWidth: "5px" };
 
-                const timeColor = done ? "text-secondary" : c.text;
+                const timeColor = c.text; // always category colour — done badge signals completion
 
                 // Area: prefer entity's own area; for club children fall back to
                 // the parent club's area; strip the @ prefix entirely
@@ -524,7 +524,7 @@ function ListView({ days, slots, instances, entityById, stays, onOpen }: {
                       </div>
 
                       {/* Vertical divider */}
-                      <div className="w-px self-stretch rounded-full" style={{ backgroundColor: `${c.hex}40` }} />
+                      <div className="w-px self-stretch rounded-full" style={{ backgroundColor: `${c.hex}60` }} />
 
                       {/* Content */}
                       <div className="min-w-0 flex-1">
@@ -534,7 +534,7 @@ function ListView({ days, slots, instances, entityById, stays, onOpen }: {
                               {done && (
                                 <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-booked text-[9px] font-bold text-white">✓</span>
                               )}
-                              <p className={`text-sm font-semibold leading-snug ${notDone ? "line-through text-secondary" : done ? "text-secondary" : "text-ink"}`}>
+                              <p className={`text-sm font-semibold leading-snug ${notDone ? "line-through text-secondary" : "text-ink"}`}>
                                 {title}
                               </p>
                             </div>
