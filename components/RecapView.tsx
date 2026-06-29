@@ -7,6 +7,8 @@ import type { Recap, RecapItem } from "@/lib/recap";
 
 const labelOf = (t: string) => ENTITY_TABS.find((x) => x.type === t)?.label ?? t;
 const emojiOf = (t: string) => ENTITY_TABS.find((x) => x.type === t)?.emoji ?? "";
+/** The publicly-loadable photos for an item (public copies, falling back to picked). */
+const pics = (i: RecapItem): string[] => (i.publicPhotos?.length ? i.publicPhotos : i.photos) ?? [];
 
 type SortKey = "rating" | "name" | "category";
 
@@ -16,12 +18,13 @@ export function RecapView({ recap }: { recap: Recap }) {
   const [sort, setSort] = useState<SortKey>("rating");
 
   const items = recap.items ?? [];
+  const cover = recap.coverPublicUrl || recap.coverPhotoUrl;
 
   // Featured = items with a photo or a blurb, "Must visit" first then admin order.
   const featured = useMemo(
     () =>
       items
-        .filter((i) => (i.photos?.length ?? 0) > 0 || i.blurb)
+        .filter((i) => pics(i).length > 0 || i.blurb)
         .sort((a, b) => Number(!!b.mustVisit) - Number(!!a.mustVisit)),
     [items]
   );
@@ -48,10 +51,10 @@ export function RecapView({ recap }: { recap: Recap }) {
     <div className="min-h-screen bg-stone-50 text-stone-900">
       {/* Hero */}
       <header className="relative">
-        {recap.coverPhotoUrl ? (
+        {cover ? (
           <div className="relative h-64 w-full overflow-hidden sm:h-80">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={recap.coverPhotoUrl} alt="" className="h-full w-full object-cover" />
+            <img src={cover} alt="" className="h-full w-full object-cover" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
             <div className="absolute bottom-0 left-0 right-0 mx-auto max-w-3xl px-5 pb-5 text-white">
               <h1 className="text-2xl font-bold sm:text-3xl">{recap.title}</h1>
@@ -89,11 +92,11 @@ export function RecapView({ recap }: { recap: Recap }) {
                       ★ Must visit
                     </span>
                   )}
-                  {item.photos?.[0] && (
+                  {pics(item)[0] && (
                     <div className="aspect-[4/3] w-full overflow-hidden">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
-                        src={item.photos[0]}
+                        src={pics(item)[0]}
                         alt=""
                         className="h-full w-full object-cover transition group-hover:scale-105"
                       />
@@ -154,9 +157,9 @@ export function RecapView({ recap }: { recap: Recap }) {
                   onClick={() => setActive(item)}
                   className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-stone-50"
                 >
-                  {item.photos?.[0] ? (
+                  {pics(item)[0] ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={item.photos[0]} alt="" className="h-12 w-12 shrink-0 rounded-lg object-cover" />
+                    <img src={pics(item)[0]} alt="" className="h-12 w-12 shrink-0 rounded-lg object-cover" />
                   ) : (
                     <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-stone-100 text-lg">
                       {emojiOf(item.type)}
@@ -198,10 +201,10 @@ function DetailModal({ item, onClose }: { item: RecapItem; onClose: () => void }
         className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-white sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        {item.photos?.[0] && (
+        {pics(item)[0] && (
           <div className="aspect-[4/3] w-full overflow-hidden sm:rounded-t-2xl">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={item.photos[0]} alt="" className="h-full w-full object-cover" />
+            <img src={pics(item)[0]} alt="" className="h-full w-full object-cover" />
           </div>
         )}
         <div className="p-5">
@@ -233,9 +236,9 @@ function DetailModal({ item, onClose }: { item: RecapItem; onClose: () => void }
           {item.blurb && <p className="mt-3 text-sm leading-relaxed text-stone-600">{item.blurb}</p>}
 
           {/* Remaining photos */}
-          {item.photos && item.photos.length > 1 && (
+          {pics(item).length > 1 && (
             <div className="mt-4 grid grid-cols-3 gap-1.5">
-              {item.photos.slice(1).map((url) => (
+              {pics(item).slice(1).map((url) => (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img key={url} src={url} alt="" className="aspect-square w-full rounded-lg object-cover" />
               ))}

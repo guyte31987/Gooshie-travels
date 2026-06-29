@@ -1,12 +1,19 @@
-// POST /api/recap/publish — publishes (or unpublishes) a Trip Recap.
+// POST /api/recap/publish — publish / unpublish / delete a Trip Recap.
 //
-// On publish it: verifies the caller is an editor/admin, reads the curated
-// `recaps/{slug}` draft, copies every picked photo (item photos + cover) from the
+// The curated `recaps/{slug}` doc always stores the *original* (private) photo
+// URLs in `photos`/`coverPhotoUrl`. Publishing copies each picked photo from the
 // private `photos/...` Storage prefix into the public `public/recaps/{slug}/...`
-// prefix, rewrites the URLs to the public ones, and flips `published: true`.
-// On unpublish it just flips `published: false`. All Firestore/Storage work uses
-// the Admin SDK, so it bypasses client security rules — the service account
-// (FIREBASE_SERVICE_ACCOUNT) must be configured or this returns 503.
+// prefix and records the public copies in `publicPhotos`/`coverPublicUrl` — which
+// is what the public page renders. This keeps the draft editable + re-publishable.
+//
+//   action "publish"   → copy photos, set published: true
+//   action "unpublish" → set published: false, purge public photos, clear public URLs
+//   action "delete"    → purge public photos, delete the recap doc
+//
+// (Legacy: a `publish` boolean is still honoured — true→publish, false→unpublish.)
+// All Firestore/Storage work uses the Admin SDK, so it bypasses client security
+// rules — the service account (FIREBASE_SERVICE_ACCOUNT) must be configured or
+// this returns 503.
 
 import { NextResponse } from "next/server";
 import { getAuth } from "firebase-admin/auth";
@@ -66,38 +73,64 @@ export async function POST(request: Request) {
   }
 
   // --- body ---
-  let body: { slug?: string; publish?: boolean };
+  let body: { slug?: string; publish?: boolean; action?: string };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
   const slug = (body.slug ?? "").trim();
-  const publish = body.publish !== false;
   if (!slug) return NextResponse.json({ error: "A slug is required." }, { status: 400 });
+  const action = body.action ?? (body.publish === false ? "unpublish" : "publish");
+  if (!["publish", "unpublish", "delete"].includes(action)) {
+    return NextResponse.json({ error: "Unknown action." }, { status: 400 });
+  }
 
   const ref = adminDb().collection("recaps").doc(slug);
   const snap = await ref.get();
   if (!snap.exists) return NextResponse.json({ error: "Recap not found." }, { status: 404 });
   const recap = snap.data() as Recap;
 
-  // --- unpublish: just flip the flag ---
-  if (!publish) {
-    await ref.update({ published: false });
+  const bucket = adminBucket();
+
+  // Remove every copied public photo for this recap.
+  async function purgePublic() {
+    try {
+      await bucket.deleteFiles({ prefix: `public/recaps/${slug}/` });
+    } catch {
+      // Folder may not exist yet — ignore.
+    }
+  }
+
+  // --- delete: purge photos, drop the doc ---
+  if (action === "delete") {
+    await purgePublic();
+    await ref.delete();
+    return NextResponse.json({ ok: true, deleted: true, slug });
+  }
+
+  // --- unpublish: offline + purge public photos + clear public URLs ---
+  if (action === "unpublish") {
+    await purgePublic();
+    const items = (recap.items ?? []).map((it) => ({ ...it, publicPhotos: [] }));
+    await ref.update({ published: false, items, coverPublicUrl: "" });
     return NextResponse.json({ ok: true, published: false });
   }
 
-  // --- publish: copy picked photos to the public prefix, rewrite URLs ---
-  const bucket = adminBucket();
+  // --- publish: copy picked photos to the public prefix; record public copies ---
   const bucketName = bucket.name;
   const cache = new Map<string, string>(); // source URL → public URL (copy once)
 
   async function toPublic(url: string): Promise<string> {
-    if (!url) return url;
+    if (!url) return "";
     if (cache.has(url)) return cache.get(url)!;
     const src = objectPath(url);
     // Already public, or not a Firebase URL we can copy — leave as-is.
-    if (!src || src.startsWith("public/")) {
+    if (!src) {
+      cache.set(url, url);
+      return url;
+    }
+    if (src.startsWith("public/")) {
       cache.set(url, url);
       return url;
     }
@@ -116,14 +149,14 @@ export async function POST(request: Request) {
 
   const items: RecapItem[] = [];
   for (const it of recap.items ?? []) {
-    const photos = (await Promise.all((it.photos ?? []).map(toPublic))).filter(Boolean);
-    items.push({ ...it, photos });
+    const publicPhotos = (await Promise.all((it.photos ?? []).map(toPublic))).filter(Boolean);
+    items.push({ ...it, publicPhotos });
   }
-  const coverPhotoUrl = recap.coverPhotoUrl ? await toPublic(recap.coverPhotoUrl) : undefined;
+  const coverPublicUrl = recap.coverPhotoUrl ? await toPublic(recap.coverPhotoUrl) : "";
 
   await ref.update({
     items,
-    ...(coverPhotoUrl ? { coverPhotoUrl } : {}),
+    coverPublicUrl,
     published: true,
     publishedAt: new Date().toISOString(),
   });

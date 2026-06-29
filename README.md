@@ -57,7 +57,10 @@ reel anyone can open with the link, no login.
   photos and comments to include, add a title/intro and a cover photo.
 - **Publish** — hit **Publish**. The chosen photos are copied into a public
   gallery and the page goes live at `/r/<slug>`. Everything you didn't pick stays
-  private. **Unpublish** takes it back offline.
+  private.
+- **Take it down** — **Unpublish** makes the page 404 *and* purges the copied
+  public photos (your draft selections are kept, so you can re-publish later).
+  **Delete** removes the recap entirely — the public photos and the saved draft.
 - **Share** — copy the link from the Recap tab. The page is server-rendered with
   rich link previews (cover image + title), has clickable place details, and a
   full recommendations list visitors can filter by category and sort by rating.

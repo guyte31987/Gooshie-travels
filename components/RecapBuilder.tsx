@@ -164,23 +164,37 @@ export function RecapBuilder({ tripId, tripName, dateLabel }: { tripId: string; 
     }
   };
 
-  const callPublish = async (publish: boolean) => {
+  const callAction = async (action: "publish" | "unpublish" | "delete") => {
+    if (action === "delete" && !confirm("Delete this recap and its public photos? This can't be undone.")) {
+      return;
+    }
     setBusy(true);
     setStatus("");
     try {
-      await saveRecapDraft(draft()); // persist latest edits first
+      if (action !== "delete") await saveRecapDraft(draft()); // persist latest edits first
       const token = await auth?.currentUser?.getIdToken();
       const res = await fetch("/api/recap/publish", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({ slug, publish }),
+        body: JSON.stringify({ slug, action }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Publish failed.");
-      setPublished(publish);
-      setStatus(publish ? "Published!" : "Unpublished.");
+      if (!res.ok) throw new Error(json.error || "Action failed.");
+      if (action === "delete") {
+        // Reset to a fresh, empty draft with a new slug.
+        setSlug(newRecapSlug(tripId));
+        setPublished(false);
+        setSubtitle("");
+        setIntro("");
+        setCoverPhotoUrl("");
+        setItems(new Map());
+        setStatus("Deleted.");
+      } else {
+        setPublished(action === "publish");
+        setStatus(action === "publish" ? "Published!" : "Unpublished.");
+      }
     } catch (e) {
-      setStatus(e instanceof Error ? e.message : "Publish failed.");
+      setStatus(e instanceof Error ? e.message : "Action failed.");
     } finally {
       setBusy(false);
     }
@@ -241,7 +255,7 @@ export function RecapBuilder({ tripId, tripName, dateLabel }: { tripId: string; 
             Save draft
           </button>
           <button
-            onClick={() => callPublish(true)}
+            onClick={() => callAction("publish")}
             disabled={busy}
             className="rounded-lg bg-rust px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
           >
@@ -249,13 +263,20 @@ export function RecapBuilder({ tripId, tripName, dateLabel }: { tripId: string; 
           </button>
           {published && (
             <button
-              onClick={() => callPublish(false)}
+              onClick={() => callAction("unpublish")}
               disabled={busy}
               className="rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50 disabled:opacity-50"
             >
               Unpublish
             </button>
           )}
+          <button
+            onClick={() => callAction("delete")}
+            disabled={busy}
+            className="ml-auto rounded-lg px-3 py-1.5 text-xs font-medium text-rose-500 hover:bg-rose-50 disabled:opacity-50"
+          >
+            Delete
+          </button>
           {status && <span className="text-xs text-slate-500">{status}</span>}
         </div>
 

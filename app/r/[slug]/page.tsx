@@ -28,6 +28,7 @@ export async function generateMetadata({
   const recap = await loadRecap(slug);
   if (!recap) return { title: "Recap not found" };
   const description = recap.intro || recap.subtitle || `A trip recap with ${recap.items.length} recommendations.`;
+  const cover = recap.coverPublicUrl || recap.coverPhotoUrl;
   return {
     title: recap.title,
     description,
@@ -35,13 +36,13 @@ export async function generateMetadata({
       title: recap.title,
       description,
       type: "article",
-      ...(recap.coverPhotoUrl ? { images: [{ url: recap.coverPhotoUrl }] } : {}),
+      ...(cover ? { images: [{ url: cover }] } : {}),
     },
     twitter: {
-      card: recap.coverPhotoUrl ? "summary_large_image" : "summary",
+      card: cover ? "summary_large_image" : "summary",
       title: recap.title,
       description,
-      ...(recap.coverPhotoUrl ? { images: [recap.coverPhotoUrl] } : {}),
+      ...(cover ? { images: [cover] } : {}),
     },
   };
 }

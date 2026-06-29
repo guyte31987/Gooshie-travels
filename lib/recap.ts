@@ -32,7 +32,9 @@ export type RecapItem = {
   /** Featured as a golden "Must visit" highlight on the public page. */
   mustVisit?: boolean;
   blurb?: string; // the recommendation text
-  photos: string[]; // public URLs (after publish copies them)
+  photos: string[]; // the picked photos — original (private) URLs, the source of truth
+  /** Public copies of `photos`, written by publish; what the public page renders. */
+  publicPhotos?: string[];
   comments?: RecapComment[]; // hand-picked
   website?: string;
   instagram?: string;
@@ -46,7 +48,9 @@ export type Recap = {
   subtitle?: string;
   dateLabel?: string;
   intro?: string;
-  coverPhotoUrl?: string;
+  coverPhotoUrl?: string; // the picked cover — original (private) URL
+  /** Public copy of the cover, written by publish; used for OG tags + hero. */
+  coverPublicUrl?: string;
   items: RecapItem[];
   published: boolean;
   updatedAt?: unknown;
