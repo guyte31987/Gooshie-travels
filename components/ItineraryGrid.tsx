@@ -1106,7 +1106,7 @@ function PlaceEditor({ entityId, ent, fallbackName, clubs, onSave, onCancel }: {
   const [website, setWebsite] = useState(ent?.website ?? "");
   const [instagram, setInstagram] = useState(ent?.instagram ?? "");
   const [hours, setHours] = useState(ent?.hours ?? "");
-  const [notes, setNotes] = useState("");
+  const [notes, setNotes] = useState(""); // populated by auto-fill only; not shown as a field
   const [parentId, setParentId] = useState<string>("");
   const [newVenueName, setNewVenueName] = useState("");
   const [mapsUrl, setMapsUrl] = useState("");
@@ -1193,7 +1193,7 @@ function PlaceEditor({ entityId, ent, fallbackName, clubs, onSave, onCancel }: {
       </div>
 
       <input value={hours} onChange={(e) => setHours(e.target.value)} placeholder="Hours" className={inp} />
-      <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="Summary / why it's worth it" className={inp} />
+
       {enriched && verifyQuery && (
         <a href={mapsSearch(verifyQuery)} target="_blank" rel="noreferrer"
           className="inline-flex items-center gap-1 text-[11px] font-medium text-indigo-600 hover:underline">
