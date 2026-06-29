@@ -64,7 +64,48 @@ export function buildEnrichPrompt(req: EnrichRequest): string {
     `- "notes" is one short line on why it's worth visiting — not a description dump.`,
     `- For "website": only a real official URL you're confident exists; otherwise omit.`,
     `- For "instagram": the official account handle (e.g. @bossa) or profile URL. Only include if you can verify it via search; omit if uncertain.`,
+    ``,
+    `Output: return ONLY a single JSON object with the keys above (any you're unsure of omitted). No prose, no markdown fences — just the JSON.`,
   ].join("\n");
+}
+
+/**
+ * Pull a JSON object out of a model response. With search grounding enabled we
+ * can't use responseSchema/JSON mime type (Gemini rejects that combo with a
+ * 400), so the model returns text that should be JSON but may be wrapped in
+ * prose or ```json fences. Extract the first balanced {...} block and parse it.
+ * Returns null if nothing parseable is found.
+ */
+export function extractJsonObject(text: string): Record<string, unknown> | null {
+  const start = text.indexOf("{");
+  if (start === -1) return null;
+  let depth = 0;
+  let inStr = false;
+  let escaped = false;
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i];
+    if (inStr) {
+      if (escaped) escaped = false;
+      else if (ch === "\\") escaped = true;
+      else if (ch === '"') inStr = false;
+      continue;
+    }
+    if (ch === '"') inStr = true;
+    else if (ch === "{") depth++;
+    else if (ch === "}") {
+      depth--;
+      if (depth === 0) {
+        const slice = text.slice(start, i + 1);
+        try {
+          const parsed = JSON.parse(slice);
+          return parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : null;
+        } catch {
+          return null;
+        }
+      }
+    }
+  }
+  return null;
 }
 
 /**

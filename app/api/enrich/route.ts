@@ -6,9 +6,9 @@
 import { NextResponse } from "next/server";
 import {
   ENRICH_MODEL,
-  ENRICH_SCHEMA,
   buildEnrichPrompt,
   cleanEnriched,
+  extractJsonObject,
   type EnrichRequest,
 } from "@/lib/enrich";
 import { ENTITY_TABS } from "@/lib/entities";
@@ -49,12 +49,14 @@ export async function POST(request: Request) {
     res = await fetch(GEMINI_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+      // NOTE: search grounding (googleSearch) and structured output
+      // (responseMimeType/responseSchema) are mutually exclusive on Gemini —
+      // sending both returns a 400. We keep grounding and ask for JSON in the
+      // prompt instead, then extract it from the text response below.
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
         tools: [{ googleSearch: {} }],
         generationConfig: {
-          responseMimeType: "application/json",
-          responseSchema: ENRICH_SCHEMA,
           temperature: 0,
         },
       }),
@@ -75,10 +77,8 @@ export async function POST(request: Request) {
   const text: string | undefined = data?.candidates?.[0]?.content?.parts?.[0]?.text;
   if (!text) return NextResponse.json({ error: "Empty response from the model." }, { status: 502 });
 
-  let parsed: Record<string, unknown>;
-  try {
-    parsed = JSON.parse(text);
-  } catch {
+  const parsed = extractJsonObject(text);
+  if (!parsed) {
     return NextResponse.json({ error: "Model did not return valid JSON." }, { status: 502 });
   }
 
