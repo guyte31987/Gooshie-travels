@@ -485,7 +485,7 @@ function ListView({ days, slots, instances, entityById, stays, onOpen }: {
                 // Spine style: tentative = dashed, notDone = hollow (border only), else solid
                 // Spine: solid for normal, dashed for tentative/notDone.
                 const spineClass = notDone
-                  ? `border-l-4 border-dashed ${c.border} opacity-50`
+                  ? `border-l-4 border-dashed ${c.border}`
                   : tentative
                   ? `border-l-4 border-dashed ${c.border}`
                   : `border-l-4 ${c.border}`;
@@ -500,50 +500,55 @@ function ListView({ days, slots, instances, entityById, stays, onOpen }: {
                   <button
                     key={slot.id}
                     onClick={() => onOpen(slot.id)}
-                    className={`group w-full ${spineClass} py-2.5 pl-3 pr-2 text-left transition-opacity hover:opacity-80`}
+                    className={`group w-full ${spineClass} rounded-r-xl bg-white py-3 pl-3 pr-3 text-left shadow-sm ring-1 ring-black/[0.06] transition hover:shadow-md ${notDone ? "opacity-50" : ""}`}
                   >
                     <div className="flex items-start gap-3">
                       {/* Stacked 24h time */}
                       <div className="w-10 shrink-0 text-right">
-                        <span className={`block font-mono text-base font-semibold leading-none ${notDone ? "text-faint" : c.text}`}>{h}</span>
-                        <span className={`font-mono text-[11px] leading-none ${notDone ? "text-faint" : "text-secondary"}`}>{m}</span>
+                        <span className={`block font-mono text-base font-semibold leading-none ${notDone || done ? "text-secondary" : c.text}`}>{h}</span>
+                        <span className="font-mono text-[11px] leading-none text-faint">{m}</span>
                       </div>
 
                       {/* Content */}
                       <div className="min-w-0 flex-1">
                         <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <span className={`text-sm font-semibold leading-snug ${notDone ? "line-through text-secondary" : done ? "text-secondary" : "text-ink"}`}>
+                          <div className="min-w-0 flex-1">
+                            <p className={`text-sm font-semibold leading-snug ${notDone ? "line-through text-secondary" : done ? "text-secondary" : "text-ink"}`}>
                               {emojiOf(type)} {title}
-                            </span>
-                            {done && <span className="ml-1 text-[11px] text-booked">✓</span>}
+                              {done && <span className="ml-1 font-normal text-booked">✓</span>}
+                            </p>
                             <p className="mt-0.5 text-[11px] text-secondary">
                               {[ent?.type !== "uncategorised" ? ent?.type : null, ent?.parent ? `@${ent.parent}` : ent?.area].filter(Boolean).join(" · ")}
-                              {done && avgRating && <span className="ml-1.5 text-tentative">★ {avgRating}</span>}
                             </p>
                             {main.note && (
                               <p className="mt-0.5 line-clamp-2 text-[11px] italic text-faint">{main.note}</p>
                             )}
                           </div>
-                          {/* Right-side pills */}
-                          <div className="flex shrink-0 flex-col items-end gap-1">
-                            {bookPill && (
-                              <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold leading-none ${bookPill.className}`}>
-                                {bookPill.label}
-                              </span>
-                            )}
-                            {tentative && !notDone && (
-                              <span className="rounded-full border border-tentative/50 bg-tentative-bg px-2.5 py-1 text-[11px] font-semibold text-tentative">
-                                Tentative
-                              </span>
-                            )}
-                            {notDone && (
-                              <span className="rounded-full border border-[#e2c4bc] px-2.5 py-1 text-[11px] font-semibold text-[#b08379]">
-                                Cancelled
-                              </span>
-                            )}
-                            {alts.length > 0 && (
-                              <span className={`rounded-full border ${c.border} px-2 py-0.5 text-[10px] font-semibold ${c.text}`}>+{alts.length}</span>
+                          {/* Right side: prominent rating for done, pills otherwise */}
+                          <div className="flex shrink-0 flex-col items-end gap-1.5">
+                            {done && avgRating ? (
+                              <span className="font-mono text-base font-semibold text-tentative">★ {avgRating}</span>
+                            ) : (
+                              <>
+                                {bookPill && (
+                                  <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold leading-none ${bookPill.className}`}>
+                                    {bookPill.label}
+                                  </span>
+                                )}
+                                {tentative && !notDone && (
+                                  <span className="rounded-full border border-tentative/50 bg-tentative-bg px-2.5 py-1 text-[11px] font-semibold text-tentative">
+                                    Tentative
+                                  </span>
+                                )}
+                                {notDone && (
+                                  <span className="rounded-full border border-[#e2c4bc] px-2.5 py-1 text-[11px] font-semibold text-[#b08379]">
+                                    Cancelled
+                                  </span>
+                                )}
+                                {alts.length > 0 && (
+                                  <span className={`rounded-full border ${c.border} px-2 py-0.5 text-[10px] font-semibold ${c.text}`}>+{alts.length}</span>
+                                )}
+                              </>
                             )}
                           </div>
                         </div>
