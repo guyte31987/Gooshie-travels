@@ -483,44 +483,58 @@ function ListView({ days, slots, instances, entityById, stays, onOpen }: {
                 const startTime = fmt24(slot.start);
                 const endTime = fmt24(slot.end);
 
-                // Spine style: tentative = dashed, notDone = hollow (border only), else solid
-                // Spine: solid for normal, dashed for tentative/notDone.
-                const spineClass = notDone
-                  ? `border-l-4 border-dashed ${c.border}`
-                  : tentative
-                  ? `border-l-4 border-dashed ${c.border}`
-                  : `border-l-4 ${c.border}`;
-
                 // Average rating from per-user scores (shown on done items)
                 const ratingScores = Object.values(main.ratings ?? {}).map((r) => r.score);
                 const avgRating = ratingScores.length
                   ? (ratingScores.reduce((a, b) => a + b, 0) / ratingScores.length).toFixed(1)
                   : null;
 
+                // Card style:
+                // tentative  → dashed border all-around in category colour, no thick spine
+                // notDone    → dashed left spine, grey thin border, faded via opacity
+                // normal/done → solid left spine, thin category-coloured border
+                const cardBase = `group w-full rounded-xl bg-white py-3 pl-3 pr-3 text-left transition hover:shadow-md ${notDone || tentative ? "opacity-50" : "shadow-sm"}`;
+                const cardStyle = tentative
+                  ? { border: `1.5px dashed ${c.hex}` }
+                  : notDone
+                  ? { borderLeft: `4px dashed ${c.hex}`, border: `1px solid #e3ddd0`, borderLeftWidth: "4px" }
+                  : { borderLeft: `4px solid ${c.hex}`, border: `1px solid ${c.hex}40`, borderLeftWidth: "4px" };
+
+                const timeColor = done ? "text-secondary" : c.text;
+                const subtitleParts = [
+                  type !== "uncategorised" ? type : null,
+                  ent?.parent ? `@${ent.parent}` : ent?.area ?? null,
+                ].filter(Boolean);
+
                 return (
                   <button
                     key={slot.id}
                     onClick={() => onOpen(slot.id)}
-                    className={`group w-full ${spineClass} rounded-r-xl bg-white py-3 pl-3 pr-3 text-left shadow-sm ring-1 ring-black/[0.06] transition hover:shadow-md ${notDone || tentative ? "opacity-50" : ""}`}
+                    className={cardBase}
+                    style={cardStyle}
                   >
                     <div className="flex items-start gap-3">
                       {/* Stacked start/end times */}
                       <div className="w-12 shrink-0 text-right">
-                        <span className={`block font-mono text-[13px] font-semibold leading-tight ${done ? "text-secondary" : c.text}`}>{startTime}</span>
-                        <span className={`block font-mono text-[13px] font-semibold leading-tight ${done ? "text-secondary" : c.text}`}>{endTime}</span>
+                        <span className={`block font-mono text-[13px] font-semibold leading-tight ${timeColor}`}>{startTime}</span>
+                        <span className={`block font-mono text-[13px] font-semibold leading-tight ${timeColor}`}>{endTime}</span>
                       </div>
 
                       {/* Content */}
                       <div className="min-w-0 flex-1">
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0 flex-1">
-                            <p className={`text-sm font-semibold leading-snug ${notDone ? "line-through text-secondary" : done ? "text-secondary" : "text-ink"}`}>
-                              {emojiOf(type)} {title}
-                              {done && <span className="ml-1 font-normal text-booked">✓</span>}
-                            </p>
-                            <p className="mt-0.5 text-[11px] text-secondary">
-                              {[ent?.type !== "uncategorised" ? ent?.type : null, ent?.parent ? `@${ent.parent}` : ent?.area].filter(Boolean).join(" · ")}
-                            </p>
+                            <div className="flex items-center gap-1.5">
+                              {done && (
+                                <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-booked text-[9px] font-bold text-white">✓</span>
+                              )}
+                              <p className={`text-sm font-semibold leading-snug ${notDone ? "line-through text-secondary" : done ? "text-secondary" : "text-ink"}`}>
+                                {title}
+                              </p>
+                            </div>
+                            {subtitleParts.length > 0 && (
+                              <p className="mt-0.5 text-[11px] text-secondary">{subtitleParts.join(" · ")}</p>
+                            )}
                             {main.note && (
                               <p className="mt-0.5 line-clamp-2 text-[11px] italic text-faint">{main.note}</p>
                             )}
@@ -542,7 +556,7 @@ function ListView({ days, slots, instances, entityById, stays, onOpen }: {
                                   </span>
                                 )}
                                 {notDone && (
-                                  <span className="rounded-full border border-[#e2c4bc] px-2.5 py-1 text-[11px] font-semibold text-[#b08379]">
+                                  <span className="rounded-full border border-slate-300 px-2.5 py-1 text-[11px] font-semibold text-secondary">
                                     Cancelled
                                   </span>
                                 )}
