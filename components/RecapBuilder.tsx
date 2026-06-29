@@ -80,26 +80,30 @@ export function RecapBuilder({ tripId, tripName, dateLabel }: { tripId: string; 
     };
   }, [tripId]);
 
+  // A fresh recap item from an entity — blurb is pre-filled from the entity's note
+  // (editable before publishing); coords carry over for the map.
+  const newItem = (e: Entity, mustVisit = false): RecapItem => ({
+    entityId: e.id,
+    name: e.name,
+    type: e.type,
+    generalArea: e.generalArea,
+    area: e.area,
+    lat: e.lat,
+    lng: e.lng,
+    rating: e.avgRating,
+    mustVisit,
+    blurb: e.notes ?? "",
+    photos: [],
+    website: e.website,
+    instagram: e.instagram,
+    address: e.address,
+  });
+
   const toggle = (e: Entity) => {
     setItems((prev) => {
       const next = new Map(prev);
-      if (next.has(e.id)) {
-        next.delete(e.id);
-      } else {
-        next.set(e.id, {
-          entityId: e.id,
-          name: e.name,
-          type: e.type,
-          generalArea: e.generalArea,
-          area: e.area,
-          rating: e.avgRating,
-          blurb: "",
-          photos: [],
-          website: e.website,
-          instagram: e.instagram,
-          address: e.address,
-        });
-      }
+      if (next.has(e.id)) next.delete(e.id);
+      else next.set(e.id, newItem(e));
       return next;
     });
   };
@@ -109,24 +113,8 @@ export function RecapBuilder({ tripId, tripName, dateLabel }: { tripId: string; 
     setItems((prev) => {
       const next = new Map(prev);
       const cur = next.get(e.id);
-      if (cur) {
-        next.set(e.id, { ...cur, mustVisit: !cur.mustVisit });
-      } else {
-        next.set(e.id, {
-          entityId: e.id,
-          name: e.name,
-          type: e.type,
-          generalArea: e.generalArea,
-          area: e.area,
-          rating: e.avgRating,
-          mustVisit: true,
-          blurb: "",
-          photos: [],
-          website: e.website,
-          instagram: e.instagram,
-          address: e.address,
-        });
-      }
+      if (cur) next.set(e.id, { ...cur, mustVisit: !cur.mustVisit });
+      else next.set(e.id, newItem(e, true));
       return next;
     });
 

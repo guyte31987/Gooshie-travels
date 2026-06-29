@@ -1,9 +1,16 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import { ENTITY_TABS } from "@/lib/entities";
-import { externalUrl, instagramUrl, instagramHandle, googleMapsUrl } from "@/lib/geo";
+import { externalUrl, instagramUrl, instagramHandle } from "@/lib/geo";
 import type { Recap, RecapItem } from "@/lib/recap";
+
+// Leaflet touches `window`, so load the map only on the client.
+const RecapMap = dynamic(() => import("./RecapMap"), {
+  ssr: false,
+  loading: () => <div className="h-[55vh] animate-pulse rounded-2xl bg-stone-100" />,
+});
 
 const labelOf = (t: string) => ENTITY_TABS.find((x) => x.type === t)?.label ?? t;
 const emojiOf = (t: string) => ENTITY_TABS.find((x) => x.type === t)?.emoji ?? "";
@@ -120,6 +127,12 @@ export function RecapView({ recap }: { recap: Recap }) {
           </section>
         )}
 
+        {/* Map */}
+        <section className="mb-12">
+          <h2 className="mb-4 text-lg font-semibold">Map</h2>
+          <RecapMap items={items} onSelect={setActive} />
+        </section>
+
         {/* Full recommendations list */}
         <section>
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -191,7 +204,6 @@ export function RecapView({ recap }: { recap: Recap }) {
 }
 
 function DetailModal({ item, onClose }: { item: RecapItem; onClose: () => void }) {
-  const mapsHref = googleMapsUrl({ name: item.name, address: item.address, area: item.generalArea });
   const igHref = instagramUrl(item.instagram);
   const webHref = item.website ? externalUrl(item.website) ?? item.website : null;
 
@@ -258,7 +270,7 @@ function DetailModal({ item, onClose }: { item: RecapItem; onClose: () => void }
           )}
 
           {/* Links */}
-          {(webHref || igHref || mapsHref) && (
+          {(webHref || igHref) && (
             <div className="mt-4 flex flex-wrap gap-2 border-t border-stone-100 pt-3 text-xs">
               {webHref && (
                 <a href={webHref} target="_blank" rel="noreferrer" className="font-medium text-indigo-600 hover:underline">
@@ -268,11 +280,6 @@ function DetailModal({ item, onClose }: { item: RecapItem; onClose: () => void }
               {igHref && (
                 <a href={igHref} target="_blank" rel="noreferrer" className="font-medium text-indigo-600 hover:underline">
                   {instagramHandle(item.instagram)} ↗
-                </a>
-              )}
-              {mapsHref && (
-                <a href={mapsHref} target="_blank" rel="noreferrer" className="font-medium text-indigo-600 hover:underline">
-                  Google Maps ↗
                 </a>
               )}
             </div>

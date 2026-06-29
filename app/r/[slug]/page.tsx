@@ -35,6 +35,8 @@ async function loadRecap(slug: string): Promise<Recap | null> {
       type: it.type,
       generalArea: it.generalArea ?? "",
       area: it.area ?? "",
+      lat: typeof it.lat === "number" ? it.lat : undefined,
+      lng: typeof it.lng === "number" ? it.lng : undefined,
       rating: typeof it.rating === "number" ? it.rating : undefined,
       mustVisit: !!it.mustVisit,
       blurb: it.blurb ?? "",

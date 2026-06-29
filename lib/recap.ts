@@ -28,6 +28,9 @@ export type RecapItem = {
   type: EntityType;
   generalArea?: string;
   area?: string;
+  /** Coordinates for the recap map (street-level when known). */
+  lat?: number;
+  lng?: number;
   rating?: number; // 0–10; prefilled from avgRating, editable
   /** Featured as a golden "Must visit" highlight on the public page. */
   mustVisit?: boolean;
