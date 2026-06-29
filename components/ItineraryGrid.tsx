@@ -501,13 +501,13 @@ function ListView({ days, slots, instances, entityById, stays, onOpen }: {
                   <button
                     key={slot.id}
                     onClick={() => onOpen(slot.id)}
-                    className={`group w-full ${spineClass} rounded-r-xl bg-white py-3 pl-3 pr-3 text-left shadow-sm ring-1 ring-black/[0.06] transition hover:shadow-md`}
+                    className={`group w-full ${spineClass} rounded-r-xl bg-white py-3 pl-3 pr-3 text-left shadow-sm ring-1 ring-black/[0.06] transition hover:shadow-md ${notDone || tentative ? "opacity-50" : ""}`}
                   >
                     <div className="flex items-start gap-3">
                       {/* Stacked start/end times */}
                       <div className="w-12 shrink-0 text-right">
-                        <span className={`block font-mono text-[13px] font-semibold leading-tight ${notDone || done ? "text-secondary" : c.text}`}>{startTime}</span>
-                        <span className="block font-mono text-[11px] leading-tight text-faint">{endTime}</span>
+                        <span className={`block font-mono text-[13px] font-semibold leading-tight ${done ? "text-secondary" : c.text}`}>{startTime}</span>
+                        <span className={`block font-mono text-[13px] font-semibold leading-tight ${done ? "text-secondary" : c.text}`}>{endTime}</span>
                       </div>
 
                       {/* Content */}
