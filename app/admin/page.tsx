@@ -34,6 +34,13 @@ export default function AdminPage() {
         </Link>
       </header>
       <AdminPanel />
+      <div className="mt-8 border-t border-slate-100 pt-6">
+        <h2 className="mb-3 text-sm font-semibold text-slate-500 uppercase tracking-wide">Tools</h2>
+        <Link href="/admin/instance-notes" className="block rounded-xl border border-slate-200 bg-white p-4 hover:bg-slate-50">
+          <p className="font-medium text-slate-800">Instance notes audit</p>
+          <p className="mt-0.5 text-sm text-slate-500">Review visit notes to decide what should be promoted to entity notes.</p>
+        </Link>
+      </div>
     </div>
   );
 }

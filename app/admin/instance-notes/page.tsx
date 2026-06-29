@@ -40,7 +40,7 @@ export default function InstanceNotesPage() {
 
     Promise.all(
       TRIPS.map((t) =>
-        getDocs(collection(db!, `trips/${t.id}/instances`)).then((snap) =>
+        getDocs(collection(db!, `tripPlanInstances/${t.id}/items`)).then((snap) =>
           snap.docs
             .map((d) => d.data() as PlanInstance)
             .filter((i) => i.note?.trim())
