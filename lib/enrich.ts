@@ -61,6 +61,8 @@ export function buildEnrichPrompt(req: EnrichRequest): string {
     `- If you are unsure of a field, OMIT it entirely — never guess, never write "N/A", "unknown", or a placeholder.`,
     `- If you cannot confidently identify the place at all, return an empty object {}.`,
     `- Coordinates should be the venue's own location if you know it; omit if approximate.`,
+    `- For "area": infer the neighbourhood/district from the address (e.g. Bushwick, Shoreditch). This is safe to estimate from a known address — don't leave it blank if you have the address.`,
+    `- For "hours": if the search results or the place's listing show opening hours as text, include them (free text is fine, e.g. "Mon–Fri 9–5, Sat 10–4"). Omit only if you genuinely can't find them.`,
     `- "notes" is one short line on why it's worth visiting — not a description dump.`,
     `- For "website": only a real official URL you're confident exists; otherwise omit.`,
     `- For "instagram": the official account handle (e.g. @bossa) or profile URL. Only include if you can verify it via search; omit if uncertain.`,
