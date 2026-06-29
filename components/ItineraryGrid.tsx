@@ -153,6 +153,15 @@ export function ItineraryCalendar({
     drag: { pointerId: number; clientY0: number; startMin0: number; day: string } | null;
   }>({ timer: null, pending: null, drag: null });
 
+  // Prevent page scroll while a ghost drag is in progress (must be non-passive).
+  useEffect(() => {
+    const onTouchMove = (e: TouchEvent) => {
+      if (ghostRef.current.pending || ghostRef.current.drag) e.preventDefault();
+    };
+    window.addEventListener("touchmove", onTouchMove, { passive: false });
+    return () => window.removeEventListener("touchmove", onTouchMove);
+  }, []);
+
   const slotById = useMemo(() => new Map(slots.map((s) => [s.id, s])), [slots]);
   const visibleDays = view === "week" ? days : [days[Math.min(dayIdx, days.length - 1)]];
   const slotsOn = (day: string) => slots.filter((s) => s.day === day);
@@ -633,8 +642,8 @@ function Block({ slot, main, alts, entityById, col, colCount, wide, canEdit, onG
       onClick={(e) => e.stopPropagation()}
     >
       {canEdit && (
-        <div className="absolute inset-x-0 top-0 z-10 flex h-5 cursor-ns-resize items-start justify-center" style={{ touchAction: "none" }} onPointerDown={down("top")} onPointerMove={move} onPointerUp={up}>
-          <div className="mt-1 h-0.5 w-8 rounded-full bg-current opacity-20 transition-opacity group-hover:opacity-40 sm:opacity-0 sm:group-hover:opacity-30" />
+        <div className="absolute inset-x-0 top-0 z-10 flex h-4 cursor-ns-resize items-start justify-center" style={{ touchAction: "none" }} onPointerDown={down("top")} onPointerMove={move} onPointerUp={up}>
+          <div className="mt-0.5 h-0.5 w-6 rounded-full bg-current opacity-25 sm:opacity-0 sm:group-hover:opacity-30" />
         </div>
       )}
       <div ref={timeTagRef} className={`absolute right-1 top-1 rounded bg-black/70 px-1 text-[9px] font-bold text-white ${isDragging ? "" : "hidden"}`} />
@@ -671,8 +680,8 @@ function Block({ slot, main, alts, entityById, col, colCount, wide, canEdit, onG
       </div>
 
       {canEdit && (
-        <div className="absolute inset-x-0 bottom-0 z-10 flex h-5 cursor-ns-resize items-end justify-center" style={{ touchAction: "none" }} onPointerDown={down("bottom")} onPointerMove={move} onPointerUp={up}>
-          <div className="mb-1 h-0.5 w-8 rounded-full bg-current opacity-20 transition-opacity group-hover:opacity-40 sm:opacity-0 sm:group-hover:opacity-30" />
+        <div className="absolute inset-x-0 bottom-0 z-10 flex h-4 cursor-ns-resize items-end justify-center" style={{ touchAction: "none" }} onPointerDown={down("bottom")} onPointerMove={move} onPointerUp={up}>
+          <div className="mb-0.5 h-0.5 w-6 rounded-full bg-current opacity-25 sm:opacity-0 sm:group-hover:opacity-30" />
         </div>
       )}
     </div>
