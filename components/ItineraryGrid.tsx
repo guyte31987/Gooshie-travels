@@ -483,28 +483,28 @@ function ListView({ days, slots, instances, entityById, stays, onOpen }: {
                 const { h, m } = fmt24(slot.start);
 
                 // Spine style: tentative = dashed, notDone = hollow (border only), else solid
-                const spineStyle = notDone
-                  ? `border-l-4 border-dashed border-[${c.hex}]/40`
+                // Spine: solid colored for normal, dashed for tentative/notDone.
+                // Use ring (box-shadow) for the card outline — no border-color conflict with the spine.
+                const spineClass = notDone
+                  ? `border-l-4 border-dashed ${c.border} opacity-50`
                   : tentative
                   ? `border-l-4 border-dashed ${c.border}`
                   : `border-l-4 ${c.border}`;
-
-                // Card border: tentative gets a dashed outer border
-                const cardBorder = tentative
-                  ? "border border-dashed border-border-card"
-                  : "border border-border-card";
+                const ringClass = tentative
+                  ? "ring-1 ring-dashed ring-border-card"
+                  : "ring-1 ring-black/[0.07]";
 
                 return (
                   <button
                     key={slot.id}
                     onClick={() => onOpen(slot.id)}
-                    className={`group w-full ${spineStyle} ${cardBorder} rounded-r-xl bg-sheet px-3 py-3 text-left shadow-sm transition hover:shadow-md ${notDone ? "opacity-60" : ""}`}
+                    className={`group w-full ${spineClass} ${ringClass} rounded-r-xl bg-sheet px-3 py-3 text-left shadow-sm transition hover:shadow-md`}
                   >
                     <div className="flex items-start gap-3">
                       {/* Stacked 24h time */}
                       <div className="w-10 shrink-0 text-right">
-                        <span className={`block font-mono text-base font-semibold leading-none ${done || notDone ? "text-faint" : c.text}`}>{h}</span>
-                        <span className={`font-mono text-[11px] leading-none ${done || notDone ? "text-faint" : "text-secondary"}`}>{m}</span>
+                        <span className={`block font-mono text-base font-semibold leading-none ${notDone ? "text-faint" : c.text}`}>{h}</span>
+                        <span className={`font-mono text-[11px] leading-none ${notDone ? "text-faint" : "text-secondary"}`}>{m}</span>
                       </div>
 
                       {/* Content */}
