@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { ENTITY_TABS, OPERATIONAL_TYPES, type Entity } from "@/lib/entities";
+import { activityStatusOf } from "@/lib/itinerary";
 import { useTripData } from "./TripData";
 import { useAuth } from "./AuthProvider";
 import { auth } from "@/lib/firebase";
@@ -37,12 +38,18 @@ export function RecapBuilder({ tripId, tripName, dateLabel }: { tripId: string; 
   const [loaded, setLoaded] = useState(false);
   const [status, setStatus] = useState<string>("");
   const [busy, setBusy] = useState(false);
+  const [doneOnly, setDoneOnly] = useState(false);
+
+  // True when any of the entity's visits was marked "done" on the itinerary.
+  const isDone = (entity: Entity): boolean =>
+    entity.slots.some((s) => s.uid && activityStatusOf(instanceMap.get(s.uid) ?? {}) === "done");
 
   // Places worth recapping: real place types only, excluding logistics buckets.
-  const places = useMemo(
-    () => entities.filter((e) => !OPERATIONAL_TYPES.has(e.type) && e.type !== "uncategorised"),
-    [entities]
-  );
+  const places = useMemo(() => {
+    const base = entities.filter((e) => !OPERATIONAL_TYPES.has(e.type) && e.type !== "uncategorised");
+    return doneOnly ? base.filter(isDone) : base;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entities, doneOnly, instanceMap]);
 
   // Instance photos per entity, derived from its slots' linked PlanInstances.
   const instancePhotosOf = (entity: Entity): string[] =>
@@ -96,6 +103,32 @@ export function RecapBuilder({ tripId, tripName, dateLabel }: { tripId: string; 
       return next;
     });
   };
+
+  // Toggle the golden "Must visit" star — auto-includes the place if it wasn't already.
+  const toggleStar = (e: Entity) =>
+    setItems((prev) => {
+      const next = new Map(prev);
+      const cur = next.get(e.id);
+      if (cur) {
+        next.set(e.id, { ...cur, mustVisit: !cur.mustVisit });
+      } else {
+        next.set(e.id, {
+          entityId: e.id,
+          name: e.name,
+          type: e.type,
+          generalArea: e.generalArea,
+          area: e.area,
+          rating: e.avgRating,
+          mustVisit: true,
+          blurb: "",
+          photos: [],
+          website: e.website,
+          instagram: e.instagram,
+          address: e.address,
+        });
+      }
+      return next;
+    });
 
   const patch = (id: string, p: Partial<RecapItem>) =>
     setItems((prev) => {
@@ -241,10 +274,16 @@ export function RecapBuilder({ tripId, tripName, dateLabel }: { tripId: string; 
         )}
       </div>
 
-      <p className="text-xs text-slate-500">
-        Tick the places to feature. {items.size} selected. Photos you pick are copied to a public
-        gallery when you publish; everything else stays private.
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs text-slate-500">
+          Tick the places to feature. {items.size} selected. Photos you pick are copied to a public
+          gallery when you publish; everything else stays private.
+        </p>
+        <label className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600">
+          <input type="checkbox" checked={doneOnly} onChange={(e) => setDoneOnly(e.target.checked)} className="rounded" />
+          Done only
+        </label>
+      </div>
 
       {/* Place list */}
       <ul className="space-y-2">
@@ -253,17 +292,29 @@ export function RecapBuilder({ tripId, tripName, dateLabel }: { tripId: string; 
           const photos = candidatePhotos(e, instancePhotosOf(e));
           return (
             <li key={e.id} className="rounded-xl border border-slate-200 bg-white">
-              <label className="flex cursor-pointer items-center gap-3 px-4 py-3">
-                <input type="checkbox" checked={!!item} onChange={() => toggle(e)} className="rounded" />
-                <span>{emojiOf(e.type)}</span>
-                <span className="flex-1 text-sm font-medium">{e.name}</span>
-                <span className="text-[11px] text-slate-400">{labelOf(e.type)}</span>
-                {e.avgRating != null && (
-                  <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
-                    ★ {e.avgRating.toFixed(1)}
-                  </span>
-                )}
-              </label>
+              <div className="flex items-center gap-3 px-4 py-3">
+                <label className="flex flex-1 cursor-pointer items-center gap-3">
+                  <input type="checkbox" checked={!!item} onChange={() => toggle(e)} className="rounded" />
+                  <span>{emojiOf(e.type)}</span>
+                  <span className="flex-1 text-sm font-medium">{e.name}</span>
+                  <span className="text-[11px] text-slate-400">{labelOf(e.type)}</span>
+                  {e.avgRating != null && (
+                    <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
+                      ★ {e.avgRating.toFixed(1)}
+                    </span>
+                  )}
+                </label>
+                <button
+                  type="button"
+                  onClick={() => toggleStar(e)}
+                  title={item?.mustVisit ? "Must visit" : "Mark as Must visit"}
+                  className={`shrink-0 text-lg leading-none transition ${
+                    item?.mustVisit ? "text-amber-400" : "text-slate-300 hover:text-amber-300"
+                  }`}
+                >
+                  ★
+                </button>
+              </div>
 
               {item && (
                 <PlaceEditor
