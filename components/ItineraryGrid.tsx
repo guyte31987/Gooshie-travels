@@ -776,7 +776,7 @@ function Block({ slot, main, alts, entityById, col, colCount, wide, canEdit, onG
   // bg, Done = muted/desaturated, otherwise the full category colour.
   const stateCls = notDone
     ? "border-l-4 border-[#d8a99c] bg-[#f6f2ea] text-[#b0a795]"
-    : `border-l-4 ${c.border} ${done ? "bg-fill-soft saturate-50 text-secondary" : `${c.bg} ${c.text}`}`;
+    : `border-l-4 ${c.border} ${done ? "bg-white text-secondary" : `${c.bg} ${c.text}`}`;
 
   return (
     <div
