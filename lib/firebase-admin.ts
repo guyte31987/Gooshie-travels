@@ -11,6 +11,7 @@
 import { getApps, getApp, initializeApp, cert, type App } from "firebase-admin/app";
 import { getFirestore, type Firestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
+import { getAuth, type Auth } from "firebase-admin/auth";
 
 function parseServiceAccount(): Record<string, string> | null {
   const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
@@ -64,4 +65,8 @@ export function adminDb(): Firestore {
 
 export function adminBucket() {
   return getStorage(adminApp()).bucket(bucketName());
+}
+
+export function adminAuth(): Auth {
+  return getAuth(adminApp());
 }

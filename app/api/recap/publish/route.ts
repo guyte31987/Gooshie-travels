@@ -16,9 +16,7 @@
 // this returns 503.
 
 import { NextResponse } from "next/server";
-import { getAuth } from "firebase-admin/auth";
-import { getApp } from "firebase-admin/app";
-import { adminBucket, adminDb, adminReady } from "@/lib/firebase-admin";
+import { adminAuth, adminBucket, adminDb, adminReady } from "@/lib/firebase-admin";
 import type { Recap, RecapItem } from "@/lib/recap";
 
 export const runtime = "nodejs";
@@ -63,10 +61,11 @@ export async function POST(request: Request) {
 
   let email: string;
   try {
-    const decoded = await getAuth(getApp()).verifyIdToken(token);
+    const decoded = await adminAuth().verifyIdToken(token);
     email = (decoded.email ?? "").toLowerCase();
-  } catch {
-    return NextResponse.json({ error: "Invalid auth token." }, { status: 401 });
+  } catch (e) {
+    const detail = e instanceof Error ? e.message : "unknown";
+    return NextResponse.json({ error: `Invalid auth token (${detail}).` }, { status: 401 });
   }
   if (!email || !(await isEditor(email))) {
     return NextResponse.json({ error: "Editors only." }, { status: 403 });
