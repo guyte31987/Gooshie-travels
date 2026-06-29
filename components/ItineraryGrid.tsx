@@ -696,6 +696,7 @@ function DetailSheet({ slot, instances, entityById, canEdit, handlers, isNew, tr
   const [commentOpen, setCommentOpen] = useState(false);
   const [editPlace, setEditPlace] = useState(false);
   const [noteOpen, setNoteOpen] = useState(false);
+  const [entityNoteOpen, setEntityNoteOpen] = useState(false);
   const [photosOpen, setPhotosOpen] = useState(false);
   const [altsOpen, setAltsOpen] = useState(false);
   const type = ent?.type ?? "uncategorised";
@@ -788,28 +789,32 @@ function DetailSheet({ slot, instances, entityById, canEdit, handlers, isNew, tr
             )}
           </div>
 
-          {/* Entity note — inline editable, saved independently */}
-          {ent && (
+          {/* Entity note — collapsed text, tap to edit */}
+          {ent && (canEdit || ent.notes) && (
             <div className="border-t border-slate-100 pt-3">
-              <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">About this place</p>
-              {canEdit ? (
-                <div className="space-y-1.5">
-                  <textarea value={entityNote} onChange={(e) => setEntityNote(e.target.value)} rows={2}
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400"
-                    placeholder="Why it's worth visiting…" />
-                  {entityNote !== (ent.notes ?? "") && (
-                    <button disabled={entityNoteSaving} onClick={async () => {
-                      if (!handlers.onSaveEntityNote) return;
-                      setEntityNoteSaving(true);
-                      try { await Promise.resolve(handlers.onSaveEntityNote(ent.id, entityNote.trim())); }
-                      finally { setEntityNoteSaving(false); }
-                    }} className="rounded-lg bg-ink px-3 py-1 text-xs font-medium text-white disabled:opacity-50">
-                      {entityNoteSaving ? "Saving…" : "Save note"}
-                    </button>
-                  )}
-                </div>
+              <button onClick={() => setEntityNoteOpen((o) => !o)} className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 hover:text-slate-600">
+                🏷 About this place {entityNoteOpen ? "▲" : "▼"}
+              </button>
+              {entityNoteOpen ? (
+                canEdit ? (
+                  <div className="mt-1 space-y-1.5">
+                    <textarea value={entityNote} onChange={(e) => setEntityNote(e.target.value)} rows={2}
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400"
+                      placeholder="Why it's worth visiting…" />
+                    {entityNote !== (ent.notes ?? "") && (
+                      <button disabled={entityNoteSaving} onClick={async () => {
+                        if (!handlers.onSaveEntityNote) return;
+                        setEntityNoteSaving(true);
+                        try { await Promise.resolve(handlers.onSaveEntityNote(ent.id, entityNote.trim())); }
+                        finally { setEntityNoteSaving(false); }
+                      }} className="rounded-lg bg-ink px-3 py-1 text-xs font-medium text-white disabled:opacity-50">
+                        {entityNoteSaving ? "Saving…" : "Save note"}
+                      </button>
+                    )}
+                  </div>
+                ) : <p className="mt-1 text-sm text-slate-600">{ent.notes || <span className="text-slate-400">No note.</span>}</p>
               ) : (
-                entityNote ? <p className="text-sm text-slate-600">{entityNote}</p> : null
+                <p className="truncate text-sm text-slate-600">{ent.notes || <span className="text-slate-400">{canEdit ? "Add a note…" : ""}</span>}</p>
               )}
             </div>
           )}
