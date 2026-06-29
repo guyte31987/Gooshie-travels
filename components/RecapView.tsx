@@ -128,7 +128,7 @@ export function RecapView({ recap }: { recap: Recap }) {
         )}
 
         {/* Map */}
-        <section className="mb-12">
+        <section className="mb-12 isolate">
           <h2 className="mb-4 text-lg font-semibold">Map</h2>
           <RecapMap items={items} onSelect={setActive} />
         </section>
