@@ -483,22 +483,24 @@ function ListView({ days, slots, instances, entityById, stays, onOpen }: {
                 const { h, m } = fmt24(slot.start);
 
                 // Spine style: tentative = dashed, notDone = hollow (border only), else solid
-                // Spine: solid colored for normal, dashed for tentative/notDone.
-                // Use ring (box-shadow) for the card outline — no border-color conflict with the spine.
+                // Spine: solid for normal, dashed for tentative/notDone.
                 const spineClass = notDone
                   ? `border-l-4 border-dashed ${c.border} opacity-50`
                   : tentative
                   ? `border-l-4 border-dashed ${c.border}`
                   : `border-l-4 ${c.border}`;
-                const ringClass = tentative
-                  ? "ring-1 ring-dashed ring-border-card"
-                  : "ring-1 ring-black/[0.07]";
+
+                // Average rating from per-user scores (shown on done items)
+                const ratingScores = Object.values(main.ratings ?? {}).map((r) => r.score);
+                const avgRating = ratingScores.length
+                  ? (ratingScores.reduce((a, b) => a + b, 0) / ratingScores.length).toFixed(1)
+                  : null;
 
                 return (
                   <button
                     key={slot.id}
                     onClick={() => onOpen(slot.id)}
-                    className={`group w-full ${spineClass} ${ringClass} rounded-r-xl bg-sheet px-3 py-3 text-left shadow-sm transition hover:shadow-md`}
+                    className={`group w-full ${spineClass} py-2.5 pl-3 pr-2 text-left transition-opacity hover:opacity-80`}
                   >
                     <div className="flex items-start gap-3">
                       {/* Stacked 24h time */}
@@ -517,6 +519,7 @@ function ListView({ days, slots, instances, entityById, stays, onOpen }: {
                             {done && <span className="ml-1 text-[11px] text-booked">✓</span>}
                             <p className="mt-0.5 text-[11px] text-secondary">
                               {[ent?.type !== "uncategorised" ? ent?.type : null, ent?.parent ? `@${ent.parent}` : ent?.area].filter(Boolean).join(" · ")}
+                              {done && avgRating && <span className="ml-1.5 text-tentative">★ {avgRating}</span>}
                             </p>
                             {main.note && (
                               <p className="mt-0.5 line-clamp-2 text-[11px] italic text-faint">{main.note}</p>
@@ -539,8 +542,8 @@ function ListView({ days, slots, instances, entityById, stays, onOpen }: {
                                 Cancelled
                               </span>
                             )}
-                            {alts.length > 0 && !bookPill && !tentative && (
-                              <span className={`rounded-full ${c.chip} px-2 py-0.5 text-[10px] font-bold text-white`}>+{alts.length}</span>
+                            {alts.length > 0 && (
+                              <span className={`rounded-full border ${c.border} px-2 py-0.5 text-[10px] font-semibold ${c.text}`}>+{alts.length}</span>
                             )}
                           </div>
                         </div>
