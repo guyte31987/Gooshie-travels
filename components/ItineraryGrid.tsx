@@ -145,6 +145,14 @@ export function ItineraryCalendar({
   const dayRefs = useRef<(HTMLDivElement | null)[]>([]);
   const swipeStart = useRef<{ x: number; y: number } | null>(null);
 
+  // Ghost slot state: preview a new 1-hour slot while the user drags on empty space.
+  const [ghostSlot, setGhostSlot] = useState<{ day: string; startMin: number } | null>(null);
+  const ghostRef = useRef<{
+    timer: ReturnType<typeof setTimeout> | null;
+    pending: { pointerId: number; clientX: number; clientY: number; startMin: number; day: string; el: HTMLElement } | null;
+    drag: { pointerId: number; clientY0: number; startMin0: number; day: string } | null;
+  }>({ timer: null, pending: null, drag: null });
+
   const slotById = useMemo(() => new Map(slots.map((s) => [s.id, s])), [slots]);
   const visibleDays = view === "week" ? days : [days[Math.min(dayIdx, days.length - 1)]];
   const slotsOn = (day: string) => slots.filter((s) => s.day === day);
@@ -172,6 +180,69 @@ export function ItineraryCalendar({
     handlers.onAddSlot(slot, inst);
     setDetailSlot(id);
     setJustCreatedId(id);
+  };
+
+  const onGridPointerDown = (day: string) => (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!canEdit || e.target !== e.currentTarget) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const startMin = DAY_START_H * 60 + (e.clientY - rect.top) / PX_PER_MIN;
+    const snapped = clamp(snap(startMin), DAY_START_H * 60, DAY_END_H * 60 - 60);
+    const el = e.currentTarget;
+    const pointerId = e.pointerId;
+    const clientX = e.clientX;
+    const clientY = e.clientY;
+    ghostRef.current.pending = { pointerId, clientX, clientY, startMin: snapped, day, el };
+    ghostRef.current.timer = setTimeout(() => {
+      const p = ghostRef.current.pending;
+      if (!p) return;
+      el.setPointerCapture(pointerId);
+      ghostRef.current.pending = null;
+      ghostRef.current.drag = { pointerId, clientY0: p.clientY, startMin0: p.startMin, day };
+      setGhostSlot({ day, startMin: p.startMin });
+    }, LONG_PRESS_MS);
+  };
+
+  const onGridPointerMove = (day: string) => (e: React.PointerEvent<HTMLDivElement>) => {
+    if (ghostRef.current.pending) {
+      const { clientX, clientY } = ghostRef.current.pending;
+      if (Math.abs(e.clientX - clientX) + Math.abs(e.clientY - clientY) > 8) {
+        if (ghostRef.current.timer) { clearTimeout(ghostRef.current.timer); ghostRef.current.timer = null; }
+        ghostRef.current.pending = null;
+      }
+      return;
+    }
+    const { drag } = ghostRef.current;
+    if (!drag || drag.day !== day) return;
+    const dm = snap((e.clientY - drag.clientY0) / PX_PER_MIN);
+    const newStart = clamp(drag.startMin0 + dm, DAY_START_H * 60, DAY_END_H * 60 - 60);
+    setGhostSlot({ day, startMin: newStart });
+  };
+
+  const onGridPointerUp = (day: string) => (e: React.PointerEvent<HTMLDivElement>) => {
+    if (ghostRef.current.timer) { clearTimeout(ghostRef.current.timer); ghostRef.current.timer = null; }
+    ghostRef.current.pending = null;
+    const { drag } = ghostRef.current;
+    if (drag) {
+      ghostRef.current.drag = null;
+      e.currentTarget.releasePointerCapture(e.pointerId);
+      const startMin = ghostSlot?.startMin ?? drag.startMin0;
+      setGhostSlot(null);
+      addAt(day, startMin);
+      swallowNextClick();
+      return;
+    }
+    // Desktop: quick click to add at pointer position
+    if (e.target === e.currentTarget && e.pointerType !== "touch") {
+      const rect = (e.target as HTMLElement).getBoundingClientRect();
+      addAt(day, DAY_START_H * 60 + (e.clientY - rect.top) / PX_PER_MIN);
+    }
+  };
+
+  const onGridPointerCancel = () => {
+    if (ghostRef.current.timer) { clearTimeout(ghostRef.current.timer); ghostRef.current.timer = null; }
+    ghostRef.current.pending = null;
+    ghostRef.current.drag = null;
+    setGhostSlot(null);
   };
 
   // Swipe left/right in day view to navigate between days.
@@ -267,9 +338,21 @@ export function ItineraryCalendar({
                 </div>
 
                 <div className="absolute inset-x-0" style={{ top: HEADER_H, height: GRID_H }}
-                  onClick={(e) => { if (canEdit && e.target === e.currentTarget) addAt(day, DAY_START_H * 60 + e.nativeEvent.offsetY / PX_PER_MIN); }}>
+                  onPointerDown={onGridPointerDown(day)}
+                  onPointerMove={onGridPointerMove(day)}
+                  onPointerUp={onGridPointerUp(day)}
+                  onPointerCancel={onGridPointerCancel}>
                   {Array.from({ length: DAY_END_H - DAY_START_H }, (_, i) => (<div key={i} className="pointer-events-none absolute inset-x-0 border-t border-slate-50" style={{ top: i * PX_PER_HOUR }} />))}
                   <NowLine day={day} days={days} />
+                  {ghostSlot?.day === day && (
+                    <div className="pointer-events-none absolute inset-x-1 z-30 rounded-lg border-2 border-dashed border-slate-400 bg-slate-200/50"
+                      style={{ top: (ghostSlot.startMin - DAY_START_H * 60) * PX_PER_MIN, height: 60 * PX_PER_MIN }}>
+                      <div className="flex h-full flex-col items-center justify-center gap-0.5">
+                        <span className="text-[11px] font-semibold text-slate-500">{fmt(ghostSlot.startMin)}</span>
+                        <span className="text-[10px] text-slate-400">–{fmt(ghostSlot.startMin + 60)}</span>
+                      </div>
+                    </div>
+                  )}
                   {daySlots.map((s) => {
                     const lay = layout.get(s.id)!;
                     const { main, alts } = splitInstances(s.id, instances);
@@ -287,7 +370,7 @@ export function ItineraryCalendar({
 
       <p className="mt-2 text-center text-xs text-slate-400">
         {canEdit
-          ? "Tap a block to open · long-press to drag · drag edges to resize"
+          ? "Tap to open · long-press block to move · drag top/bottom edge to resize · long-press empty space to place new slot"
           : "Read-only — sign in as an editor to make changes. Tap a block for details."}
       </p>
 
@@ -549,7 +632,11 @@ function Block({ slot, main, alts, entityById, col, colCount, wide, canEdit, onG
       onPointerDown={down("move")} onPointerMove={move} onPointerUp={up} onPointerCancel={cancel}
       onClick={(e) => e.stopPropagation()}
     >
-      {canEdit && <div className="absolute inset-x-0 top-0 z-10 hidden h-2 cursor-ns-resize sm:block" onPointerDown={down("top")} onPointerMove={move} onPointerUp={up} />}
+      {canEdit && (
+        <div className="absolute inset-x-0 top-0 z-10 flex h-5 cursor-ns-resize items-start justify-center" style={{ touchAction: "none" }} onPointerDown={down("top")} onPointerMove={move} onPointerUp={up}>
+          <div className="mt-1 h-0.5 w-8 rounded-full bg-current opacity-20 transition-opacity group-hover:opacity-40 sm:opacity-0 sm:group-hover:opacity-30" />
+        </div>
+      )}
       <div ref={timeTagRef} className={`absolute right-1 top-1 rounded bg-black/70 px-1 text-[9px] font-bold text-white ${isDragging ? "" : "hidden"}`} />
 
       <div className="px-1.5 py-1">
@@ -584,8 +671,8 @@ function Block({ slot, main, alts, entityById, col, colCount, wide, canEdit, onG
       </div>
 
       {canEdit && (
-        <div className="absolute inset-x-0 bottom-0 z-10 hidden h-2 cursor-ns-resize sm:block" onPointerDown={down("bottom")} onPointerMove={move} onPointerUp={up}>
-          <div className="mx-auto mt-0.5 h-0.5 w-5 rounded-full bg-current opacity-0 group-hover:opacity-30" />
+        <div className="absolute inset-x-0 bottom-0 z-10 flex h-5 cursor-ns-resize items-end justify-center" style={{ touchAction: "none" }} onPointerDown={down("bottom")} onPointerMove={move} onPointerUp={up}>
+          <div className="mb-1 h-0.5 w-8 rounded-full bg-current opacity-20 transition-opacity group-hover:opacity-40 sm:opacity-0 sm:group-hover:opacity-30" />
         </div>
       )}
     </div>
