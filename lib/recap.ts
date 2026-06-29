@@ -29,6 +29,8 @@ export type RecapItem = {
   generalArea?: string;
   area?: string;
   rating?: number; // 0–10; prefilled from avgRating, editable
+  /** Featured as a golden "Must visit" highlight on the public page. */
+  mustVisit?: boolean;
   blurb?: string; // the recommendation text
   photos: string[]; // public URLs (after publish copies them)
   comments?: RecapComment[]; // hand-picked

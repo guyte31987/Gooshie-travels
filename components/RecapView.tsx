@@ -17,9 +17,12 @@ export function RecapView({ recap }: { recap: Recap }) {
 
   const items = recap.items ?? [];
 
-  // Featured = items with a photo or a blurb, kept in the admin's order.
+  // Featured = items with a photo or a blurb, "Must visit" first then admin order.
   const featured = useMemo(
-    () => items.filter((i) => (i.photos?.length ?? 0) > 0 || i.blurb),
+    () =>
+      items
+        .filter((i) => (i.photos?.length ?? 0) > 0 || i.blurb)
+        .sort((a, b) => Number(!!b.mustVisit) - Number(!!a.mustVisit)),
     [items]
   );
 
@@ -32,7 +35,10 @@ export function RecapView({ recap }: { recap: Recap }) {
   const list = useMemo(() => {
     let rows = filter === "all" ? items : items.filter((i) => i.type === filter);
     rows = [...rows];
-    if (sort === "rating") rows.sort((a, b) => (b.rating ?? -1) - (a.rating ?? -1));
+    if (sort === "rating")
+      rows.sort(
+        (a, b) => Number(!!b.mustVisit) - Number(!!a.mustVisit) || (b.rating ?? -1) - (a.rating ?? -1)
+      );
     else if (sort === "name") rows.sort((a, b) => a.name.localeCompare(b.name));
     else rows.sort((a, b) => labelOf(a.type).localeCompare(labelOf(b.type)) || a.name.localeCompare(b.name));
     return rows;
@@ -74,8 +80,15 @@ export function RecapView({ recap }: { recap: Recap }) {
                 <button
                   key={item.entityId}
                   onClick={() => setActive(item)}
-                  className="group overflow-hidden rounded-2xl border border-stone-200 bg-white text-left shadow-sm transition hover:shadow-md"
+                  className={`group relative overflow-hidden rounded-2xl border bg-white text-left shadow-sm transition hover:shadow-md ${
+                    item.mustVisit ? "border-amber-300 ring-1 ring-amber-300" : "border-stone-200"
+                  }`}
                 >
+                  {item.mustVisit && (
+                    <span className="absolute left-2 top-2 z-10 rounded-full bg-amber-400 px-2 py-0.5 text-[11px] font-bold text-white shadow">
+                      ★ Must visit
+                    </span>
+                  )}
                   {item.photos?.[0] && (
                     <div className="aspect-[4/3] w-full overflow-hidden">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -150,7 +163,10 @@ export function RecapView({ recap }: { recap: Recap }) {
                     </span>
                   )}
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{item.name}</p>
+                    <p className="flex items-center gap-1.5 truncate text-sm font-medium">
+                      {item.mustVisit && <span className="text-amber-400">★</span>}
+                      {item.name}
+                    </p>
                     <p className="truncate text-xs text-stone-400">
                       {labelOf(item.type)}
                       {item.generalArea ? ` · ${item.generalArea}` : ""}
@@ -191,9 +207,14 @@ function DetailModal({ item, onClose }: { item: RecapItem; onClose: () => void }
         <div className="p-5">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <span className="text-lg">{emojiOf(item.type)}</span>
                 <h2 className="text-lg font-semibold">{item.name}</h2>
+                {item.mustVisit && (
+                  <span className="rounded-full bg-amber-400 px-2 py-0.5 text-[11px] font-bold text-white">
+                    ★ Must visit
+                  </span>
+                )}
               </div>
               <p className="mt-0.5 text-xs text-stone-400">
                 {labelOf(item.type)}
