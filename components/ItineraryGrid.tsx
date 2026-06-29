@@ -422,6 +422,12 @@ export function ItineraryCalendar({
 
 // --- list view ---------------------------------------------------------------
 
+function fmt24(min: number): { h: string; m: string } {
+  const h = Math.floor(min / 60) % 24;
+  const m = min % 60;
+  return { h: String(h), m: `:${String(m).padStart(2, "0")}` };
+}
+
 function ListView({ days, slots, instances, entityById, stays, onOpen }: {
   days: string[];
   slots: CalSlot[];
@@ -430,26 +436,38 @@ function ListView({ days, slots, instances, entityById, stays, onOpen }: {
   stays: IcsStay[];
   onOpen: (slotId: string) => void;
 }) {
+  const totalDays = days.length;
   return (
-    <div className="space-y-6 pb-4">
-      {days.map((day) => {
+    <div className="space-y-8 pb-4">
+      {days.map((day, dayIndex) => {
         const daySlots = slots.filter((s) => s.day === day).sort((a, b) => a.start - b.start);
         const dayStays = stays.filter((s) => day >= s.from && day < s.to);
-        if (daySlots.length === 0) return null;
+        if (daySlots.length === 0 && dayStays.length === 0) return null;
         const dt = new Date(day + "T12:00:00");
-        const weekday = dt.toLocaleDateString("en-US", { weekday: "long", timeZone: "UTC" });
-        const dateStr = dt.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+        const weekdayShort = dt.toLocaleDateString("en-US", { weekday: "short", timeZone: "UTC" }).toUpperCase();
+        const monthDay = dt.toLocaleDateString("en-US", { month: "long", day: "numeric", timeZone: "UTC" });
+        const dayNum = String(dayIndex + 1).padStart(2, "0");
+        const totalStr = String(totalDays).padStart(2, "0");
+
         return (
           <div key={day}>
             {/* Day header */}
-            <div className="mb-2 flex items-baseline justify-between">
-              <h3 className="font-display text-lg font-semibold text-ink">{weekday}</h3>
-              <span className="font-mono text-xs text-secondary">{dateStr}</span>
+            <div className="mb-3">
+              <p className="font-mono text-[10px] font-medium uppercase tracking-widest text-secondary">
+                Day {dayNum} / {totalStr} · {weekdayShort}
+              </p>
+              <h3 className="font-display text-3xl font-bold leading-tight text-ink">{monthDay}</h3>
             </div>
+
+            {/* Stay banner */}
             {dayStays.length > 0 && (
-              <p className="mb-2 text-xs text-secondary">🛏 {dayStays[0].name}</p>
+              <div className="mb-3 rounded-lg bg-fill px-3 py-1.5">
+                <span className="font-mono text-[10px] font-semibold uppercase tracking-widest text-secondary">Based in </span>
+                <span className="font-accent text-sm italic text-body">{dayStays[0].name}</span>
+              </div>
             )}
-            <div className="space-y-1.5">
+
+            <div className="space-y-2">
               {daySlots.map((slot) => {
                 const { main, alts } = splitInstances(slot.id, instances);
                 if (!main) return null;
@@ -462,42 +480,70 @@ function ListView({ days, slots, instances, entityById, stays, onOpen }: {
                 const book = bookingStatusOf(main);
                 const bookPill = book !== "walkin" ? BOOKING_PILL[book] : null;
                 const title = ent?.name ?? slot.label;
+                const { h, m } = fmt24(slot.start);
+
+                // Spine style: tentative = dashed, notDone = hollow (border only), else solid
+                const spineStyle = notDone
+                  ? `border-l-4 border-dashed border-[${c.hex}]/40`
+                  : tentative
+                  ? `border-l-4 border-dashed ${c.border}`
+                  : `border-l-4 ${c.border}`;
+
+                // Card border: tentative gets a dashed outer border
+                const cardBorder = tentative
+                  ? "border border-dashed border-border-card"
+                  : "border border-border-card";
+
                 return (
                   <button
                     key={slot.id}
                     onClick={() => onOpen(slot.id)}
-                    className={`group w-full rounded-xl border-l-4 ${c.border} ${notDone ? "bg-fill-soft opacity-60" : done ? `${c.bg} opacity-75 saturate-50` : c.bg} px-3 py-2.5 text-left transition hover:brightness-95`}
+                    className={`group w-full ${spineStyle} ${cardBorder} rounded-r-xl bg-sheet px-3 py-3 text-left shadow-sm transition hover:shadow-md ${notDone ? "opacity-60" : ""}`}
                   >
-                    <div className="flex items-start gap-2.5">
-                      {/* Time column */}
-                      <div className="w-14 shrink-0 pt-0.5">
-                        <span className={`font-mono text-[11px] ${done || notDone ? "text-secondary" : c.text}`}>
-                          {fmt(slot.start)}
-                        </span>
-                        <span className={`block font-mono text-[10px] text-faint`}>
-                          –{fmt(slot.end)}
-                        </span>
+                    <div className="flex items-start gap-3">
+                      {/* Stacked 24h time */}
+                      <div className="w-10 shrink-0 text-right">
+                        <span className={`block font-mono text-base font-semibold leading-none ${done || notDone ? "text-faint" : c.text}`}>{h}</span>
+                        <span className={`font-mono text-[11px] leading-none ${done || notDone ? "text-faint" : "text-secondary"}`}>{m}</span>
                       </div>
+
                       {/* Content */}
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-sm leading-none">{emojiOf(type)}</span>
-                          <span className={`text-sm font-semibold leading-snug ${notDone ? "line-through text-secondary" : done ? "text-body" : "text-ink"}`}>
-                            {title}
-                          </span>
-                          {done && <span className="text-[11px] text-booked">✓</span>}
-                          {tentative && !notDone && <span className={`rounded-full px-1.5 py-px font-mono text-[9px] font-bold ${c.text} ring-1 ring-current/30`}>?</span>}
-                          {alts.length > 0 && <span className={`rounded-full ${c.chip} px-1.5 py-px text-[9px] font-bold text-white`}>+{alts.length}</span>}
-                          {bookPill && <span className={`rounded-full px-1.5 py-px text-[9px] font-semibold leading-none ${bookPill.className}`}>{bookPill.label}</span>}
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <span className={`text-sm font-semibold leading-snug ${notDone ? "line-through text-secondary" : done ? "text-secondary" : "text-ink"}`}>
+                              {emojiOf(type)} {title}
+                            </span>
+                            {done && <span className="ml-1 text-[11px] text-booked">✓</span>}
+                            <p className="mt-0.5 text-[11px] text-secondary">
+                              {[ent?.type !== "uncategorised" ? ent?.type : null, ent?.parent ? `@${ent.parent}` : ent?.area].filter(Boolean).join(" · ")}
+                            </p>
+                            {main.note && (
+                              <p className="mt-0.5 line-clamp-2 text-[11px] italic text-faint">{main.note}</p>
+                            )}
+                          </div>
+                          {/* Right-side pills */}
+                          <div className="flex shrink-0 flex-col items-end gap-1">
+                            {bookPill && (
+                              <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold leading-none ${bookPill.className}`}>
+                                {bookPill.label}
+                              </span>
+                            )}
+                            {tentative && !notDone && (
+                              <span className="rounded-full border border-tentative/50 bg-tentative-bg px-2.5 py-1 text-[11px] font-semibold text-tentative">
+                                Tentative
+                              </span>
+                            )}
+                            {notDone && (
+                              <span className="rounded-full border border-[#e2c4bc] px-2.5 py-1 text-[11px] font-semibold text-[#b08379]">
+                                Cancelled
+                              </span>
+                            )}
+                            {alts.length > 0 && !bookPill && !tentative && (
+                              <span className={`rounded-full ${c.chip} px-2 py-0.5 text-[10px] font-bold text-white`}>+{alts.length}</span>
+                            )}
+                          </div>
                         </div>
-                        {(ent?.area || ent?.parent) && (
-                          <p className="mt-0.5 text-[11px] text-secondary">
-                            {ent.parent ? `@${ent.parent}` : ent.area}
-                          </p>
-                        )}
-                        {main.note && (
-                          <p className="mt-1 line-clamp-1 text-[11px] text-body/70 italic">{main.note}</p>
-                        )}
                       </div>
                     </div>
                   </button>
