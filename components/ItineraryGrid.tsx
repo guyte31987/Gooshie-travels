@@ -500,7 +500,7 @@ function ListView({ days, slots, instances, entityById, stays, onOpen }: {
                   <button
                     key={slot.id}
                     onClick={() => onOpen(slot.id)}
-                    className={`group w-full ${spineClass} rounded-r-xl bg-white py-3 pl-3 pr-3 text-left shadow-sm ring-1 ring-black/[0.06] transition hover:shadow-md ${notDone ? "opacity-50" : ""}`}
+                    className={`group w-full ${spineClass} rounded-r-xl bg-white py-3 pl-3 pr-3 text-left shadow-sm ring-1 ring-black/[0.06] transition hover:shadow-md`}
                   >
                     <div className="flex items-start gap-3">
                       {/* Stacked 24h time */}
