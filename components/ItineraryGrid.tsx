@@ -878,22 +878,31 @@ function DetailSheet({ slot, instances, entityById, canEdit, handlers, isNew, tr
   useBackClose(true, cancel);
   if (!main) return null;
 
+  const bookingPill = BOOKING_PILL[bookingStatusOf(main) as keyof typeof BOOKING_PILL];
+  const locationLabel = ent?.parent ? `@${ent.parent}` : ent?.area ?? "";
+  const timeLineParts = [
+    `${fmt(slot.start)} – ${fmt(slot.end)}`,
+    locationLabel,
+    bookingPill?.short ? bookingPill.short : bookingPill?.label ?? "",
+  ].filter(Boolean);
+
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 sm:items-center sm:p-4" onClick={cancel}>
       <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-sheet p-5 shadow-xl sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="mb-3 flex items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <div className="mb-1 flex flex-wrap items-center gap-1.5">
-              <span className={`inline-flex items-center gap-1 rounded-full ${c.bg} ${c.text} px-2 py-0.5 text-[11px] font-medium`}>{emojiOf(type)} {type}</span>
-              <CycleBadge value={activityStatusOf(main)} options={STATUS_CYCLE} disabled={!canEdit}
-                onChange={(v) => handlers.onUpdateInstance(slot.id, main.entityId, { status: v })} />
-              <CycleBadge value={bookingStatusOf(main)} options={BOOKING_CYCLE} disabled={!canEdit}
-                onChange={(v) => handlers.onUpdateInstance(slot.id, main.entityId, { bookingStatus: v })} />
-            </div>
-            {adhoc && canEdit ? (
-              <input value={label} onChange={(e) => setLabel(e.target.value)} autoFocus={isNew} placeholder="Activity name…" className="w-full rounded-lg border border-slate-300 px-2 py-1 text-lg font-semibold outline-none focus:border-slate-400" />
-            ) : <h2 className="text-lg font-semibold leading-snug">{title}</h2>}
-            <div className="mt-0.5 text-xs text-slate-500">{fmt(slot.start)} – {fmt(slot.end)}{ent?.parent ? ` · @${ent.parent}` : ent?.area ? ` · ${ent.area}` : ""}</div>
+
+        {/* Top: category chip row + close/edit */}
+        <div className="mb-3 flex items-start justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-1.5">
+            {/* Category dot chip */}
+            <span className={`inline-flex items-center gap-1.5 rounded-full ${c.bg} ${c.text} px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide`}>
+              <span className={`inline-block h-2 w-2 rounded-full ${c.chip}`} />
+              {emojiOf(type)} {type}
+            </span>
+            {/* Status badges */}
+            <CycleBadge value={activityStatusOf(main)} options={STATUS_CYCLE} disabled={!canEdit}
+              onChange={(v) => handlers.onUpdateInstance(slot.id, main.entityId, { status: v })} />
+            <CycleBadge value={bookingStatusOf(main)} options={BOOKING_CYCLE} disabled={!canEdit}
+              onChange={(v) => handlers.onUpdateInstance(slot.id, main.entityId, { bookingStatus: v })} />
           </div>
           <div className="flex shrink-0 items-center gap-1">
             {canEdit && handlers.onSaveEntity && (
@@ -906,22 +915,53 @@ function DetailSheet({ slot, instances, entityById, canEdit, handlers, isNew, tr
           </div>
         </div>
 
-        {isNew && adhoc && canEdit && handlers.onReplaceMain && handlers.onSaveEntity && (
-          <PrimaryPicker
-            entityById={entityById}
-            excludeIds={new Set([main.entityId])}
-            onPickFromDb={(entityId) => handlers.onReplaceMain!(slot.id, entityId)}
-            onCreate={(patch) => { handlers.onSaveEntity!(main.entityId, patch); }}
-          />
+        {/* Name — large Bodoni */}
+        {adhoc && canEdit ? (
+          <input value={label} onChange={(e) => setLabel(e.target.value)} autoFocus={isNew} placeholder="Activity name…"
+            className="w-full rounded-lg border border-slate-300 px-2 py-1 font-display text-2xl font-bold outline-none focus:border-slate-400" />
+        ) : (
+          <h2 className="font-display text-2xl font-bold leading-tight">{title}</h2>
         )}
 
-        {!adhoc && (
-          <div className="space-y-1 text-sm">
-            <a href={mapsSearch(mapQuery)} target="_blank" rel="noreferrer" className="flex items-start gap-2 text-slate-600 hover:text-ink"><span>📍</span><span className="underline decoration-slate-300">{ent?.address || `Find "${ent?.name}" on Google Maps`}</span></a>
-            {ent?.hours && <div className="flex items-start gap-2 text-slate-600"><span>🕑</span><span>{ent.hours}</span></div>}
-            {ent?.website && <a href={ent.website} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-indigo-600 hover:underline"><span>🔗</span><span className="truncate">{ent.website.replace(/^https?:\/\//, "")}</span></a>}
-            {ent?.instagram && <a href={igUrl(ent.instagram)} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-pink-600 hover:underline"><span>📸</span><span>{ent.instagram}</span></a>}
-            {ent?.phone && <a href={`tel:${ent.phone.replace(/\s/g, "")}`} className="flex items-center gap-2 text-slate-600 hover:underline"><span>📞</span><span>{ent.phone}</span></a>}
+        {/* Time line — mono, single row */}
+        <p className="mt-1 font-mono text-xs text-secondary">{timeLineParts.join(" · ")}</p>
+
+        {isNew && adhoc && canEdit && handlers.onReplaceMain && handlers.onSaveEntity && (
+          <div className="mt-3">
+            <PrimaryPicker
+              entityById={entityById}
+              excludeIds={new Set([main.entityId])}
+              onPickFromDb={(entityId) => handlers.onReplaceMain!(slot.id, entityId)}
+              onCreate={(patch) => { handlers.onSaveEntity!(main.entityId, patch); }}
+            />
+          </div>
+        )}
+
+        {/* Info rows — structured label/value table */}
+        {!adhoc && (ent?.address || ent?.hours || ent?.website || ent?.instagram || ent?.phone) && (
+          <div className="mt-4 space-y-2 rounded-xl bg-fill-soft px-4 py-3 text-sm">
+            {(ent?.address || true) && (
+              <a href={mapsSearch(mapQuery)} target="_blank" rel="noreferrer" className="flex items-start gap-3 hover:opacity-80">
+                <span className="w-14 shrink-0 font-mono text-[10px] font-semibold uppercase tracking-widest text-faint pt-0.5">Address</span>
+                <span className="text-ink underline decoration-slate-300">{ent?.address || `Find "${ent?.name}" on Maps`}</span>
+              </a>
+            )}
+            {ent?.hours && (
+              <div className="flex items-start gap-3">
+                <span className="w-14 shrink-0 font-mono text-[10px] font-semibold uppercase tracking-widest text-faint pt-0.5">Hours</span>
+                <span className="text-body">{ent.hours}</span>
+              </div>
+            )}
+            {(ent?.website || ent?.instagram || ent?.phone) && (
+              <div className="flex items-start gap-3">
+                <span className="w-14 shrink-0 font-mono text-[10px] font-semibold uppercase tracking-widest text-faint pt-0.5">Links</span>
+                <div className="flex flex-col gap-1">
+                  {ent?.website && <a href={ent.website} target="_blank" rel="noreferrer" className="truncate text-rust hover:underline">{ent.website.replace(/^https?:\/\//, "")}</a>}
+                  {ent?.instagram && <a href={igUrl(ent.instagram)} target="_blank" rel="noreferrer" className="text-rust hover:underline">{ent.instagram}</a>}
+                  {ent?.phone && <a href={`tel:${ent.phone.replace(/\s/g, "")}`} className="text-body hover:underline">{ent.phone}</a>}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
