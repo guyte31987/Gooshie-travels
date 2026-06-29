@@ -1,0 +1,413 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { ENTITY_TABS, OPERATIONAL_TYPES, type Entity } from "@/lib/entities";
+import { useTripData } from "./TripData";
+import { useAuth } from "./AuthProvider";
+import { auth } from "@/lib/firebase";
+import {
+  fetchPickableComments,
+  getRecapByTrip,
+  newRecapSlug,
+  saveRecapDraft,
+  type RecapComment,
+  type RecapItem,
+} from "@/lib/recap";
+
+const labelOf = (t: string) => ENTITY_TABS.find((x) => x.type === t)?.label ?? t;
+const emojiOf = (t: string) => ENTITY_TABS.find((x) => x.type === t)?.emoji ?? "";
+
+/** Every photo URL the admin could pick for a place: its favourites + every visit's photos. */
+function candidatePhotos(entity: Entity, instancePhotos: string[]): string[] {
+  return Array.from(new Set([...(entity.photos ?? []), ...instancePhotos]));
+}
+
+export function RecapBuilder({ tripId, tripName, dateLabel }: { tripId: string; tripName: string; dateLabel?: string }) {
+  const { entities, instanceMap } = useTripData();
+  const { isAdmin, role } = useAuth();
+  const canEdit = isAdmin || role === "editor";
+
+  const [slug, setSlug] = useState<string>("");
+  const [published, setPublished] = useState(false);
+  const [title, setTitle] = useState(tripName);
+  const [subtitle, setSubtitle] = useState("");
+  const [intro, setIntro] = useState("");
+  const [coverPhotoUrl, setCoverPhotoUrl] = useState<string>("");
+  const [items, setItems] = useState<Map<string, RecapItem>>(new Map());
+  const [loaded, setLoaded] = useState(false);
+  const [status, setStatus] = useState<string>("");
+  const [busy, setBusy] = useState(false);
+
+  // Places worth recapping: real place types only, excluding logistics buckets.
+  const places = useMemo(
+    () => entities.filter((e) => !OPERATIONAL_TYPES.has(e.type) && e.type !== "uncategorised"),
+    [entities]
+  );
+
+  // Instance photos per entity, derived from its slots' linked PlanInstances.
+  const instancePhotosOf = (entity: Entity): string[] =>
+    entity.slots.flatMap((s) => (s.uid ? instanceMap.get(s.uid)?.photos ?? [] : []));
+  const instanceIdsOf = (entity: Entity): string[] =>
+    entity.slots.map((s) => s.uid).filter((x): x is string => !!x);
+
+  // Load an existing draft/published recap once.
+  useEffect(() => {
+    let alive = true;
+    getRecapByTrip(tripId).then((r) => {
+      if (!alive) return;
+      if (r) {
+        setSlug(r.slug);
+        setPublished(r.published);
+        setTitle(r.title);
+        setSubtitle(r.subtitle ?? "");
+        setIntro(r.intro ?? "");
+        setCoverPhotoUrl(r.coverPhotoUrl ?? "");
+        setItems(new Map(r.items.map((it) => [it.entityId, it])));
+      } else {
+        setSlug(newRecapSlug(tripId));
+      }
+      setLoaded(true);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [tripId]);
+
+  const toggle = (e: Entity) => {
+    setItems((prev) => {
+      const next = new Map(prev);
+      if (next.has(e.id)) {
+        next.delete(e.id);
+      } else {
+        next.set(e.id, {
+          entityId: e.id,
+          name: e.name,
+          type: e.type,
+          generalArea: e.generalArea,
+          area: e.area,
+          rating: e.avgRating,
+          blurb: "",
+          photos: [],
+          website: e.website,
+          instagram: e.instagram,
+          address: e.address,
+        });
+      }
+      return next;
+    });
+  };
+
+  const patch = (id: string, p: Partial<RecapItem>) =>
+    setItems((prev) => {
+      const cur = prev.get(id);
+      if (!cur) return prev;
+      const next = new Map(prev);
+      next.set(id, { ...cur, ...p });
+      return next;
+    });
+
+  const draft = () => ({
+    slug,
+    tripId,
+    title: title.trim() || tripName,
+    subtitle: subtitle.trim() || undefined,
+    dateLabel,
+    intro: intro.trim() || undefined,
+    coverPhotoUrl: coverPhotoUrl || undefined,
+    items: [...items.values()],
+    published,
+  });
+
+  const saveDraft = async () => {
+    setBusy(true);
+    setStatus("");
+    try {
+      await saveRecapDraft(draft());
+      setStatus("Draft saved.");
+    } catch (e) {
+      setStatus(e instanceof Error ? e.message : "Save failed.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const callPublish = async (publish: boolean) => {
+    setBusy(true);
+    setStatus("");
+    try {
+      await saveRecapDraft(draft()); // persist latest edits first
+      const token = await auth?.currentUser?.getIdToken();
+      const res = await fetch("/api/recap/publish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ slug, publish }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Publish failed.");
+      setPublished(publish);
+      setStatus(publish ? "Published!" : "Unpublished.");
+    } catch (e) {
+      setStatus(e instanceof Error ? e.message : "Publish failed.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (!canEdit) {
+    return <p className="py-10 text-center text-sm text-slate-400">Only editors can build a recap.</p>;
+  }
+  if (!loaded) {
+    return <p className="py-10 text-center text-sm text-slate-400">Loading…</p>;
+  }
+
+  const publicUrl = typeof window !== "undefined" ? `${window.location.origin}/r/${slug}` : `/r/${slug}`;
+
+  return (
+    <div className="space-y-5">
+      {/* Header / publish controls */}
+      <div className="rounded-xl border border-slate-200 bg-white p-4">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold">Recap page</h2>
+          <span
+            className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
+              published ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"
+            }`}
+          >
+            {published ? "Published" : "Draft"}
+          </span>
+        </div>
+
+        <div className="space-y-2">
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Title"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-400"
+          />
+          <input
+            value={subtitle}
+            onChange={(e) => setSubtitle(e.target.value)}
+            placeholder="Subtitle (optional)"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-400"
+          />
+          <textarea
+            value={intro}
+            onChange={(e) => setIntro(e.target.value)}
+            placeholder="Intro — a sentence or two about the trip (optional)"
+            rows={2}
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-400"
+          />
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <button
+            onClick={saveDraft}
+            disabled={busy}
+            className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+          >
+            Save draft
+          </button>
+          <button
+            onClick={() => callPublish(true)}
+            disabled={busy}
+            className="rounded-lg bg-ink px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
+          >
+            {published ? "Re-publish" : "Publish"}
+          </button>
+          {published && (
+            <button
+              onClick={() => callPublish(false)}
+              disabled={busy}
+              className="rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50 disabled:opacity-50"
+            >
+              Unpublish
+            </button>
+          )}
+          {status && <span className="text-xs text-slate-500">{status}</span>}
+        </div>
+
+        {published && (
+          <div className="mt-3 flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-xs">
+            <a href={`/r/${slug}`} target="_blank" rel="noreferrer" className="truncate font-medium text-indigo-600 hover:underline">
+              {publicUrl}
+            </a>
+            <button
+              onClick={() => navigator.clipboard?.writeText(publicUrl)}
+              className="ml-auto shrink-0 rounded border border-slate-300 px-2 py-0.5 text-slate-600 hover:bg-white"
+            >
+              Copy
+            </button>
+          </div>
+        )}
+      </div>
+
+      <p className="text-xs text-slate-500">
+        Tick the places to feature. {items.size} selected. Photos you pick are copied to a public
+        gallery when you publish; everything else stays private.
+      </p>
+
+      {/* Place list */}
+      <ul className="space-y-2">
+        {places.map((e) => {
+          const item = items.get(e.id);
+          const photos = candidatePhotos(e, instancePhotosOf(e));
+          return (
+            <li key={e.id} className="rounded-xl border border-slate-200 bg-white">
+              <label className="flex cursor-pointer items-center gap-3 px-4 py-3">
+                <input type="checkbox" checked={!!item} onChange={() => toggle(e)} className="rounded" />
+                <span>{emojiOf(e.type)}</span>
+                <span className="flex-1 text-sm font-medium">{e.name}</span>
+                <span className="text-[11px] text-slate-400">{labelOf(e.type)}</span>
+                {e.avgRating != null && (
+                  <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
+                    ★ {e.avgRating.toFixed(1)}
+                  </span>
+                )}
+              </label>
+
+              {item && (
+                <PlaceEditor
+                  item={item}
+                  photos={photos}
+                  coverPhotoUrl={coverPhotoUrl}
+                  onSetCover={setCoverPhotoUrl}
+                  onPatch={(p) => patch(e.id, p)}
+                  fetchComments={() => fetchPickableComments(e.id, instanceIdsOf(e))}
+                />
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+function PlaceEditor({
+  item,
+  photos,
+  coverPhotoUrl,
+  onSetCover,
+  onPatch,
+  fetchComments,
+}: {
+  item: RecapItem;
+  photos: string[];
+  coverPhotoUrl: string;
+  onSetCover: (url: string) => void;
+  onPatch: (p: Partial<RecapItem>) => void;
+  fetchComments: () => Promise<RecapComment[]>;
+}) {
+  const [available, setAvailable] = useState<RecapComment[] | null>(null);
+
+  useEffect(() => {
+    fetchComments().then(setAvailable);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const togglePhoto = (url: string) => {
+    const has = item.photos.includes(url);
+    onPatch({ photos: has ? item.photos.filter((p) => p !== url) : [...item.photos, url] });
+  };
+
+  const toggleComment = (c: RecapComment) => {
+    const cur = item.comments ?? [];
+    const has = cur.some((x) => x.author === c.author && x.text === c.text);
+    onPatch({ comments: has ? cur.filter((x) => !(x.author === c.author && x.text === c.text)) : [...cur, c] });
+  };
+
+  return (
+    <div className="space-y-3 border-t border-slate-100 px-4 py-3">
+      {/* Rating + blurb */}
+      <div className="flex items-center gap-2">
+        <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Rating</span>
+        <input
+          type="number"
+          min={0}
+          max={10}
+          step={0.1}
+          value={item.rating ?? ""}
+          onChange={(e) => onPatch({ rating: e.target.value === "" ? undefined : Number(e.target.value) })}
+          placeholder="0–10"
+          className="w-20 rounded-lg border border-slate-300 px-2 py-1 text-xs outline-none focus:border-slate-400"
+        />
+      </div>
+      <textarea
+        value={item.blurb ?? ""}
+        onChange={(e) => onPatch({ blurb: e.target.value })}
+        placeholder="Your recommendation — why it's worth it…"
+        rows={2}
+        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-400"
+      />
+
+      {/* Photo picker */}
+      {photos.length > 0 ? (
+        <div>
+          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+            Photos ({item.photos.length} chosen)
+          </p>
+          <div className="grid grid-cols-4 gap-1.5">
+            {photos.map((url) => {
+              const chosen = item.photos.includes(url);
+              const isCover = coverPhotoUrl === url;
+              return (
+                <div key={url} className="relative">
+                  <button
+                    type="button"
+                    onClick={() => togglePhoto(url)}
+                    className={`block aspect-square w-full overflow-hidden rounded-lg border-2 ${
+                      chosen ? "border-indigo-500" : "border-transparent"
+                    }`}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={url} alt="" className="h-full w-full object-cover" />
+                  </button>
+                  {chosen && (
+                    <button
+                      type="button"
+                      onClick={() => onSetCover(isCover ? "" : url)}
+                      className={`absolute bottom-1 right-1 rounded px-1 py-0.5 text-[9px] font-semibold ${
+                        isCover ? "bg-amber-400 text-white" : "bg-black/50 text-white"
+                      }`}
+                    >
+                      {isCover ? "★ cover" : "cover"}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        <p className="text-xs text-slate-400">No photos for this place yet.</p>
+      )}
+
+      {/* Comment picker */}
+      {available === null ? (
+        <p className="text-xs text-slate-400">Loading comments…</p>
+      ) : available.length > 0 ? (
+        <div>
+          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+            Comments ({(item.comments ?? []).length} chosen)
+          </p>
+          <ul className="space-y-1.5">
+            {available.map((c, i) => {
+              const chosen = (item.comments ?? []).some((x) => x.author === c.author && x.text === c.text);
+              return (
+                <li key={i}>
+                  <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs">
+                    <input type="checkbox" checked={chosen} onChange={() => toggleComment(c)} className="mt-0.5 rounded" />
+                    <span className="text-slate-600">
+                      <span className="font-medium text-slate-700">{c.author}: </span>
+                      {c.text}
+                    </span>
+                  </label>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ) : null}
+    </div>
+  );
+}
