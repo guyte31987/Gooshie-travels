@@ -981,7 +981,7 @@ function DetailSheet({ slot, instances, entityById, canEdit, handlers, isNew, tr
         )}
 
         {/* Notes — only shown when there's content or editable */}
-        <div className="mt-4 space-y-3">
+        <div className="mt-4">
           {/* Visit note */}
           {(note || canEdit) && (
             <div>
@@ -995,7 +995,7 @@ function DetailSheet({ slot, instances, entityById, canEdit, handlers, isNew, tr
               ) : note ? (
                 <button onClick={() => setNoteOpen(true)} className="w-full text-left">
                   <p className="line-clamp-2 text-sm text-body">{note}</p>
-                  <span className="text-[11px] text-faint hover:text-secondary">Edit note</span>
+                  <span className="mt-0.5 block text-[11px] text-faint hover:text-secondary">Edit note</span>
                 </button>
               ) : canEdit ? (
                 <button onClick={() => setNoteOpen(true)} className="text-[11px] text-faint hover:text-secondary">
@@ -1007,7 +1007,7 @@ function DetailSheet({ slot, instances, entityById, canEdit, handlers, isNew, tr
 
           {/* Entity note */}
           {ent && (canEdit || ent.notes) && (
-            <div className={note || canEdit ? "border-t border-border-divider pt-3" : ""}>
+            <div className="mt-3 border-t border-border-divider pt-2">
               {entityNoteOpen ? (
                 canEdit ? (
                   <div className="space-y-1.5">
@@ -1030,7 +1030,7 @@ function DetailSheet({ slot, instances, entityById, canEdit, handlers, isNew, tr
               ) : ent.notes ? (
                 <button onClick={() => setEntityNoteOpen(true)} className="w-full text-left">
                   <p className="line-clamp-2 text-sm text-body italic">{ent.notes}</p>
-                  {canEdit && <span className="text-[11px] text-faint hover:text-secondary">Edit</span>}
+                  {canEdit && <span className="mt-0.5 block text-[11px] text-faint hover:text-secondary">Edit</span>}
                 </button>
               ) : canEdit ? (
                 <button onClick={() => setEntityNoteOpen(true)} className="text-[11px] text-faint hover:text-secondary">
@@ -1041,52 +1041,55 @@ function DetailSheet({ slot, instances, entityById, canEdit, handlers, isNew, tr
           )}
         </div>
 
-        {/* Rating — always visible when done */}
-        {ent && tripId && isDone && (
-          <div className="mt-4 border-t border-border-divider pt-3">
-            <CalRatingWidget tripId={tripId} instanceDocId={`${slot.id}__${main.entityId}`} entityId={main.entityId} ratings={main.ratings} />
-          </div>
-        )}
-
-        {ent && (
-          <div className="mt-1 space-y-0">
-            {/* Photos */}
-            <div className="border-t border-border-divider pt-3 mt-3">
-              <SectionToggle label={`Photos${main.photos?.length ? ` (${main.photos.length})` : ""}`} open={photosOpen} onToggle={() => setPhotosOpen((o) => !o)} />
-              {photosOpen && (
-                <div className="mt-2">
-                  <PhotoGallery
-                    photos={main.photos ?? []}
-                    context="instance"
-                    contextId={`${slot.id}__${main.entityId}`}
-                    canEdit={canEdit}
-                    onPhotosChange={async (photos) => {
-                      handlers.onUpdateInstance(slot.id, main.entityId, { photos });
-                    }}
-                    favourites={ent ? new Set(ent.photos ?? []) : undefined}
-                    onToggleFavourite={ent && handlers.onToggleEntityPhoto
-                      ? async (url, next) => handlers.onToggleEntityPhoto!(ent.id, url, next)
-                      : undefined}
-                  />
-                  {ent && <p className="mt-1 text-[10px] text-faint">Starred favourites appear on the place in the Database.</p>}
-                </div>
-              )}
+        {/* Bottom sections — equal rhythm via divide-y */}
+        <div className="mt-5 divide-y divide-border-divider border-t border-border-divider">
+          {/* Rating — always visible when done */}
+          {ent && tripId && isDone && (
+            <div className="py-3">
+              <CalRatingWidget tripId={tripId} instanceDocId={`${slot.id}__${main.entityId}`} entityId={main.entityId} ratings={main.ratings} />
             </div>
+          )}
 
-            {/* Comments */}
-            <div className="border-t border-border-divider pt-3 mt-3">
-              <SectionToggle label="Comments" open={commentOpen} onToggle={() => setCommentOpen((o) => !o)} />
-              {commentOpen && (
-                <div className="mt-2">
-                  <Comments instanceId={`${slot.id}__${main.entityId}`} />
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+          {ent && (
+            <>
+              {/* Photos */}
+              <div className="py-3">
+                <SectionToggle label={`Photos${main.photos?.length ? ` (${main.photos.length})` : ""}`} open={photosOpen} onToggle={() => setPhotosOpen((o) => !o)} />
+                {photosOpen && (
+                  <div className="mt-2">
+                    <PhotoGallery
+                      photos={main.photos ?? []}
+                      context="instance"
+                      contextId={`${slot.id}__${main.entityId}`}
+                      canEdit={canEdit}
+                      onPhotosChange={async (photos) => {
+                        handlers.onUpdateInstance(slot.id, main.entityId, { photos });
+                      }}
+                      favourites={ent ? new Set(ent.photos ?? []) : undefined}
+                      onToggleFavourite={ent && handlers.onToggleEntityPhoto
+                        ? async (url, next) => handlers.onToggleEntityPhoto!(ent.id, url, next)
+                        : undefined}
+                    />
+                    {ent && <p className="mt-1 text-[10px] text-faint">Starred favourites appear on the place in the Database.</p>}
+                  </div>
+                )}
+              </div>
 
-        <div className="mt-3 border-t border-border-divider pt-3">
-          <SectionToggle label={`Alternatives${alts.length ? ` (${alts.length + 1})` : ""}`} open={altsOpen} onToggle={() => setAltsOpen((o) => !o)} />
+              {/* Comments */}
+              <div className="py-3">
+                <SectionToggle label="Comments" open={commentOpen} onToggle={() => setCommentOpen((o) => !o)} />
+                {commentOpen && (
+                  <div className="mt-2">
+                    <Comments instanceId={`${slot.id}__${main.entityId}`} />
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
+          {/* Alternatives */}
+          <div className="py-3">
+            <SectionToggle label={`Alternatives${alts.length ? ` (${alts.length + 1})` : ""}`} open={altsOpen} onToggle={() => setAltsOpen((o) => !o)} />
           {altsOpen && (
             <div className="mt-2">
               <ul className="space-y-1.5">
@@ -1110,7 +1113,8 @@ function DetailSheet({ slot, instances, entityById, canEdit, handlers, isNew, tr
               <p className="mt-2 text-[11px] text-slate-400">Only the main option exports to Google Calendar.{canEdit ? ' "Make main" swaps a Plan B in.' : ""}</p>
             </div>
           )}
-        </div>
+          </div>{/* end Alternatives py-3 */}
+        </div>{/* end divide-y wrapper */}
 
         {canEdit && (
           <div className="mt-5 flex items-center justify-between gap-2">
