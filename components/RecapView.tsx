@@ -247,6 +247,24 @@ function DetailModal({ item, onClose }: { item: RecapItem; onClose: () => void }
 
           {item.blurb && <p className="mt-3 text-sm leading-relaxed text-stone-600">{item.blurb}</p>}
 
+          {/* Place details */}
+          {(item.hours || item.address) && (
+            <dl className="mt-3 space-y-1 text-xs">
+              {item.hours && (
+                <div className="flex gap-2">
+                  <dt className="w-14 shrink-0 font-medium text-stone-400">Hours</dt>
+                  <dd className="text-stone-600">{item.hours}</dd>
+                </div>
+              )}
+              {item.address && (
+                <div className="flex gap-2">
+                  <dt className="w-14 shrink-0 font-medium text-stone-400">Address</dt>
+                  <dd className="text-stone-600">{item.address}</dd>
+                </div>
+              )}
+            </dl>
+          )}
+
           {/* Remaining photos */}
           {pics(item).length > 1 && (
             <div className="mt-4 grid grid-cols-3 gap-1.5">

@@ -97,7 +97,29 @@ export function RecapBuilder({ tripId, tripName, dateLabel }: { tripId: string; 
     website: e.website,
     instagram: e.instagram,
     address: e.address,
+    hours: e.hours,
   });
+
+  // Overlay the latest entity facts (coords, address, hours, links…) onto a saved
+  // item, keeping the admin's edits (blurb, rating, must-visit, photos, comments).
+  // This backfills coordinates into recaps built before coords were stored.
+  const refreshItem = (item: RecapItem): RecapItem => {
+    const e = entities.find((x) => x.id === item.entityId);
+    if (!e) return item;
+    return {
+      ...item,
+      name: e.name,
+      type: e.type,
+      generalArea: e.generalArea,
+      area: e.area,
+      lat: e.lat,
+      lng: e.lng,
+      address: e.address,
+      website: e.website,
+      instagram: e.instagram,
+      hours: e.hours,
+    };
+  };
 
   const toggle = (e: Entity) => {
     setItems((prev) => {
@@ -135,7 +157,7 @@ export function RecapBuilder({ tripId, tripName, dateLabel }: { tripId: string; 
     dateLabel,
     intro: intro.trim() || undefined,
     coverPhotoUrl: coverPhotoUrl || undefined,
-    items: [...items.values()],
+    items: [...items.values()].map(refreshItem),
     published,
   });
 

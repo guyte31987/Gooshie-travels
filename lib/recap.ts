@@ -42,6 +42,7 @@ export type RecapItem = {
   website?: string;
   instagram?: string;
   address?: string;
+  hours?: string;
 };
 
 export type Recap = {
