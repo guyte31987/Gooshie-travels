@@ -47,7 +47,7 @@ export function RequestAccess() {
           <button
             type="submit"
             disabled={busy}
-            className="w-full rounded-lg bg-ink px-4 py-2.5 text-sm font-medium text-white transition hover:bg-ink/90 disabled:opacity-50"
+            className="w-full rounded-lg bg-rust px-4 py-2.5 text-sm font-medium text-white transition hover:bg-rust/90 disabled:opacity-50"
           >
             {busy ? "Sending…" : "Request access"}
           </button>

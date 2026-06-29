@@ -210,7 +210,7 @@ export function RecapBuilder({ tripId, tripName, dateLabel }: { tripId: string; 
           <button
             onClick={() => callPublish(true)}
             disabled={busy}
-            className="rounded-lg bg-ink px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
+            className="rounded-lg bg-rust px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
           >
             {published ? "Re-publish" : "Publish"}
           </button>

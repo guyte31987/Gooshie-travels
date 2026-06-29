@@ -510,7 +510,7 @@ function TabChip({
     <button
       onClick={onClick}
       className={`rounded-full px-3 py-1.5 font-medium transition ${
-        active ? "bg-ink text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+        active ? "bg-rust text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
       }`}
     >
       {children}

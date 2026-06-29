@@ -25,7 +25,7 @@ export function AppHeader({
             ← All trips
           </Link>
         )}
-        <h1 className="truncate text-xl font-semibold tracking-tight">{title}</h1>
+        <h1 className="truncate font-display text-xl font-semibold tracking-tight">{title}</h1>
         {subtitle && <p className="text-xs text-slate-500">{subtitle}</p>}
       </div>
       <div className="flex shrink-0 items-center gap-2 text-xs">

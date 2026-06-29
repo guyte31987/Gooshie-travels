@@ -269,7 +269,7 @@ export function ItineraryCalendar({
         <div className="flex items-center gap-2">
           <div className="inline-flex rounded-full border border-slate-200 bg-white p-0.5 text-xs font-medium">
             {(["day", "week"] as const).map((v) => (
-              <button key={v} onClick={() => setView(v)} className={`rounded-full px-3 py-1 capitalize ${view === v ? "bg-ink text-white" : "text-slate-500"}`}>{v}</button>
+              <button key={v} onClick={() => setView(v)} className={`rounded-full px-3 py-1 capitalize ${view === v ? "bg-rust text-white" : "text-slate-500"}`}>{v}</button>
             ))}
           </div>
           {onUndo && (
@@ -282,7 +282,7 @@ export function ItineraryCalendar({
         {view === "day" && (
           <div className="flex items-center gap-1">
             <button onClick={goPrev} disabled={dayIdx === 0} className="rounded-lg px-2 py-1 text-lg text-slate-500 hover:bg-slate-100 disabled:opacity-30">‹</button>
-            <span className="min-w-[5.5rem] text-center text-sm font-semibold text-slate-700">
+            <span className="min-w-[5.5rem] text-center font-display text-sm font-semibold text-slate-700">
               {shortDay(visibleDays[0])}
             </span>
             <button onClick={goNext} disabled={dayIdx === days.length - 1} className="rounded-lg px-2 py-1 text-lg text-slate-500 hover:bg-slate-100 disabled:opacity-30">›</button>
@@ -301,16 +301,16 @@ export function ItineraryCalendar({
       </div>
 
       <div
-          className="relative flex overflow-auto rounded-2xl border border-slate-200 bg-white shadow-sm"
+          className="relative flex overflow-auto rounded-2xl border border-border-card bg-sheet shadow-sm"
           style={{ height: "72vh" }}
           onTouchStart={onGridTouchStart}
           onTouchEnd={onGridTouchEnd}
         >
           {/* Time ruler */}
-          <div className="sticky left-0 z-20 w-14 shrink-0 border-r border-slate-100 bg-white" style={{ height: GRID_H + HEADER_H }}>
+          <div className="sticky left-0 z-20 w-14 shrink-0 border-r border-border-divider bg-sheet" style={{ height: GRID_H + HEADER_H }}>
             <div style={{ height: HEADER_H }} />
             {Array.from({ length: DAY_END_H - DAY_START_H + 1 }, (_, i) => (
-              <div key={i} className="absolute right-1 -translate-y-1/2 text-[10px] font-medium text-slate-400" style={{ top: HEADER_H + i * PX_PER_HOUR }}>{fmt(((DAY_START_H + i) % 24) * 60)}</div>
+              <div key={i} className="absolute right-1 -translate-y-1/2 font-mono text-[10px] font-medium text-slate-400" style={{ top: HEADER_H + i * PX_PER_HOUR }}>{fmt(((DAY_START_H + i) % 24) * 60)}</div>
             ))}
           </div>
 
@@ -324,8 +324,8 @@ export function ItineraryCalendar({
             return (
               <div key={day} ref={(el) => { dayRefs.current[realIdx] = el; }} data-day={day} className={`relative border-r border-slate-100 last:border-r-0 ${wide ? "min-w-0 flex-1" : "shrink-0"}`} style={{ height: GRID_H + HEADER_H, width: wide ? undefined : "var(--col-w)" }}>
                 {/* Day header */}
-                <div className="sticky top-0 z-10 flex flex-col justify-center border-b border-slate-100 bg-white/95 px-2 backdrop-blur" style={{ height: HEADER_H }}>
-                  <div className={`font-semibold text-slate-700 ${wide ? "text-sm" : "text-xs"}`}>
+                <div className="sticky top-0 z-10 flex flex-col justify-center border-b border-border-divider bg-sheet/95 px-2 backdrop-blur" style={{ height: HEADER_H }}>
+                  <div className={`font-display font-semibold text-slate-700 ${wide ? "text-sm" : "text-xs"}`}>
                     {wide
                       ? shortDay(day)
                       : `${dt.toLocaleDateString("en-US", { weekday: "short", timeZone: "UTC" })} ${dt.getUTCDate()}`}
@@ -649,7 +649,7 @@ function Block({ slot, main, alts, entityById, col, colCount, wide, canEdit, onG
               {title}
             </div>
             {(wide || height > 30) && (
-              <div className={`opacity-70 ${wide ? "text-xs" : "truncate text-[10px]"}`}>
+              <div className={`font-mono opacity-70 ${wide ? "text-xs" : "truncate text-[10px]"}`}>
                 {fmt(slot.start)}{(wide || height > 44) ? `–${fmt(slot.end)}` : ""}{tentative ? "?" : ""}
                 {entity?.parent ? ` · @${entity.parent}` : entity?.area ? ` · ${entity.area}` : ""}
               </div>
@@ -720,7 +720,7 @@ function DetailSheet({ slot, instances, entityById, canEdit, handlers, isNew, tr
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 sm:items-center sm:p-4" onClick={cancel}>
-      <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-white p-5 shadow-xl sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
+      <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-sheet p-5 shadow-xl sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="mb-3 flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <div className="mb-1 flex flex-wrap items-center gap-1.5">
@@ -807,7 +807,7 @@ function DetailSheet({ slot, instances, entityById, canEdit, handlers, isNew, tr
                         setEntityNoteSaving(true);
                         try { await Promise.resolve(handlers.onSaveEntityNote(ent.id, entityNote.trim())); }
                         finally { setEntityNoteSaving(false); }
-                      }} className="rounded-lg bg-ink px-3 py-1 text-xs font-medium text-white disabled:opacity-50">
+                      }} className="rounded-lg bg-rust px-3 py-1 text-xs font-medium text-white disabled:opacity-50">
                         {entityNoteSaving ? "Saving…" : "Save note"}
                       </button>
                     )}
@@ -900,7 +900,7 @@ function DetailSheet({ slot, instances, entityById, canEdit, handlers, isNew, tr
             {!isNew ? <button onClick={() => { handlers.onDeleteSlot(slot.id, instances.filter((i) => i.slotId === slot.id).map((i) => `${i.slotId}__${i.entityId}`)); onClose(); }} className="text-xs font-medium text-rose-500 hover:underline">Delete slot</button> : <span />}
             <div className="flex gap-2">
               <button onClick={cancel} className="rounded-lg border border-slate-300 px-4 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50">Cancel</button>
-              <button onClick={save} className="rounded-lg bg-ink px-4 py-1.5 text-sm font-medium text-white">Save</button>
+              <button onClick={save} className="rounded-lg bg-rust px-4 py-1.5 text-sm font-medium text-white">Save</button>
             </div>
           </div>
         )}
@@ -1004,8 +1004,8 @@ function AltAdder({ entityById, excludeIds, onPick, onCreate, canCreate }: {
     <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50 p-2.5">
       {canCreate && (
         <div className="mb-2 inline-flex rounded-md border border-slate-200 bg-white p-0.5 text-[11px] font-medium">
-          <button onClick={() => setMode("pick")} className={`rounded px-2 py-0.5 ${mode === "pick" ? "bg-ink text-white" : "text-slate-500"}`}>From Database</button>
-          <button onClick={() => setMode("create")} className={`rounded px-2 py-0.5 ${mode === "create" ? "bg-ink text-white" : "text-slate-500"}`}>New place</button>
+          <button onClick={() => setMode("pick")} className={`rounded px-2 py-0.5 ${mode === "pick" ? "bg-rust text-white" : "text-slate-500"}`}>From Database</button>
+          <button onClick={() => setMode("create")} className={`rounded px-2 py-0.5 ${mode === "create" ? "bg-rust text-white" : "text-slate-500"}`}>New place</button>
         </div>
       )}
       {mode === "pick" ? (
@@ -1081,7 +1081,7 @@ function CalRatingWidget({ tripId, instanceDocId, entityId, ratings }: {
             <input autoFocus type="number" min={0} max={10} step={0.1} value={draft}
               onChange={(e) => setDraft(e.target.value)} disabled={busy} placeholder="0–10"
               className="w-20 rounded-lg border border-slate-300 px-2 py-1 text-xs outline-none focus:border-slate-500" />
-            <button type="submit" disabled={busy} className="rounded-lg bg-ink px-2.5 py-1 text-[11px] font-medium text-white disabled:opacity-50">Save</button>
+            <button type="submit" disabled={busy} className="rounded-lg bg-rust px-2.5 py-1 text-[11px] font-medium text-white disabled:opacity-50">Save</button>
             <button type="button" onClick={() => setEditing(false)} className="text-[11px] text-slate-400 hover:text-slate-600">cancel</button>
           </form>
         ) : (
@@ -1123,7 +1123,7 @@ function Segmented({ value, options, disabled, onChange }: {
     <div className="inline-flex w-full rounded-lg border border-slate-200 bg-slate-50 p-0.5 text-[11px] font-medium">
       {options.map((o) => (
         <button key={o.value} disabled={disabled} onClick={() => onChange(o.value)}
-          className={`flex-1 rounded-md px-1.5 py-1 ${value === o.value ? "bg-ink text-white shadow-sm" : "text-slate-500"} ${disabled ? "cursor-default opacity-70" : "hover:text-slate-700"}`}>
+          className={`flex-1 rounded-md px-1.5 py-1 ${value === o.value ? "bg-rust text-white shadow-sm" : "text-slate-500"} ${disabled ? "cursor-default opacity-70" : "hover:text-slate-700"}`}>
           {o.label}
         </button>
       ))}
@@ -1241,7 +1241,7 @@ function PlaceEditor({ entityId, ent, fallbackName, clubs, onSave, onCancel }: {
       )}
       <div className="flex justify-end gap-2 pt-1">
         <button onClick={onCancel} className="rounded-lg border border-slate-300 px-3 py-1 text-xs font-medium text-slate-600 hover:bg-white">Cancel</button>
-        <button onClick={save} disabled={!name.trim()} className="rounded-lg bg-ink px-3 py-1 text-xs font-medium text-white disabled:opacity-50">Save place</button>
+        <button onClick={save} disabled={!name.trim()} className="rounded-lg bg-rust px-3 py-1 text-xs font-medium text-white disabled:opacity-50">Save place</button>
       </div>
       <p className="text-[10px] text-slate-400">Saved to the Database — also updates everywhere this place appears.</p>
     </div>
@@ -1265,7 +1265,7 @@ function StaySheet({ day, days, current, onSave, onDelete, onClose }: {
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 sm:items-center sm:p-4" onClick={onClose}>
-      <div className="w-full max-w-md rounded-t-2xl bg-white p-5 shadow-xl sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
+      <div className="w-full max-w-md rounded-t-2xl bg-sheet p-5 shadow-xl sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-center justify-between">
           <h2 className="font-semibold text-slate-800">🛏 {current ? "Edit stay" : "Add stay"}</h2>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600">✕</button>
@@ -1294,7 +1294,7 @@ function StaySheet({ day, days, current, onSave, onDelete, onClose }: {
           ) : <span />}
           <div className="flex gap-2">
             <button onClick={onClose} className="rounded-lg border border-slate-300 px-4 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50">Cancel</button>
-            <button onClick={save} disabled={!name.trim() || !to || to <= from} className="rounded-lg bg-ink px-4 py-1.5 text-sm font-medium text-white disabled:opacity-50">Save</button>
+            <button onClick={save} disabled={!name.trim() || !to || to <= from} className="rounded-lg bg-rust px-4 py-1.5 text-sm font-medium text-white disabled:opacity-50">Save</button>
           </div>
         </div>
       </div>

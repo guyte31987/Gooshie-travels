@@ -14,6 +14,7 @@ import {
   buildCuratedSeedEntities,
   type EntityType,
 } from "@/lib/entities";
+import { TYPE_COLORS } from "@/lib/preview-data";
 import { buildAllSeedEntities } from "@/lib/seed-entities";
 import { nycSeedEntities } from "@/lib/itinerary-seed";
 import {
@@ -317,7 +318,7 @@ export function DatabaseView() {
             <button
               onClick={seed}
               disabled={seeding}
-              className="mt-3 rounded-lg bg-ink px-4 py-2 text-sm font-medium text-white hover:bg-ink/90 disabled:opacity-50"
+              className="mt-3 rounded-lg bg-rust px-4 py-2 text-sm font-medium text-white hover:bg-rust/90 disabled:opacity-50"
             >
               {seeding ? "Seeding…" : "Seed database"}
             </button>
@@ -352,7 +353,7 @@ export function DatabaseView() {
             {canEdit && (
               <button
                 onClick={() => setEditing("new")}
-                className="rounded-lg bg-ink px-3 py-2 text-sm font-medium text-white hover:bg-ink/90"
+                className="rounded-lg bg-rust px-3 py-2 text-sm font-medium text-white hover:bg-rust/90"
               >
                 + Add
               </button>
@@ -361,7 +362,7 @@ export function DatabaseView() {
               onClick={() => (selectMode ? exitSelect() : setSelectMode(true))}
               className={`rounded-lg border px-3 py-2 text-sm font-medium ${
                 selectMode
-                  ? "border-ink bg-ink text-white"
+                  ? "border-rust bg-rust text-white"
                   : "border-slate-300 text-slate-600 hover:bg-slate-50"
               }`}
             >
@@ -477,11 +478,11 @@ export function DatabaseView() {
               </button>
             )}
           </div>
-          <ul className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">
+          <ul className="divide-y divide-border-divider overflow-hidden rounded-xl border border-border-card bg-sheet">
             {filtered.map((e) => (
               <li
                 key={e.id}
-                className={`flex items-start gap-2 px-4 py-3 ${
+                className={`flex items-start gap-2 border-l-4 px-4 py-3 ${TYPE_COLORS[e.type]?.border ?? "border-slate-200"} ${
                   selectMode && selected.has(e.id) ? "bg-indigo-50" : ""
                 }`}
               >
@@ -658,7 +659,7 @@ function TypeChip({
     <button
       onClick={onClick}
       className={`rounded-full px-2.5 py-1 font-medium transition ${
-        active ? "bg-ink text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+        active ? "bg-rust text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
       }`}
     >
       {children}
