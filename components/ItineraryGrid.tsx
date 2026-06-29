@@ -134,6 +134,7 @@ export function ItineraryCalendar({
 }) {
   const [detailSlot, setDetailSlot] = useState<string | null>(null);
   const [stayEditDay, setStayEditDay] = useState<string | null>(null);
+  const [mode, setMode] = useState<"view" | "edit">("view");
   // Default to day view on mobile, week view on desktop.
   const [view, setView] = useState<"week" | "day">(() =>
     typeof window !== "undefined" && window.innerWidth < 768 ? "day" : "week"
@@ -267,19 +268,28 @@ export function ItineraryCalendar({
       {/* Toolbar */}
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <div className="inline-flex rounded-full border border-slate-200 bg-white p-0.5 text-xs font-medium">
-            {(["day", "week"] as const).map((v) => (
-              <button key={v} onClick={() => setView(v)} className={`rounded-full px-3 py-1 capitalize ${view === v ? "bg-rust text-white" : "text-slate-500"}`}>{v}</button>
+          {/* View / Edit mode toggle */}
+          <div className="inline-flex rounded-full border border-slate-200 bg-fill-soft p-0.5 text-xs font-medium">
+            {(["view", "edit"] as const).map((m) => (
+              <button key={m} onClick={() => setMode(m)} className={`rounded-full px-3 py-1 capitalize ${mode === m ? "bg-rust text-white shadow-sm" : "text-secondary hover:text-body"}`}>{m}</button>
             ))}
           </div>
-          {onUndo && (
+          {/* Day/Week sub-toggle — only in edit mode */}
+          {mode === "edit" && (
+            <div className="inline-flex rounded-full border border-slate-200 bg-fill-soft p-0.5 text-xs font-medium">
+              {(["day", "week"] as const).map((v) => (
+                <button key={v} onClick={() => setView(v)} className={`rounded-full px-3 py-1 capitalize ${view === v ? "bg-rust text-white shadow-sm" : "text-secondary hover:text-body"}`}>{v}</button>
+              ))}
+            </div>
+          )}
+          {onUndo && mode === "edit" && (
             <button onClick={onUndo} disabled={!canUndo} title="Undo"
               className={`rounded-full border px-3 py-1 text-xs font-medium ${canUndo ? "border-slate-200 bg-white text-slate-600 hover:bg-slate-50" : "border-slate-100 bg-slate-50 text-slate-300"}`}>↶ Undo</button>
           )}
         </div>
 
-        {/* Day navigator — day view only */}
-        {view === "day" && (
+        {/* Day navigator — edit/day view only */}
+        {mode === "edit" && view === "day" && (
           <div className="flex items-center gap-1">
             <button onClick={goPrev} disabled={dayIdx === 0} className="rounded-lg px-2 py-1 text-lg text-slate-500 hover:bg-slate-100 disabled:opacity-30">‹</button>
             <span className="min-w-[5.5rem] text-center font-display text-sm font-semibold text-slate-700">
@@ -289,8 +299,8 @@ export function ItineraryCalendar({
           </div>
         )}
 
-        {/* Day jump strip — week view only */}
-        {view === "week" && (
+        {/* Day jump strip — edit/week view only */}
+        {mode === "edit" && view === "week" && (
           <div className="flex gap-1 overflow-x-auto">
             {days.map((d, i) => { const dt = new Date(d + "T12:00:00"); return (
               <button key={d} onClick={() => dayRefs.current[i]?.scrollIntoView({ behavior: "smooth", inline: "start", block: "nearest" })} className="shrink-0 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
@@ -300,7 +310,12 @@ export function ItineraryCalendar({
         )}
       </div>
 
-      <div
+      {mode === "view" && (
+        <ListView days={days} slots={slots} instances={instances} entityById={entityById} stays={stays}
+          onOpen={(slotId) => setDetailSlot(slotId)} />
+      )}
+
+      {mode === "edit" && <div
           className="relative flex overflow-auto rounded-2xl border border-border-card bg-sheet shadow-sm"
           style={{ height: "72vh" }}
           onTouchStart={onGridTouchStart}
@@ -368,13 +383,13 @@ export function ItineraryCalendar({
               </div>
             );
           })}
-        </div>
+        </div>}
 
-      <p className="mt-2 text-center text-xs text-slate-400">
+      {mode === "edit" && <p className="mt-2 text-center text-xs text-slate-400">
         {canEdit
           ? "Tap to open · long-press block to move · drag top/bottom edge to resize · long-press empty space to place new slot"
           : "Read-only — sign in as an editor to make changes. Tap a block for details."}
-      </p>
+      </p>}
 
       {detailSlot && slotById.get(detailSlot) && (
         <DetailSheet slot={slotById.get(detailSlot)!} instances={instances} entityById={entityById} canEdit={canEdit} handlers={handlers} isNew={justCreatedId === detailSlot} tripId={tripId} onClose={() => { setDetailSlot(null); setJustCreatedId(null); }} />
@@ -401,6 +416,97 @@ export function ItineraryCalendar({
       </div>
 
       <style>{`:root{--col-w:84vw}@media(min-width:768px){:root{--col-w:172px}}`}</style>
+    </div>
+  );
+}
+
+// --- list view ---------------------------------------------------------------
+
+function ListView({ days, slots, instances, entityById, stays, onOpen }: {
+  days: string[];
+  slots: CalSlot[];
+  instances: CalInstance[];
+  entityById: Map<string, CalEntity>;
+  stays: IcsStay[];
+  onOpen: (slotId: string) => void;
+}) {
+  return (
+    <div className="space-y-6 pb-4">
+      {days.map((day) => {
+        const daySlots = slots.filter((s) => s.day === day).sort((a, b) => a.start - b.start);
+        const dayStays = stays.filter((s) => day >= s.from && day < s.to);
+        if (daySlots.length === 0) return null;
+        const dt = new Date(day + "T12:00:00");
+        const weekday = dt.toLocaleDateString("en-US", { weekday: "long", timeZone: "UTC" });
+        const dateStr = dt.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+        return (
+          <div key={day}>
+            {/* Day header */}
+            <div className="mb-2 flex items-baseline justify-between">
+              <h3 className="font-display text-lg font-semibold text-ink">{weekday}</h3>
+              <span className="font-mono text-xs text-secondary">{dateStr}</span>
+            </div>
+            {dayStays.length > 0 && (
+              <p className="mb-2 text-xs text-secondary">🛏 {dayStays[0].name}</p>
+            )}
+            <div className="space-y-1.5">
+              {daySlots.map((slot) => {
+                const { main, alts } = splitInstances(slot.id, instances);
+                if (!main) return null;
+                const ent = entityById.get(main.entityId);
+                const type = ent?.type ?? "uncategorised";
+                const c = TYPE_COLORS[type] ?? TYPE_COLORS.uncategorised;
+                const done = main.status === "done";
+                const notDone = main.status === "notDone";
+                const tentative = main.capacity === "planB";
+                const book = bookingStatusOf(main);
+                const bookPill = book !== "walkin" ? BOOKING_PILL[book] : null;
+                const title = ent?.name ?? slot.label;
+                return (
+                  <button
+                    key={slot.id}
+                    onClick={() => onOpen(slot.id)}
+                    className={`group w-full rounded-xl border-l-4 ${c.border} ${notDone ? "bg-fill-soft opacity-60" : done ? `${c.bg} opacity-75 saturate-50` : c.bg} px-3 py-2.5 text-left transition hover:brightness-95`}
+                  >
+                    <div className="flex items-start gap-2.5">
+                      {/* Time column */}
+                      <div className="w-14 shrink-0 pt-0.5">
+                        <span className={`font-mono text-[11px] ${done || notDone ? "text-secondary" : c.text}`}>
+                          {fmt(slot.start)}
+                        </span>
+                        <span className={`block font-mono text-[10px] text-faint`}>
+                          –{fmt(slot.end)}
+                        </span>
+                      </div>
+                      {/* Content */}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-sm leading-none">{emojiOf(type)}</span>
+                          <span className={`text-sm font-semibold leading-snug ${notDone ? "line-through text-secondary" : done ? "text-body" : "text-ink"}`}>
+                            {title}
+                          </span>
+                          {done && <span className="text-[11px] text-booked">✓</span>}
+                          {tentative && !notDone && <span className={`rounded-full px-1.5 py-px font-mono text-[9px] font-bold ${c.text} ring-1 ring-current/30`}>?</span>}
+                          {alts.length > 0 && <span className={`rounded-full ${c.chip} px-1.5 py-px text-[9px] font-bold text-white`}>+{alts.length}</span>}
+                          {bookPill && <span className={`rounded-full px-1.5 py-px text-[9px] font-semibold leading-none ${bookPill.className}`}>{bookPill.label}</span>}
+                        </div>
+                        {(ent?.area || ent?.parent) && (
+                          <p className="mt-0.5 text-[11px] text-secondary">
+                            {ent.parent ? `@${ent.parent}` : ent.area}
+                          </p>
+                        )}
+                        {main.note && (
+                          <p className="mt-1 line-clamp-1 text-[11px] text-body/70 italic">{main.note}</p>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
