@@ -493,7 +493,7 @@ function ListView({ days, slots, instances, entityById, stays, onOpen }: {
                 // tentative  → dashed border all-around in category colour, no thick spine
                 // notDone    → dashed left spine, grey thin border, faded via opacity
                 // normal/done → solid left spine, thin category-coloured border
-                const cardBase = `group w-full rounded-xl bg-white py-3 pl-3 pr-3 text-left transition hover:shadow-md ${notDone || tentative ? "opacity-50" : "shadow-sm"}`;
+                const cardBase = `group w-full rounded-xl bg-white py-3.5 pl-3 pr-4 text-left transition hover:shadow-md ${notDone || tentative ? "opacity-50" : "shadow-sm"}`;
                 const cardStyle = tentative
                   ? { border: `1.5px dashed ${c.hex}` }
                   : notDone
@@ -501,10 +501,13 @@ function ListView({ days, slots, instances, entityById, stays, onOpen }: {
                   : { borderLeft: `4px solid ${c.hex}`, border: `1px solid ${c.hex}40`, borderLeftWidth: "4px" };
 
                 const timeColor = done ? "text-secondary" : c.text;
-                const subtitleParts = [
-                  type !== "uncategorised" ? type : null,
-                  ent?.parent ? `@${ent.parent}` : ent?.area ?? null,
-                ].filter(Boolean);
+
+                // Area: prefer entity's own area; for club children fall back to
+                // the parent club's area; strip the @ prefix entirely
+                const parentClub = ent?.parent ? [...entityById.values()].find((e) => e.name === ent!.parent || e.id === ent!.parent) : null;
+                const areaLabel = ent?.area ?? parentClub?.area ?? (ent?.parent || null);
+                const typeLabel = type !== "uncategorised" ? (type.charAt(0).toUpperCase() + type.slice(1)) : null;
+                const subtitleParts = [typeLabel, areaLabel].filter(Boolean);
 
                 return (
                   <button
@@ -520,6 +523,9 @@ function ListView({ days, slots, instances, entityById, stays, onOpen }: {
                         <span className={`block font-mono text-[13px] font-semibold leading-tight ${timeColor}`}>{endTime}</span>
                       </div>
 
+                      {/* Vertical divider */}
+                      <div className="w-px self-stretch rounded-full" style={{ backgroundColor: `${c.hex}40` }} />
+
                       {/* Content */}
                       <div className="min-w-0 flex-1">
                         <div className="flex items-start justify-between gap-2">
@@ -533,10 +539,14 @@ function ListView({ days, slots, instances, entityById, stays, onOpen }: {
                               </p>
                             </div>
                             {subtitleParts.length > 0 && (
-                              <p className="mt-0.5 text-[11px] text-secondary">{subtitleParts.join(" · ")}</p>
-                            )}
-                            {main.note && (
-                              <p className="mt-0.5 line-clamp-2 text-[11px] italic text-faint">{main.note}</p>
+                              <p className="mt-1 flex items-center gap-1.5 text-[11px] text-secondary">
+                                {subtitleParts.map((p, i) => (
+                                  <span key={i} className="flex items-center gap-1.5">
+                                    {i > 0 && <span className="inline-block h-1 w-1 rounded-full bg-faint" />}
+                                    {p}
+                                  </span>
+                                ))}
+                              </p>
                             )}
                           </div>
                           {/* Right side: prominent rating for done, pills otherwise */}
