@@ -16,7 +16,37 @@ async function loadRecap(slug: string): Promise<Recap | null> {
   const snap = await adminDb().collection("recaps").doc(slug).get();
   if (!snap.exists) return null;
   const r = snap.data() as Recap;
-  return r.published ? r : null;
+  if (!r.published) return null;
+
+  // Strip non-serialisable Firestore values (Timestamps) before handing the data
+  // to the client component — only plain objects can cross that boundary.
+  return {
+    slug: r.slug,
+    tripId: r.tripId,
+    title: r.title,
+    subtitle: r.subtitle ?? "",
+    dateLabel: r.dateLabel ?? "",
+    intro: r.intro ?? "",
+    coverPhotoUrl: r.coverPhotoUrl ?? "",
+    coverPublicUrl: r.coverPublicUrl ?? "",
+    items: (r.items ?? []).map((it) => ({
+      entityId: it.entityId,
+      name: it.name,
+      type: it.type,
+      generalArea: it.generalArea ?? "",
+      area: it.area ?? "",
+      rating: typeof it.rating === "number" ? it.rating : undefined,
+      mustVisit: !!it.mustVisit,
+      blurb: it.blurb ?? "",
+      photos: it.photos ?? [],
+      publicPhotos: it.publicPhotos ?? [],
+      comments: (it.comments ?? []).map((c) => ({ author: c.author, text: c.text })),
+      website: it.website ?? "",
+      instagram: it.instagram ?? "",
+      address: it.address ?? "",
+    })),
+    published: true,
+  };
 }
 
 export async function generateMetadata({
