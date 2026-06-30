@@ -56,6 +56,31 @@ export function GeocodeAudit() {
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [trip, dbEntities, items, slots, instances]);
 
+  // Re-geocode every itinerary place that has an address, overwriting existing
+  // coords. Spaced for Nominatim's ~1 req/sec policy.
+  const [runningAll, setRunningAll] = useState(false);
+  const [allMsg, setAllMsg] = useState<string | null>(null);
+  const regeocodeAll = async () => {
+    const todo = places.map((p) => dbById.get(p.id)).filter((e): e is DBEntity => !!e && !!(e.address ?? "").trim());
+    if (todo.length === 0) { setAllMsg("No places with an address to re-geocode."); return; }
+    setRunningAll(true);
+    let done = 0, updated = 0;
+    try {
+      for (const e of todo) {
+        setAllMsg(`Re-geocoding ${done + 1} of ${todo.length}… (${updated} updated)`);
+        const pt = await geocodeAddress(e.address!.trim());
+        if (pt) { await saveEntity({ ...e, lat: pt.lat, lng: pt.lng }); updated++; }
+        done++;
+        if (done < todo.length) await new Promise((r) => setTimeout(r, 1100));
+      }
+      setAllMsg(`Done. Re-geocoded ${updated} of ${todo.length} place${todo.length === 1 ? "" : "s"}.`);
+    } catch (err) {
+      setAllMsg(err instanceof Error ? err.message : "Re-geocode failed.");
+    } finally {
+      setRunningAll(false);
+    }
+  };
+
   return (
     <div className="rounded-lg border border-slate-200 bg-white p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -75,6 +100,19 @@ export function GeocodeAudit() {
           </select>
         )}
       </div>
+
+      {places.length > 0 && (
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <button
+            onClick={regeocodeAll}
+            disabled={runningAll}
+            className="rounded-lg bg-rust px-3 py-1.5 text-xs font-medium text-white hover:bg-rust/90 disabled:opacity-50"
+          >
+            {runningAll ? "Running…" : "Re-geocode all (overwrite)"}
+          </button>
+          {allMsg && <span className="text-xs text-slate-600">{allMsg}</span>}
+        </div>
+      )}
 
       {places.length === 0 ? (
         <p className="mt-3 text-xs text-slate-400">No itinerary places resolved for this trip yet.</p>
