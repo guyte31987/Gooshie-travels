@@ -20,6 +20,18 @@ import {
 const labelOf = (t: string) => ENTITY_TABS.find((x) => x.type === t)?.label ?? t;
 const emojiOf = (t: string) => ENTITY_TABS.find((x) => x.type === t)?.emoji ?? "";
 
+/** Parse a time string like "6:00 PM" → minutes from midnight. */
+function parseTimeStr(time?: string): number {
+  if (!time) return 0;
+  const m = time.match(/(\d+):(\d+)\s*(AM|PM)/i);
+  if (!m) return 0;
+  let h = parseInt(m[1]);
+  const min = parseInt(m[2]);
+  if (m[3].toUpperCase() === "PM" && h !== 12) h += 12;
+  if (m[3].toUpperCase() === "AM" && h === 12) h = 0;
+  return h * 60 + min;
+}
+
 /** Every photo URL the admin could pick for a place: its favourites + every visit's photos. */
 function candidatePhotos(entity: Entity, instancePhotos: string[]): string[] {
   return Array.from(new Set([...(entity.photos ?? []), ...instancePhotos]));
@@ -214,26 +226,40 @@ export function RecapBuilder({ tripId, tripName, dateLabel }: { tripId: string; 
   const buildItinerary = (): RecapItineraryDay[] => {
     const chosenIds = new Set(items.keys());
     const dayMap = new Map<string, RecapItineraryDay>();
-    for (const slot of slots) {
-      const relevant = instances.filter(
-        (inst) => inst.slotId === slot.id && chosenIds.has(inst.entityId)
-      );
-      if (!relevant.length) continue;
-      if (!dayMap.has(slot.day)) dayMap.set(slot.day, { day: slot.day, activities: [] });
-      const day = dayMap.get(slot.day)!;
-      for (const inst of relevant) {
-        const item = items.get(inst.entityId);
-        if (!item) continue;
-        day.activities.push({
-          entityId: inst.entityId,
-          name: item.name,
-          type: item.type,
-          start: slot.start,
-          end: slot.end,
-          slotLabel: slot.label,
-        });
+
+    // Build a lookup from raw Slot id → Slot for end-time enrichment (best-effort).
+    const slotById = new Map(slots.map((s) => [s.id, s]));
+
+    for (const entity of entities) {
+      if (!chosenIds.has(entity.id)) continue;
+      const item = items.get(entity.id);
+      if (!item) continue;
+
+      for (const ts of entity.slots) {
+        if (!ts.dayKey) continue;
+
+        // ts.uid is the PlanInstance id = "${slotId}__${entityId}"; extract slotId.
+        const slotId = ts.uid ? ts.uid.split("__")[0] : undefined;
+        const rawSlot = slotId ? slotById.get(slotId) : undefined;
+        const startMin = rawSlot?.start ?? parseTimeStr(ts.time);
+        const endMin = rawSlot?.end ?? startMin;
+
+        if (!dayMap.has(ts.dayKey)) dayMap.set(ts.dayKey, { day: ts.dayKey, activities: [] });
+        const day = dayMap.get(ts.dayKey)!;
+        // Avoid duplicate entries (same entity appearing twice in same slot).
+        if (!day.activities.some((a) => a.entityId === entity.id && a.start === startMin)) {
+          day.activities.push({
+            entityId: entity.id,
+            name: item.name,
+            type: item.type,
+            start: startMin,
+            end: endMin,
+            slotLabel: ts.label,
+          });
+        }
       }
     }
+
     return [...dayMap.values()]
       .sort((a, b) => a.day.localeCompare(b.day))
       .map((d) => ({ ...d, activities: [...d.activities].sort((a, b) => a.start - b.start) }));
