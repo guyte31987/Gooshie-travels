@@ -56,33 +56,52 @@ export function AdminPanel() {
   // get precise map pins. Nominatim asks for ~1 req/sec, so we space the calls.
   const [backfilling, setBackfilling] = useState(false);
   const [backfillMsg, setBackfillMsg] = useState<string | null>(null);
+  type BackfillRow = { name: string; address: string };
+  const [backfillReport, setBackfillReport] = useState<{
+    located: BackfillRow[];
+    failed: BackfillRow[];
+    skipped: number; // places with no address — can't geocode
+    done: boolean;
+  } | null>(null);
 
   const runBackfill = async () => {
     setBackfilling(true);
     setBackfillMsg("Loading places…");
+    setBackfillReport(null);
     try {
       const all = await getEntities();
+      const noAddress = all.filter(
+        (e) => !(e.address ?? "").trim() && (e.lat === undefined || e.lng === undefined)
+      ).length;
       const todo = all.filter(
         (e) => (e.address ?? "").trim() && (e.lat === undefined || e.lng === undefined)
       );
+      const located: BackfillRow[] = [];
+      const failed: BackfillRow[] = [];
       if (todo.length === 0) {
         setBackfillMsg("All places with an address already have coordinates. Nothing to do.");
+        setBackfillReport({ located, failed, skipped: noAddress, done: true });
         return;
       }
       let done = 0;
-      let updated = 0;
       for (const e of todo) {
-        setBackfillMsg(`Geocoding ${done + 1} of ${todo.length}… (${updated} located)`);
-        const pt = await geocodeAddress(e.address!.trim());
+        setBackfillMsg(`Geocoding ${done + 1} of ${todo.length}… (${located.length} located)`);
+        const addr = e.address!.trim();
+        const pt = await geocodeAddress(addr);
         if (pt) {
           await saveEntity({ ...e, lat: pt.lat, lng: pt.lng });
-          updated++;
+          located.push({ name: e.name, address: addr });
+        } else {
+          failed.push({ name: e.name, address: addr });
         }
+        // Update the running report so it fills in live.
+        setBackfillReport({ located: [...located], failed: [...failed], skipped: noAddress, done: false });
         done++;
         // Be polite to Nominatim's ~1 req/sec usage policy.
         if (done < todo.length) await new Promise((r) => setTimeout(r, 1100));
       }
-      setBackfillMsg(`Done. Located ${updated} of ${todo.length} place${todo.length === 1 ? "" : "s"}.`);
+      setBackfillMsg(`Done. Located ${located.length} of ${todo.length} place${todo.length === 1 ? "" : "s"}.`);
+      setBackfillReport({ located, failed, skipped: noAddress, done: true });
     } catch (err) {
       setBackfillMsg(err instanceof Error ? err.message : "Backfill failed.");
     } finally {
@@ -143,6 +162,53 @@ export function AdminPanel() {
             </button>
           </div>
           {backfillMsg && <p className="mt-2 text-sm text-slate-600">{backfillMsg}</p>}
+
+          {backfillReport && (
+            <div className="mt-3 space-y-3 border-t border-slate-100 pt-3 text-sm">
+              {/* Summary line */}
+              <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs font-medium">
+                <span className="text-emerald-600">✓ {backfillReport.located.length} located</span>
+                <span className="text-amber-600">✕ {backfillReport.failed.length} couldn&apos;t geocode</span>
+                {backfillReport.skipped > 0 && (
+                  <span className="text-slate-400">— {backfillReport.skipped} skipped (no address)</span>
+                )}
+              </div>
+
+              {/* What didn't work — the actionable part */}
+              {backfillReport.failed.length > 0 && (
+                <div>
+                  <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-amber-700">
+                    Couldn&apos;t locate — check these addresses
+                  </p>
+                  <ul className="divide-y divide-slate-100 rounded-lg border border-amber-200 bg-amber-50/60">
+                    {backfillReport.failed.map((r, i) => (
+                      <li key={i} className="px-3 py-2">
+                        <div className="font-medium text-slate-700">{r.name}</div>
+                        <div className="text-xs text-slate-500">{r.address}</div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* What worked — collapsed detail */}
+              {backfillReport.located.length > 0 && (
+                <details>
+                  <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-emerald-700">
+                    Located ({backfillReport.located.length}) — show
+                  </summary>
+                  <ul className="mt-1 divide-y divide-slate-100 rounded-lg border border-slate-200 bg-white">
+                    {backfillReport.located.map((r, i) => (
+                      <li key={i} className="px-3 py-2">
+                        <div className="font-medium text-slate-700">{r.name}</div>
+                        <div className="text-xs text-slate-500">{r.address}</div>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+            </div>
+          )}
         </div>
       </Section>
 
