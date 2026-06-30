@@ -282,9 +282,19 @@ export function RecapBuilder({ tripId, tripName, dateLabel }: { tripId: string; 
   const saveDraft = async () => {
     setBusy(true);
     setStatus("");
+    const itin = buildItinerary();
+    const chosenIds = new Set(items.keys());
+    const matchedEntities = entities.filter((e) => chosenIds.has(e.id));
+    console.log("[RecapBuilder] itinerary debug", {
+      slots: slots.length,
+      instances: instances.length,
+      chosenIds: [...chosenIds],
+      matchedEntities: matchedEntities.map((e) => ({ id: e.id, name: e.name, slots: e.slots.length })),
+      itineraryDays: itin.length,
+    });
     try {
-      await saveRecapDraft(draft());
-      setStatus("Draft saved.");
+      await saveRecapDraft({ ...draft(), itinerary: itin });
+      setStatus(`Draft saved. Itinerary: ${itin.length} days, ${itin.reduce((s, d) => s + d.activities.length, 0)} activities.`);
     } catch (e) {
       setStatus(e instanceof Error ? e.message : "Save failed.");
     } finally {
