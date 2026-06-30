@@ -14,6 +14,7 @@ import {
   saveRecapDraft,
   type RecapComment,
   type RecapItem,
+  type RecapItineraryDay,
 } from "@/lib/recap";
 
 const labelOf = (t: string) => ENTITY_TABS.find((x) => x.type === t)?.label ?? t;
@@ -25,7 +26,7 @@ function candidatePhotos(entity: Entity, instancePhotos: string[]): string[] {
 }
 
 export function RecapBuilder({ tripId, tripName, dateLabel }: { tripId: string; tripName: string; dateLabel?: string }) {
-  const { entities, instanceMap } = useTripData();
+  const { entities, instanceMap, slots, instances } = useTripData();
   const { isAdmin, role } = useAuth();
   const canEdit = isAdmin || role === "editor";
 
@@ -198,6 +199,34 @@ export function RecapBuilder({ tripId, tripName, dateLabel }: { tripId: string; 
       return next;
     });
 
+  const buildItinerary = (): RecapItineraryDay[] => {
+    const chosenIds = new Set(items.keys());
+    const dayMap = new Map<string, RecapItineraryDay>();
+    for (const slot of slots) {
+      const relevant = instances.filter(
+        (inst) => inst.slotId === slot.id && chosenIds.has(inst.entityId)
+      );
+      if (!relevant.length) continue;
+      if (!dayMap.has(slot.day)) dayMap.set(slot.day, { day: slot.day, activities: [] });
+      const day = dayMap.get(slot.day)!;
+      for (const inst of relevant) {
+        const item = items.get(inst.entityId);
+        if (!item) continue;
+        day.activities.push({
+          entityId: inst.entityId,
+          name: item.name,
+          type: item.type,
+          start: slot.start,
+          end: slot.end,
+          slotLabel: slot.label,
+        });
+      }
+    }
+    return [...dayMap.values()]
+      .sort((a, b) => a.day.localeCompare(b.day))
+      .map((d) => ({ ...d, activities: [...d.activities].sort((a, b) => a.start - b.start) }));
+  };
+
   const draft = () => ({
     slug,
     tripId,
@@ -208,6 +237,7 @@ export function RecapBuilder({ tripId, tripName, dateLabel }: { tripId: string; 
     coverPhotoUrl: coverPhotoUrl || undefined,
     items: [...items.values()].map(refreshItem),
     wishlist: [...wishlist.values()].map(refreshItem),
+    itinerary: buildItinerary(),
     published,
   });
 
@@ -542,11 +572,19 @@ function PlaceEditor({
   fetchComments: () => Promise<RecapComment[]>;
 }) {
   const [available, setAvailable] = useState<RecapComment[] | null>(null);
+  const [urlInput, setUrlInput] = useState("");
 
   useEffect(() => {
     fetchComments().then(setAvailable);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const addPhotoUrl = () => {
+    const url = urlInput.trim();
+    if (!url || item.photos.includes(url)) { setUrlInput(""); return; }
+    onPatch({ photos: [...item.photos, url] });
+    setUrlInput("");
+  };
 
   const togglePhoto = (url: string) => {
     const has = item.photos.includes(url);
@@ -624,6 +662,31 @@ function PlaceEditor({
       ) : (
         <p className="text-xs text-slate-400">No photos for this place yet.</p>
       )}
+
+      {/* Add photo from external URL */}
+      <div>
+        <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+          Add photo from URL
+        </p>
+        <div className="flex gap-1.5">
+          <input
+            type="url"
+            value={urlInput}
+            onChange={(e) => setUrlInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && addPhotoUrl()}
+            placeholder="https://…"
+            className="flex-1 rounded-lg border border-slate-300 px-2 py-1 text-xs outline-none focus:border-slate-400"
+          />
+          <button
+            type="button"
+            onClick={addPhotoUrl}
+            disabled={!urlInput.trim()}
+            className="rounded-lg border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-40"
+          >
+            Add
+          </button>
+        </div>
+      </div>
 
       {/* Comment picker */}
       {available === null ? (

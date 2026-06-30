@@ -19,6 +19,8 @@ export type TripDataValue = {
   removedEntities: DBEntity[];
   /** PlanInstance by its id (= a TripSlot's `uid`) — for per-visit booking/comments. */
   instanceMap: Map<string, PlanInstance>;
+  slots: Slot[];
+  instances: PlanInstance[];
   seeded: boolean;
   loading: boolean;
 };
@@ -62,7 +64,7 @@ export function TripDataProvider({
 
   return (
     <Ctx.Provider
-      value={{ tripId, tripName, tripAreas, entities, removedEntities, instanceMap, seeded: dbEntities.length > 0, loading: !loaded }}
+      value={{ tripId, tripName, tripAreas, entities, removedEntities, instanceMap, slots, instances, seeded: dbEntities.length > 0, loading: !loaded }}
     >
       {children}
     </Ctx.Provider>
