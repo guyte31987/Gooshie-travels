@@ -15,6 +15,7 @@ import {
 import { getEntities, saveEntity } from "@/lib/db";
 import { geocodeAddress } from "@/lib/geo";
 import { TripMapsFiller } from "./TripMapsFiller";
+import { GeocodeAudit } from "./GeocodeAudit";
 
 const ROLES: Role[] = ["viewer", "editor", "admin"];
 
@@ -214,6 +215,10 @@ export function AdminPanel() {
 
         <div className="mt-3">
           <TripMapsFiller />
+        </div>
+
+        <div className="mt-3">
+          <GeocodeAudit />
         </div>
       </Section>
 
