@@ -52,18 +52,22 @@ export function TripMapsFiller() {
 
   const dbById = useMemo(() => new Map(dbEntities.map((e) => [e.id, e])), [dbEntities]);
 
-  const missing = useMemo(() => {
+  // Only places that actually appear in the itinerary (have a scheduled slot),
+  // vs. every eligible trip member (area-matched + added). Default: itinerary only.
+  const [itineraryOnly, setItineraryOnly] = useState(true);
+
+  // The trip's eligible entities, optionally narrowed to those on the itinerary.
+  const scoped = useMemo(() => {
     if (!trip) return [];
     const entities = buildTripEntities({ dbEntities, items, slots, instances, tripAreas: trip.areas });
-    return entities
-      .filter((e) => !(e.mapsUrl ?? "").trim())
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }, [trip, dbEntities, items, slots, instances]);
+    return itineraryOnly ? entities.filter((e) => e.slots.length > 0) : entities;
+  }, [trip, dbEntities, items, slots, instances, itineraryOnly]);
 
-  const total = useMemo(() => {
-    if (!trip) return 0;
-    return buildTripEntities({ dbEntities, items, slots, instances, tripAreas: trip.areas }).length;
-  }, [trip, dbEntities, items, slots, instances]);
+  const missing = useMemo(
+    () => scoped.filter((e) => !(e.mapsUrl ?? "").trim()).sort((a, b) => a.name.localeCompare(b.name)),
+    [scoped]
+  );
+  const total = scoped.length;
 
   return (
     <div className="rounded-lg border border-slate-200 bg-white p-3">
@@ -72,7 +76,7 @@ export function TripMapsFiller() {
           <div className="font-medium">Add missing Google Maps links</div>
           <div className="text-slate-500">Places in this trip without a saved Maps link.</div>
         </div>
-        {trips.length > 1 && (
+        {trips.length > 0 && (
           <select
             value={tripId}
             onChange={(e) => setTripId(e.target.value)}
@@ -84,6 +88,16 @@ export function TripMapsFiller() {
           </select>
         )}
       </div>
+
+      <label className="mt-2 flex items-center gap-2 text-xs text-slate-600">
+        <input
+          type="checkbox"
+          checked={itineraryOnly}
+          onChange={(e) => setItineraryOnly(e.target.checked)}
+          className="h-3.5 w-3.5 rounded border-slate-300"
+        />
+        Only places scheduled in the itinerary
+      </label>
 
       <p className="mt-2 text-xs font-medium text-slate-500">
         {missing.length === 0
