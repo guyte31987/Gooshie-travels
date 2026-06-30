@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ENTITY_TABS, OPERATIONAL_TYPES, type Entity } from "@/lib/entities";
 import { activityStatusOf } from "@/lib/itinerary";
+import { subscribeEntities, type DBEntity } from "@/lib/db";
 import { useTripData } from "./TripData";
 import { useAuth } from "./AuthProvider";
 import { auth } from "@/lib/firebase";
@@ -35,6 +36,8 @@ export function RecapBuilder({ tripId, tripName, dateLabel }: { tripId: string; 
   const [intro, setIntro] = useState("");
   const [coverPhotoUrl, setCoverPhotoUrl] = useState<string>("");
   const [items, setItems] = useState<Map<string, RecapItem>>(new Map());
+  const [wishlist, setWishlist] = useState<Map<string, RecapItem>>(new Map());
+  const [allEntities, setAllEntities] = useState<DBEntity[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [status, setStatus] = useState<string>("");
   const [busy, setBusy] = useState(false);
@@ -70,6 +73,7 @@ export function RecapBuilder({ tripId, tripName, dateLabel }: { tripId: string; 
         setIntro(r.intro ?? "");
         setCoverPhotoUrl(r.coverPhotoUrl ?? "");
         setItems(new Map(r.items.map((it) => [it.entityId, it])));
+        setWishlist(new Map((r.wishlist ?? []).map((it) => [it.entityId, it])));
       } else {
         setSlug(newRecapSlug(tripId));
       }
@@ -151,6 +155,49 @@ export function RecapBuilder({ tripId, tripName, dateLabel }: { tripId: string; 
       return next;
     });
 
+  // --- "Places I'd like to visit next" — picked from the whole Database --------
+  useEffect(() => subscribeEntities(setAllEntities), []);
+
+  // A wishlist item carries the place's facts (incl. Maps link) but no photos.
+  const wishItem = (e: DBEntity): RecapItem => ({
+    entityId: e.id,
+    name: e.name,
+    type: e.type,
+    generalArea: e.generalArea,
+    area: e.area,
+    lat: e.lat,
+    lng: e.lng,
+    blurb: e.notes ?? "",
+    photos: [],
+    website: e.website,
+    instagram: e.instagram,
+    address: e.address,
+    hours: e.hours,
+    mapsUrl: e.mapsUrl,
+  });
+
+  const addWish = (e: DBEntity) =>
+    setWishlist((prev) => {
+      if (prev.has(e.id)) return prev;
+      const next = new Map(prev);
+      next.set(e.id, wishItem(e));
+      return next;
+    });
+  const removeWish = (id: string) =>
+    setWishlist((prev) => {
+      const next = new Map(prev);
+      next.delete(id);
+      return next;
+    });
+  const patchWish = (id: string, p: Partial<RecapItem>) =>
+    setWishlist((prev) => {
+      const cur = prev.get(id);
+      if (!cur) return prev;
+      const next = new Map(prev);
+      next.set(id, { ...cur, ...p });
+      return next;
+    });
+
   const draft = () => ({
     slug,
     tripId,
@@ -160,6 +207,7 @@ export function RecapBuilder({ tripId, tripName, dateLabel }: { tripId: string; 
     intro: intro.trim() || undefined,
     coverPhotoUrl: coverPhotoUrl || undefined,
     items: [...items.values()].map(refreshItem),
+    wishlist: [...wishlist.values()].map(refreshItem),
     published,
   });
 
@@ -200,6 +248,7 @@ export function RecapBuilder({ tripId, tripName, dateLabel }: { tripId: string; 
         setIntro("");
         setCoverPhotoUrl("");
         setItems(new Map());
+        setWishlist(new Map());
         setStatus("Deleted.");
       } else {
         setPublished(action === "publish");
@@ -363,6 +412,116 @@ export function RecapBuilder({ tripId, tripName, dateLabel }: { tripId: string; 
           );
         })}
       </ul>
+
+      {/* Places I'd like to visit next */}
+      <WishlistSection
+        wishlist={wishlist}
+        allEntities={allEntities}
+        onAdd={addWish}
+        onRemove={removeWish}
+        onPatch={patchWish}
+      />
+    </div>
+  );
+}
+
+/** Pick places from the whole Database to feature as "I'd like to visit next". */
+function WishlistSection({
+  wishlist,
+  allEntities,
+  onAdd,
+  onRemove,
+  onPatch,
+}: {
+  wishlist: Map<string, RecapItem>;
+  allEntities: DBEntity[];
+  onAdd: (e: DBEntity) => void;
+  onRemove: (id: string) => void;
+  onPatch: (id: string, p: Partial<RecapItem>) => void;
+}) {
+  const [q, setQ] = useState("");
+
+  const results = useMemo(() => {
+    const term = q.trim().toLowerCase();
+    if (!term) return [];
+    return allEntities
+      .filter((e) => !OPERATIONAL_TYPES.has(e.type) && e.type !== "uncategorised")
+      .filter((e) => !wishlist.has(e.id))
+      .filter((e) =>
+        [e.name, e.area, e.generalArea, e.address].some((f) => f?.toLowerCase().includes(term))
+      )
+      .slice(0, 8);
+  }, [q, allEntities, wishlist]);
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-4">
+      <h3 className="text-sm font-semibold">Places I&apos;d like to visit next</h3>
+      <p className="mt-0.5 text-xs text-slate-500">
+        Search the Database and add places you want to feature for next time.
+      </p>
+
+      {/* Search */}
+      <div className="relative mt-3">
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Search places by name or area…"
+          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-400"
+        />
+        {results.length > 0 && (
+          <ul className="absolute z-10 mt-1 max-h-64 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg">
+            {results.map((e) => (
+              <li key={e.id}>
+                <button
+                  type="button"
+                  onClick={() => { onAdd(e); setQ(""); }}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-slate-50"
+                >
+                  <span>{emojiOf(e.type)}</span>
+                  <span className="flex-1 font-medium">{e.name}</span>
+                  <span className="text-[11px] text-slate-400">
+                    {e.area || e.generalArea || labelOf(e.type)}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {/* Selected wishlist */}
+      {wishlist.size > 0 ? (
+        <ul className="mt-3 space-y-2">
+          {[...wishlist.values()].map((it) => (
+            <li key={it.entityId} className="rounded-lg border border-slate-200 p-3">
+              <div className="flex items-center gap-2">
+                <span>{emojiOf(it.type)}</span>
+                <span className="flex-1 text-sm font-medium">{it.name}</span>
+                <span className="text-[11px] text-slate-400">
+                  {it.area || it.generalArea || labelOf(it.type)}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onRemove(it.entityId)}
+                  className="shrink-0 text-slate-300 hover:text-rose-500"
+                  title="Remove"
+                >
+                  ✕
+                </button>
+              </div>
+              <textarea
+                value={it.blurb ?? ""}
+                onChange={(e) => onPatch(it.entityId, { blurb: e.target.value })}
+                placeholder="Why you want to go (optional)…"
+                rows={2}
+                className="mt-2 w-full rounded-lg border border-slate-200 px-2 py-1 text-xs outline-none focus:border-slate-400"
+              />
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-3 text-xs text-slate-400">Nothing added yet.</p>
+      )}
     </div>
   );
 }

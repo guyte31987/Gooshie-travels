@@ -664,10 +664,75 @@ function DetailSheet({ item, onClose }: { item: RecapItem; onClose: () => void }
 
 // ── Main component ────────────────────────────────────────────────────────────
 
+// ── "Places I'd like to visit next" ───────────────────────────────────────────
+function WishlistSection({ items, onSelect }: { items: RecapItem[]; onSelect: (i: RecapItem) => void }) {
+  return (
+    <section className="px-5 pb-8 sm:px-6">
+      <div className="mb-3 flex items-baseline gap-2">
+        <h2 className="font-display text-[22px] font-semibold text-ink">Places I&apos;d like to visit next</h2>
+        <span className="font-accent text-[13px] italic text-ink-faint">{items.length}</span>
+      </div>
+      <ul className="space-y-2.5">
+        {items.map((item) => {
+          const href = mapsHref(item);
+          return (
+            <li
+              key={item.entityId}
+              className="relative overflow-hidden rounded-2xl border border-border-card bg-ivory-sheet"
+            >
+              {/* Category colour spine */}
+              <span
+                className="absolute left-0 top-0 h-full w-[5px] rounded-[3px]"
+                style={{ background: catColor(item.type) }}
+              />
+              <div className="flex items-start gap-3 py-3 pl-5 pr-4">
+                <button onClick={() => onSelect(item)} className="min-w-0 flex-1 text-left">
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className="font-mono text-[10px] font-semibold tracking-[0.14em]"
+                      style={{ textTransform: "uppercase", color: catColor(item.type) }}
+                    >
+                      {labelOf(item.type)}
+                      {item.generalArea ? ` · ${item.generalArea}` : ""}
+                    </span>
+                  </div>
+                  <h3 className="mt-0.5 font-display text-[19px] font-semibold leading-tight text-ink">
+                    {item.name}
+                  </h3>
+                  {item.blurb && (
+                    <p className="mt-1 font-accent text-[13.5px] italic leading-snug text-ink-secondary">
+                      {item.blurb}
+                    </p>
+                  )}
+                </button>
+                {href && (
+                  <a
+                    href={href}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    title="Open in Google Maps"
+                    className="mt-0.5 shrink-0 text-rust hover:opacity-70"
+                  >
+                    <svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor" aria-hidden="true">
+                      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z" />
+                    </svg>
+                  </a>
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
 export function RecapView({ recap }: { recap: Recap }) {
   const [active, setActive] = useState<RecapItem | null>(null);
 
   const items = recap.items ?? [];
+  const wishlist = recap.wishlist ?? [];
 
   const mustVisit = useMemo(() => items.filter((i) => i.mustVisit), [items]);
 
@@ -733,6 +798,11 @@ export function RecapView({ recap }: { recap: Recap }) {
             onSelect={setActive}
           />
         ))}
+
+        {/* Places I'd like to visit next */}
+        {wishlist.length > 0 && (
+          <WishlistSection items={wishlist} onSelect={setActive} />
+        )}
 
         {/* Map */}
         {items.some((i) => typeof i.lat === "number") && (

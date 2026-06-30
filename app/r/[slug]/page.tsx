@@ -20,6 +20,27 @@ async function loadRecap(slug: string): Promise<Recap | null> {
 
   // Strip non-serialisable Firestore values (Timestamps) before handing the data
   // to the client component — only plain objects can cross that boundary.
+  const mapItem = (it: Recap["items"][number]) => ({
+    entityId: it.entityId,
+    name: it.name,
+    type: it.type,
+    generalArea: it.generalArea ?? "",
+    area: it.area ?? "",
+    lat: typeof it.lat === "number" ? it.lat : undefined,
+    lng: typeof it.lng === "number" ? it.lng : undefined,
+    rating: typeof it.rating === "number" ? it.rating : undefined,
+    mustVisit: !!it.mustVisit,
+    blurb: it.blurb ?? "",
+    photos: it.photos ?? [],
+    publicPhotos: it.publicPhotos ?? [],
+    comments: (it.comments ?? []).map((c) => ({ author: c.author, text: c.text })),
+    website: it.website ?? "",
+    instagram: it.instagram ?? "",
+    address: it.address ?? "",
+    hours: it.hours ?? "",
+    mapsUrl: it.mapsUrl ?? "",
+  });
+
   return {
     slug: r.slug,
     tripId: r.tripId,
@@ -29,26 +50,8 @@ async function loadRecap(slug: string): Promise<Recap | null> {
     intro: r.intro ?? "",
     coverPhotoUrl: r.coverPhotoUrl ?? "",
     coverPublicUrl: r.coverPublicUrl ?? "",
-    items: (r.items ?? []).map((it) => ({
-      entityId: it.entityId,
-      name: it.name,
-      type: it.type,
-      generalArea: it.generalArea ?? "",
-      area: it.area ?? "",
-      lat: typeof it.lat === "number" ? it.lat : undefined,
-      lng: typeof it.lng === "number" ? it.lng : undefined,
-      rating: typeof it.rating === "number" ? it.rating : undefined,
-      mustVisit: !!it.mustVisit,
-      blurb: it.blurb ?? "",
-      photos: it.photos ?? [],
-      publicPhotos: it.publicPhotos ?? [],
-      comments: (it.comments ?? []).map((c) => ({ author: c.author, text: c.text })),
-      website: it.website ?? "",
-      instagram: it.instagram ?? "",
-      address: it.address ?? "",
-      hours: it.hours ?? "",
-      mapsUrl: it.mapsUrl ?? "",
-    })),
+    items: (r.items ?? []).map(mapItem),
+    wishlist: (r.wishlist ?? []).map(mapItem),
     published: true,
   };
 }

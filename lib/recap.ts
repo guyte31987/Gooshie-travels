@@ -58,6 +58,8 @@ export type Recap = {
   /** Public copy of the cover, written by publish; used for OG tags + hero. */
   coverPublicUrl?: string;
   items: RecapItem[];
+  /** "Places I'd like to visit next" — picked from the Database, not visited on this trip. */
+  wishlist?: RecapItem[];
   published: boolean;
   updatedAt?: unknown;
   publishedAt?: unknown;
