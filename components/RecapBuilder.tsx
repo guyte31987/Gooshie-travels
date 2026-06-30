@@ -98,6 +98,7 @@ export function RecapBuilder({ tripId, tripName, dateLabel }: { tripId: string; 
     instagram: e.instagram,
     address: e.address,
     hours: e.hours,
+    mapsUrl: e.mapsUrl,
   });
 
   // Overlay the latest entity facts (coords, address, hours, links…) onto a saved
@@ -118,6 +119,7 @@ export function RecapBuilder({ tripId, tripName, dateLabel }: { tripId: string; 
       website: e.website,
       instagram: e.instagram,
       hours: e.hours,
+      mapsUrl: e.mapsUrl,
     };
   };
 
@@ -421,20 +423,6 @@ function PlaceEditor({
         rows={2}
         className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-400"
       />
-
-      {/* Google Maps URL */}
-      <div>
-        <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-          Google Maps link (optional)
-        </p>
-        <input
-          type="url"
-          value={item.mapsUrl ?? ""}
-          onChange={(e) => onPatch({ mapsUrl: e.target.value || undefined })}
-          placeholder="Paste exact Google Maps URL — open the business on maps.google.com and copy the URL"
-          className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-xs outline-none focus:border-slate-400"
-        />
-      </div>
 
       {/* Photo picker */}
       {photos.length > 0 ? (

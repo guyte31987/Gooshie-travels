@@ -125,7 +125,9 @@ export function googleMapsUrl(opts: {
   area?: string;
   lat?: number;
   lng?: number;
+  mapsUrl?: string;
 }): string | null {
+  if (opts.mapsUrl?.trim()) return opts.mapsUrl.trim();
   const base = "https://www.google.com/maps/search/?api=1&query=";
   if (typeof opts.lat === "number" && typeof opts.lng === "number") {
     return `${base}${opts.lat},${opts.lng}`;

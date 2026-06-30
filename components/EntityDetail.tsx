@@ -51,6 +51,7 @@ export function EntityDetail({
     area: entity.area ?? entity.generalArea,
     lat: entity.lat,
     lng: entity.lng,
+    mapsUrl: entity.mapsUrl,
   });
   const instagramHref = instagramUrl(entity.instagram);
   const igHandle = instagramHandle(entity.instagram);

@@ -62,6 +62,8 @@ export type DBEntity = {
   calendarSource?: boolean;
   /** For party/event entities — links them to a parent club/venue entity. */
   parentId?: string;
+  /** Exact Google Maps business URL, pasted by an editor for a precise link. */
+  mapsUrl?: string;
   /** Firebase Storage download URLs for entity photos. */
   photos?: string[];
   /** Denormalised average of all per-user instance ratings (0–10). */
