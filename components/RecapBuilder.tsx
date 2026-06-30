@@ -48,10 +48,22 @@ export function RecapBuilder({ tripId, tripName, dateLabel }: { tripId: string; 
   const isDone = (entity: Entity): boolean =>
     entity.slots.some((s) => s.uid && activityStatusOf(instanceMap.get(s.uid) ?? {}) === "done");
 
-  // Places worth recapping: real place types only, excluding logistics buckets.
+  // Places worth recapping: real place types only, excluding logistics buckets,
+  // sorted by the earliest slot so the list follows trip chronological order.
   const places = useMemo(() => {
     const base = entities.filter((e) => !OPERATIONAL_TYPES.has(e.type) && e.type !== "uncategorised");
-    return doneOnly ? base.filter(isDone) : base;
+    const filtered = doneOnly ? base.filter(isDone) : base;
+
+    const earliestKey = (slots: import("@/lib/entities").TripSlot[]): string => {
+      let best = "";
+      for (const s of slots) {
+        const key = s.dayKey ? `${s.dayKey}_${String(s.startMs ?? 0).padStart(15, "0")}` : "";
+        if (key && (!best || key < best)) best = key;
+      }
+      return best || "￿"; // entities with no slots go last
+    };
+
+    return [...filtered].sort((a, b) => earliestKey(a.slots).localeCompare(earliestKey(b.slots)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entities, doneOnly, instanceMap]);
 
