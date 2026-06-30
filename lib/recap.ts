@@ -18,6 +18,20 @@ import {
 import { db } from "./firebase";
 import type { EntityType } from "./entities";
 
+export type RecapItineraryActivity = {
+  entityId: string;
+  name: string;
+  type: EntityType;
+  start: number; // minutes from midnight
+  end: number;
+  slotLabel: string;
+};
+
+export type RecapItineraryDay = {
+  day: string; // YYYY-MM-DD
+  activities: RecapItineraryActivity[];
+};
+
 /** A picked comment, flattened to just what's safe to show publicly. */
 export type RecapComment = { author: string; text: string };
 
@@ -60,6 +74,8 @@ export type Recap = {
   items: RecapItem[];
   /** "Places I'd like to visit next" — picked from the Database, not visited on this trip. */
   wishlist?: RecapItem[];
+  /** Day-by-day itinerary snapshot — only items in `recap.items`, snapshotted at save time. */
+  itinerary?: RecapItineraryDay[];
   published: boolean;
   updatedAt?: unknown;
   publishedAt?: unknown;

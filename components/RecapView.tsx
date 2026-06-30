@@ -1,10 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { ENTITY_TABS } from "@/lib/entities";
 import { externalUrl, instagramUrl, instagramHandle } from "@/lib/geo";
-import type { Recap, RecapItem } from "@/lib/recap";
+import type { Recap, RecapItem, RecapItineraryDay } from "@/lib/recap";
 
 const RecapMap = dynamic(() => import("./RecapMap"), {
   ssr: false,
@@ -101,7 +101,7 @@ function CardPhoto({
   );
 }
 
-// ── Hero band ────────────────────────────────────────────────────────────────
+// ── Hero band (carousel) ─────────────────────────────────────────────────────
 
 function HeroBand({
   recap,
@@ -114,18 +114,50 @@ function HeroBand({
 }) {
   const cover = recap.coverPublicUrl || recap.coverPhotoUrl;
 
+  // Gather all public photos for the carousel: cover first, then item photos
+  const allPhotos = useMemo(() => {
+    const itemPhotos = (recap.items ?? []).flatMap((i) =>
+      (i.publicPhotos?.length ? i.publicPhotos : i.photos) ?? []
+    );
+    if (cover) {
+      return [cover, ...itemPhotos.filter((p) => p !== cover)];
+    }
+    return itemPhotos;
+  }, [recap.items, cover]);
+
+  const [idx, setIdx] = useState(0);
+
+  useEffect(() => {
+    if (allPhotos.length <= 1) return;
+    const t = setInterval(() => setIdx((i) => (i + 1) % allPhotos.length), 4500);
+    return () => clearInterval(t);
+  }, [allPhotos.length]);
+
   return (
     <div className="relative min-h-[300px] overflow-hidden sm:min-h-[340px]">
-      {/* Background: cover photo or rust gradient */}
-      {cover ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={cover} alt="" className="absolute inset-0 h-full w-full object-cover" />
+      {/* Carousel photos — fade transition */}
+      {allPhotos.length > 0 ? (
+        allPhotos.map((src, i) => (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            key={src}
+            src={src}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover"
+            style={{
+              opacity: i === idx ? 1 : 0,
+              transition: "opacity 1s ease",
+              pointerEvents: "none",
+            }}
+          />
+        ))
       ) : (
         <div
           className="absolute inset-0"
           style={{ background: "linear-gradient(150deg,#c2592f 0%,#d98a4a 55%,#e6c79b 100%)" }}
         />
       )}
+
       {/* Gradient overlay */}
       <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 25%, rgba(33,28,24,.78) 100%)" }} />
 
@@ -146,7 +178,7 @@ function HeroBand({
             {recap.subtitle}
           </p>
         )}
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-3 flex flex-wrap items-center gap-2">
           {recap.dateLabel && (
             <span
               className="rounded-full border px-3 py-1 font-sans text-[11px] font-semibold text-white/90"
@@ -169,9 +201,135 @@ function HeroBand({
               ★ {mustVisitCount} must visit
             </span>
           )}
+
+          {/* Carousel dots */}
+          {allPhotos.length > 1 && (
+            <div className="ml-auto flex gap-1">
+              {allPhotos.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setIdx(i)}
+                  className="h-1.5 rounded-full transition-all"
+                  style={{
+                    width: i === idx ? 18 : 6,
+                    background: i === idx ? "rgba(255,255,255,.9)" : "rgba(255,255,255,.4)",
+                  }}
+                  aria-label={`Photo ${i + 1}`}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
+  );
+}
+
+// ── Time formatter ───────────────────────────────────────────────────────────
+
+function fmtTime(min: number): string {
+  let h = Math.floor(min / 60);
+  const m = min % 60;
+  const period = h < 12 || h >= 24 ? "am" : "pm";
+  h = h % 24;
+  let hh = h % 12;
+  if (hh === 0) hh = 12;
+  return m === 0 ? `${hh}${period}` : `${hh}:${String(m).padStart(2, "0")}${period}`;
+}
+
+// ── Itinerary section ────────────────────────────────────────────────────────
+
+function ItinerarySection({ days }: { days: RecapItineraryDay[] }) {
+  const sorted = useMemo(
+    () => [...days].sort((a, b) => a.day.localeCompare(b.day)),
+    [days]
+  );
+
+  return (
+    <section className="px-5 py-5 sm:px-6">
+      {/* Section header */}
+      <div className="mb-4 flex items-center gap-2.5">
+        <span className="shrink-0 rounded-[3px]" style={{ width: 5, height: 26, background: "#8A8175" }} />
+        <h2 className="font-display text-[22px] font-semibold text-ink">Itinerary</h2>
+        <span className="font-accent text-[13px] italic text-ink-faint">{sorted.length} days</span>
+      </div>
+
+      <div className="space-y-5">
+        {sorted.map((day, di) => {
+          const dt = new Date(day.day + "T12:00:00");
+          const weekday = dt.toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" });
+          const dateStr = dt.toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
+          const activities = [...day.activities].sort((a, b) => a.start - b.start);
+
+          return (
+            <div key={day.day}>
+              {/* Day header */}
+              <div className="mb-2.5 flex items-baseline gap-2">
+                <span
+                  className="shrink-0 rounded-full px-2.5 py-0.5 font-mono text-[10px] font-bold tracking-[0.1em] text-white"
+                  style={{ background: "#211C18", textTransform: "uppercase" }}
+                >
+                  Day {di + 1}
+                </span>
+                <span className="font-sans text-[13px] font-semibold text-ink">
+                  {weekday}, {dateStr}
+                </span>
+              </div>
+
+              {/* Activity cards */}
+              <div className="overflow-hidden rounded-2xl border border-border" style={{ background: "#fff" }}>
+                {activities.map((act, ai) => (
+                  <div
+                    key={`${act.entityId}-${ai}`}
+                    className="flex items-center gap-3 px-4 py-3"
+                    style={{
+                      borderTop: ai > 0 ? "1px solid #ece7dd" : undefined,
+                    }}
+                  >
+                    {/* Time */}
+                    <span
+                      className="w-10 shrink-0 text-right font-mono text-[11px] font-semibold text-ink-faint"
+                    >
+                      {fmtTime(act.start)}
+                    </span>
+
+                    {/* Connector line */}
+                    <div className="flex shrink-0 flex-col items-center self-stretch">
+                      <div className="w-px flex-1" style={{ background: ai === 0 ? "transparent" : "#ece7dd" }} />
+                      <span
+                        className="my-0.5 h-2 w-2 shrink-0 rounded-full"
+                        style={{ background: catColor(act.type) }}
+                      />
+                      <div className="w-px flex-1" style={{ background: ai === activities.length - 1 ? "transparent" : "#ece7dd" }} />
+                    </div>
+
+                    {/* Name + category */}
+                    <div className="min-w-0 flex-1">
+                      <p className="font-display text-[15px] font-semibold leading-tight text-ink">
+                        {act.name}
+                      </p>
+                      <p
+                        className="mt-0.5 font-mono text-[10px] tracking-[0.1em]"
+                        style={{ textTransform: "uppercase", color: catColor(act.type) }}
+                      >
+                        {labelOf(act.type)}
+                      </p>
+                    </div>
+
+                    {/* End time */}
+                    {act.end > act.start && (
+                      <span className="shrink-0 font-mono text-[10px] text-ink-ghost">
+                        → {fmtTime(act.end)}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 
@@ -297,10 +455,12 @@ function MustVisitReel({
 function CategorySection({
   type,
   items,
+  wishlistItems = [],
   onSelect,
 }: {
   type: string;
   items: RecapItem[];
+  wishlistItems?: RecapItem[];
   onSelect: (i: RecapItem) => void;
 }) {
   const color = catColor(type);
@@ -400,6 +560,74 @@ function CategorySection({
         <p className="mt-3 text-center font-sans text-xs font-semibold text-rust">
           +{rest} more {labelOf(type).toLowerCase()} picks
         </p>
+      )}
+
+      {/* "For next visit" wishlist items */}
+      {wishlistItems.length > 0 && (
+        <div className="mt-5">
+          <div className="mb-3 flex items-center gap-2.5">
+            <span
+              className="h-px flex-1 rounded"
+              style={{ background: `${color}33` }}
+            />
+            <span
+              className="rounded-full border px-3 py-1 font-mono text-[10px] font-semibold tracking-[0.1em] text-ink-secondary"
+              style={{ textTransform: "uppercase", borderColor: `${color}44`, background: `${color}0a` }}
+            >
+              For next visit
+            </span>
+            <span
+              className="h-px flex-1 rounded"
+              style={{ background: `${color}33` }}
+            />
+          </div>
+          <div className="space-y-1.5">
+            {wishlistItems.map((item) => {
+              const href = mapsHref(item);
+              return (
+                <button
+                  key={item.entityId}
+                  onClick={() => onSelect(item)}
+                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left"
+                  style={{
+                    border: `1.5px dashed ${color}55`,
+                    background: `${color}08`,
+                    opacity: 0.82,
+                  }}
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="font-display text-[14px] font-semibold leading-tight text-ink">
+                      {item.name}
+                    </p>
+                    {item.generalArea && (
+                      <p className="mt-0.5 font-mono text-[10px] tracking-[0.08em] text-ink-ghost" style={{ textTransform: "uppercase" }}>
+                        {item.generalArea}
+                      </p>
+                    )}
+                    {item.blurb && (
+                      <p className="mt-1 font-accent text-[12px] italic leading-snug text-ink-faint line-clamp-1">
+                        {item.blurb}
+                      </p>
+                    )}
+                  </div>
+                  {href && (
+                    <a
+                      href={href}
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="shrink-0 text-ink-ghost hover:text-rust"
+                    >
+                      <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true">
+                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z" />
+                      </svg>
+                    </a>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       )}
     </section>
   );
@@ -662,72 +890,6 @@ function DetailSheet({ item, onClose }: { item: RecapItem; onClose: () => void }
   );
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
-
-// ── "Places I'd like to visit next" ───────────────────────────────────────────
-function WishlistSection({ items, onSelect }: { items: RecapItem[]; onSelect: (i: RecapItem) => void }) {
-  return (
-    <section className="px-5 pb-8 sm:px-6">
-      <div className="mb-3 flex items-baseline gap-2">
-        <h2 className="font-display text-[22px] font-semibold text-ink">Places I&apos;d like to visit next</h2>
-        <span className="font-accent text-[13px] italic text-ink-faint">{items.length}</span>
-      </div>
-      <ul className="space-y-2.5">
-        {items.map((item) => {
-          const href = mapsHref(item);
-          return (
-            <li
-              key={item.entityId}
-              className="relative overflow-hidden rounded-2xl border border-border-card bg-ivory-sheet"
-            >
-              {/* Category colour spine */}
-              <span
-                className="absolute left-0 top-0 h-full w-[5px] rounded-[3px]"
-                style={{ background: catColor(item.type) }}
-              />
-              <div className="flex items-start gap-3 py-3 pl-5 pr-4">
-                <button onClick={() => onSelect(item)} className="min-w-0 flex-1 text-left">
-                  <div className="flex items-center gap-1.5">
-                    <span
-                      className="font-mono text-[10px] font-semibold tracking-[0.14em]"
-                      style={{ textTransform: "uppercase", color: catColor(item.type) }}
-                    >
-                      {labelOf(item.type)}
-                      {item.generalArea ? ` · ${item.generalArea}` : ""}
-                    </span>
-                  </div>
-                  <h3 className="mt-0.5 font-display text-[19px] font-semibold leading-tight text-ink">
-                    {item.name}
-                  </h3>
-                  {item.blurb && (
-                    <p className="mt-1 font-accent text-[13.5px] italic leading-snug text-ink-secondary">
-                      {item.blurb}
-                    </p>
-                  )}
-                </button>
-                {href && (
-                  <a
-                    href={href}
-                    target="_blank"
-                    rel="noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                    title="Open in Google Maps"
-                    className="mt-0.5 shrink-0 text-rust hover:opacity-70"
-                  >
-                    <svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor" aria-hidden="true">
-                      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z" />
-                    </svg>
-                  </a>
-                )}
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-    </section>
-  );
-}
-
 export function RecapView({ recap }: { recap: Recap }) {
   const [active, setActive] = useState<RecapItem | null>(null);
 
@@ -758,9 +920,26 @@ export function RecapView({ recap }: { recap: Recap }) {
     return ordered;
   }, [items]);
 
+  // Group wishlist items by category type for appending to category sections
+  const wishlistByType = useMemo(() => {
+    const m = new Map<string, RecapItem[]>();
+    for (const w of wishlist) {
+      const arr = m.get(w.type) ?? [];
+      arr.push(w);
+      m.set(w.type, arr);
+    }
+    return m;
+  }, [wishlist]);
+
+  // Wishlist types not covered by any visited category — shown standalone at end
+  const uncoveredWishlist = useMemo(
+    () => wishlist.filter((w) => !categoryGroups.some((g) => g.type === w.type)),
+    [wishlist, categoryGroups]
+  );
+
   return (
     <div className="min-h-screen" style={{ background: "#F7F2E9", fontFamily: "var(--font-sans)" }}>
-      {/* Hero */}
+      {/* Hero carousel */}
       <HeroBand
         recap={recap}
         mustVisitCount={mustVisit.length}
@@ -784,25 +963,45 @@ export function RecapView({ recap }: { recap: Recap }) {
       )}
 
       <div className="mx-auto max-w-xl">
+        {/* Itinerary */}
+        {recap.itinerary && recap.itinerary.length > 0 && (
+          <ItinerarySection days={recap.itinerary} />
+        )}
+
         {/* Must visit reel */}
         {mustVisit.length > 0 && (
           <MustVisitReel items={mustVisit} onSelect={setActive} />
         )}
 
-        {/* Category sections */}
+        {/* Category sections — wishlist items appended at the end of each */}
         {categoryGroups.map(({ type, items: catItems }) => (
           <CategorySection
             key={type}
             type={type}
             items={catItems}
+            wishlistItems={wishlistByType.get(type) ?? []}
             onSelect={setActive}
           />
         ))}
 
-        {/* Places I'd like to visit next */}
-        {wishlist.length > 0 && (
-          <WishlistSection items={wishlist} onSelect={setActive} />
-        )}
+        {/* Wishlist items whose category didn't appear in visited places */}
+        {uncoveredWishlist.length > 0 && (() => {
+          const byType = new Map<string, RecapItem[]>();
+          for (const w of uncoveredWishlist) {
+            const arr = byType.get(w.type) ?? [];
+            arr.push(w);
+            byType.set(w.type, arr);
+          }
+          return [...byType.entries()].map(([type, wItems]) => (
+            <CategorySection
+              key={`wish-${type}`}
+              type={type}
+              items={[]}
+              wishlistItems={wItems}
+              onSelect={setActive}
+            />
+          ));
+        })()}
 
         {/* Map */}
         {items.some((i) => typeof i.lat === "number") && (
