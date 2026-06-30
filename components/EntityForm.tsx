@@ -5,6 +5,7 @@ import { ENTITY_TABS, type EntityType } from "@/lib/entities";
 import { saveEntity, saveAreas, subscribeEntities, type DBEntity } from "@/lib/db";
 import { slugId } from "@/lib/slug";
 import { requestEnrichment, type EnrichedFields } from "@/lib/enrich";
+import { geocodeAddress } from "@/lib/geo";
 import { useBackClose } from "@/lib/useBackClose";
 
 const FIELDS: { key: keyof DBEntity; label: string; textarea?: boolean }[] = [
@@ -86,7 +87,21 @@ export function EntityForm({
     setBusy(true);
     try {
       const id = isNew ? slugId(form.type, form.name) : form.id;
-      await saveEntity({ ...form, id, name: form.name.trim() });
+      const next: DBEntity = { ...form, id, name: form.name.trim() };
+      // Geocode to precise street-level coords when there's an address and we
+      // either have none yet or the address changed. Pins then land exactly,
+      // instead of falling back to the approximate neighborhood centroid.
+      const addr = next.address?.trim();
+      const addressChanged = (entity?.address ?? "") !== (next.address ?? "");
+      const needsCoords = next.lat === undefined || next.lng === undefined;
+      if (addr && (needsCoords || addressChanged)) {
+        const pt = await geocodeAddress(addr);
+        if (pt) {
+          next.lat = pt.lat;
+          next.lng = pt.lng;
+        }
+      }
+      await saveEntity(next);
       // Persist a brand-new general area into the managed list.
       if (form.generalArea && !areas.includes(form.generalArea)) {
         await saveAreas([...areas, form.generalArea].sort());

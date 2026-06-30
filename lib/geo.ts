@@ -137,6 +137,30 @@ export function googleMapsUrl(opts: {
   return q ? `${base}${encodeURIComponent(q)}` : null;
 }
 
+/**
+ * Client helper: geocode a free-text address to precise coordinates via the
+ * /api/geocode route (OpenStreetMap Nominatim). Returns null on any failure or
+ * a no-match so callers can keep whatever coords they already had.
+ */
+export async function geocodeAddress(address: string): Promise<LatLng | null> {
+  const q = address.trim();
+  if (!q) return null;
+  try {
+    const res = await fetch("/api/geocode", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ address: q }),
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { lat?: number; lng?: number };
+    return typeof data.lat === "number" && typeof data.lng === "number"
+      ? { lat: data.lat, lng: data.lng }
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 /** A safe external href: prepends https:// to bare domains so they don't resolve
  *  as a relative in-app path. Returns null for empty input. */
 export function externalUrl(value: string | undefined): string | null {
