@@ -52,6 +52,17 @@ async function loadRecap(slug: string): Promise<Recap | null> {
     coverPublicUrl: r.coverPublicUrl ?? "",
     items: (r.items ?? []).map(mapItem),
     wishlist: (r.wishlist ?? []).map(mapItem),
+    itinerary: (r.itinerary ?? []).map((d) => ({
+      day: d.day,
+      activities: (d.activities ?? []).map((a) => ({
+        entityId: a.entityId,
+        name: a.name,
+        type: a.type,
+        start: a.start,
+        end: a.end,
+        slotLabel: a.slotLabel ?? "",
+      })),
+    })),
     published: true,
   };
 }
