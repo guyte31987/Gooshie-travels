@@ -564,13 +564,23 @@ function CategorySection({
 
       {/* "For next visit" wishlist items */}
       {wishlistItems.length > 0 && (
-        <div className="mt-3.5">
-          <p
-            className="mb-2 font-mono text-[9px] tracking-[0.14em] text-ink-ghost"
-            style={{ textTransform: "uppercase" }}
-          >
-            For next visit
-          </p>
+        <div className="mt-5">
+          <div className="mb-3 flex items-center gap-2.5">
+            <span
+              className="h-px flex-1 rounded"
+              style={{ background: `${color}33` }}
+            />
+            <span
+              className="rounded-full border px-3 py-1 font-mono text-[10px] font-semibold tracking-[0.1em] text-ink-secondary"
+              style={{ textTransform: "uppercase", borderColor: `${color}44`, background: `${color}0a` }}
+            >
+              For next visit
+            </span>
+            <span
+              className="h-px flex-1 rounded"
+              style={{ background: `${color}33` }}
+            />
+          </div>
           <div className="space-y-1.5">
             {wishlistItems.map((item) => {
               const href = mapsHref(item);
