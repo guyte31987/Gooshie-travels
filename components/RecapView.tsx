@@ -405,11 +405,25 @@ function CategorySection({
   );
 }
 
+/** Best available Google Maps URL for an item.
+ *  Priority: manually pasted URL → name+coords search → name+address search */
+function mapsHref(item: RecapItem): string | null {
+  if (item.mapsUrl) return item.mapsUrl;
+  if (typeof item.lat === "number" && typeof item.lng === "number") {
+    return `https://www.google.com/maps/search/${encodeURIComponent(item.name)}/@${item.lat},${item.lng},17z`;
+  }
+  if (item.address) {
+    return `https://maps.google.com/?q=${encodeURIComponent(`${item.name} ${item.address}`)}`;
+  }
+  return null;
+}
+
 // ── Detail bottom sheet ───────────────────────────────────────────────────────
 
 function DetailSheet({ item, onClose }: { item: RecapItem; onClose: () => void }) {
   const igHref = instagramUrl(item.instagram);
   const webHref = item.website ? externalUrl(item.website) ?? item.website : null;
+  const googleMaps = mapsHref(item);
   const photo = pics(item)[0];
 
   return (
@@ -524,7 +538,17 @@ function DetailSheet({ item, onClose }: { item: RecapItem; onClose: () => void }
                   >
                     Address
                   </span>
-                  <span className="flex-1 font-sans text-[13px] text-ink-body">{item.address}</span>
+                  <span className="flex-1 font-sans text-[13px] text-ink-body">
+                    {item.address}
+                    {googleMaps && (
+                      <>
+                        {" · "}
+                        <a href={googleMaps} target="_blank" rel="noreferrer" className="font-semibold text-rust">
+                          Maps ↗
+                        </a>
+                      </>
+                    )}
+                  </span>
                 </div>
               )}
               {(webHref || igHref) && (
@@ -612,9 +636,9 @@ function DetailSheet({ item, onClose }: { item: RecapItem; onClose: () => void }
               Website ↗
             </a>
           )}
-          {item.address && (
+          {googleMaps && (
             <a
-              href={`https://maps.google.com/?q=${encodeURIComponent(item.address)}`}
+              href={googleMaps}
               target="_blank"
               rel="noreferrer"
               className="flex-1 rounded-[10px] py-3 text-center font-sans text-[13px] font-semibold text-white"
@@ -623,7 +647,7 @@ function DetailSheet({ item, onClose }: { item: RecapItem; onClose: () => void }
               Maps ›
             </a>
           )}
-          {!webHref && !item.address && (
+          {!webHref && !googleMaps && (
             <button
               onClick={onClose}
               className="flex-1 rounded-[10px] py-3 text-center font-sans text-[13px] font-semibold text-ink"

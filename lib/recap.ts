@@ -43,6 +43,8 @@ export type RecapItem = {
   instagram?: string;
   address?: string;
   hours?: string;
+  /** Direct Google Maps business URL, pasted by the admin for a precise link. */
+  mapsUrl?: string;
 };
 
 export type Recap = {

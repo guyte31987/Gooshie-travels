@@ -47,6 +47,7 @@ async function loadRecap(slug: string): Promise<Recap | null> {
       instagram: it.instagram ?? "",
       address: it.address ?? "",
       hours: it.hours ?? "",
+      mapsUrl: it.mapsUrl ?? "",
     })),
     published: true,
   };
