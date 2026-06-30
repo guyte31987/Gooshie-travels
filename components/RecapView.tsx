@@ -945,6 +945,122 @@ function DetailSheet({ item, onClose }: { item: RecapItem; onClose: () => void }
   );
 }
 
+// ── Database section ──────────────────────────────────────────────────────────
+
+function DatabaseSection({
+  mustVisit,
+  categoryGroups,
+  wishlistByType,
+  uncoveredWishlist,
+  onSelect,
+}: {
+  mustVisit: RecapItem[];
+  categoryGroups: Array<{ type: string; items: RecapItem[] }>;
+  wishlistByType: Map<string, RecapItem[]>;
+  uncoveredWishlist: RecapItem[];
+  onSelect: (i: RecapItem) => void;
+}) {
+  const [activeFilter, setActiveFilter] = useState<string>("all");
+
+  // All category types that have either visited or wishlist items
+  const allTypes = useMemo(() => {
+    const visitedTypes = categoryGroups.map((g) => g.type);
+    const wishTypes = [...wishlistByType.keys()].filter(
+      (t) => !visitedTypes.includes(t)
+    );
+    return [...visitedTypes, ...wishTypes];
+  }, [categoryGroups, wishlistByType]);
+
+  const visibleGroups = useMemo(
+    () => (activeFilter === "all" ? categoryGroups : categoryGroups.filter((g) => g.type === activeFilter)),
+    [categoryGroups, activeFilter]
+  );
+
+  const visibleUncovered = useMemo(() => {
+    if (activeFilter === "all") return uncoveredWishlist;
+    return uncoveredWishlist.filter((w) => w.type === activeFilter);
+  }, [uncoveredWishlist, activeFilter]);
+
+  return (
+    <div>
+      {/* Section header + pills */}
+      <div className="px-5 pb-1 pt-5 sm:px-6">
+        <div className="mb-3 flex items-center gap-2.5">
+          <span className="shrink-0 rounded-[3px]" style={{ width: 5, height: 26, background: "#8A8175" }} />
+          <h2 className="font-display text-[22px] font-semibold text-ink">Places</h2>
+          <span className="font-accent text-[13px] italic text-ink-faint">{categoryGroups.reduce((s, g) => s + g.items.length, 0)} picks</span>
+        </div>
+
+        {allTypes.length > 1 && (
+          <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+            <button
+              onClick={() => setActiveFilter("all")}
+              className="shrink-0 rounded-full px-3 py-1 font-sans text-[12px] font-semibold transition"
+              style={{
+                background: activeFilter === "all" ? "#211C18" : "#ece7dd",
+                color: activeFilter === "all" ? "#fff" : "#6b6256",
+              }}
+            >
+              All
+            </button>
+            {allTypes.map((type) => (
+              <button
+                key={type}
+                onClick={() => setActiveFilter(activeFilter === type ? "all" : type)}
+                className="shrink-0 rounded-full px-3 py-1 font-sans text-[12px] font-semibold transition"
+                style={{
+                  background: activeFilter === type ? catColor(type) : "#ece7dd",
+                  color: activeFilter === type ? "#fff" : "#6b6256",
+                }}
+              >
+                {labelOf(type)}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Must-visit reel — show when All or if the filter matches any must-visit */}
+      {mustVisit.length > 0 && (activeFilter === "all" || mustVisit.some((i) => i.type === activeFilter)) && (
+        <MustVisitReel
+          items={activeFilter === "all" ? mustVisit : mustVisit.filter((i) => i.type === activeFilter)}
+          onSelect={onSelect}
+        />
+      )}
+
+      {/* Category sections */}
+      {visibleGroups.map(({ type, items: catItems }) => (
+        <CategorySection
+          key={type}
+          type={type}
+          items={catItems}
+          wishlistItems={wishlistByType.get(type) ?? []}
+          onSelect={onSelect}
+        />
+      ))}
+
+      {/* Wishlist-only categories */}
+      {(() => {
+        const byType = new Map<string, RecapItem[]>();
+        for (const w of visibleUncovered) {
+          const arr = byType.get(w.type) ?? [];
+          arr.push(w);
+          byType.set(w.type, arr);
+        }
+        return [...byType.entries()].map(([type, wItems]) => (
+          <CategorySection
+            key={`wish-${type}`}
+            type={type}
+            items={[]}
+            wishlistItems={wItems}
+            onSelect={onSelect}
+          />
+        ));
+      })()}
+    </div>
+  );
+}
+
 export function RecapView({ recap }: { recap: Recap }) {
   const [active, setActive] = useState<RecapItem | null>(null);
 
@@ -1032,40 +1148,14 @@ export function RecapView({ recap }: { recap: Recap }) {
           />
         )}
 
-        {/* Must visit reel */}
-        {mustVisit.length > 0 && (
-          <MustVisitReel items={mustVisit} onSelect={setActive} />
-        )}
-
-        {/* Category sections — wishlist items appended at the end of each */}
-        {categoryGroups.map(({ type, items: catItems }) => (
-          <CategorySection
-            key={type}
-            type={type}
-            items={catItems}
-            wishlistItems={wishlistByType.get(type) ?? []}
-            onSelect={setActive}
-          />
-        ))}
-
-        {/* Wishlist items whose category didn't appear in visited places */}
-        {uncoveredWishlist.length > 0 && (() => {
-          const byType = new Map<string, RecapItem[]>();
-          for (const w of uncoveredWishlist) {
-            const arr = byType.get(w.type) ?? [];
-            arr.push(w);
-            byType.set(w.type, arr);
-          }
-          return [...byType.entries()].map(([type, wItems]) => (
-            <CategorySection
-              key={`wish-${type}`}
-              type={type}
-              items={[]}
-              wishlistItems={wItems}
-              onSelect={setActive}
-            />
-          ));
-        })()}
+        {/* Database section */}
+        <DatabaseSection
+          mustVisit={mustVisit}
+          categoryGroups={categoryGroups}
+          wishlistByType={wishlistByType}
+          uncoveredWishlist={uncoveredWishlist}
+          onSelect={setActive}
+        />
 
         {/* Map */}
         {items.some((i) => typeof i.lat === "number") && (
