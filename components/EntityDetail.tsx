@@ -110,29 +110,18 @@ export function EntityDetail({
           {entity.hours && <Row label="Hours">{entity.hours}</Row>}
           {entity.address && (
             <Row label="Address">
-              {entity.address}
-              {mapsHref && (
-                <a
-                  href={mapsHref}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="ml-2 font-medium text-indigo-600 hover:underline"
-                >
-                  Google Maps ↗
-                </a>
-              )}
+              <span className="inline-flex items-center gap-1.5 align-middle">
+                <span>{entity.address}</span>
+                {mapsHref && <MapsPin href={mapsHref} />}
+              </span>
             </Row>
           )}
           {!entity.address && mapsHref && (
             <Row label="Map">
-              <a
-                href={mapsHref}
-                target="_blank"
-                rel="noreferrer"
-                className="font-medium text-indigo-600 hover:underline"
-              >
-                Open in Google Maps ↗
-              </a>
+              <span className="inline-flex items-center gap-1.5 align-middle">
+                <MapsPin href={mapsHref} />
+                <span className="text-slate-500">Open in Google Maps</span>
+              </span>
             </Row>
           )}
           {entity.website && (
@@ -671,5 +660,23 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
       <dt className="w-16 shrink-0 font-medium text-slate-400">{label}</dt>
       <dd className="text-slate-600">{children}</dd>
     </div>
+  );
+}
+
+/** A small Google Maps pin that opens the place in Maps in a new tab. */
+function MapsPin({ href }: { href: string }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      title="Open in Google Maps"
+      aria-label="Open in Google Maps"
+      className="inline-flex shrink-0 text-rust hover:opacity-70"
+    >
+      <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true">
+        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z" />
+      </svg>
+    </a>
   );
 }

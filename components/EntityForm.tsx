@@ -10,13 +10,13 @@ import { useBackClose } from "@/lib/useBackClose";
 const FIELDS: { key: keyof DBEntity; label: string; textarea?: boolean }[] = [
   { key: "area", label: "Area / neighborhood" },
   { key: "address", label: "Address" },
+  { key: "mapsUrl", label: "Google Maps link" },
   { key: "website", label: "Website" },
   { key: "instagram", label: "Instagram" },
   { key: "hours", label: "Hours" },
   { key: "price", label: "Price" },
   { key: "source", label: "Source" },
   { key: "booking", label: "Booking" },
-  { key: "mapsUrl", label: "Google Maps URL" },
   { key: "bestDay", label: "Best day" },
   { key: "notes", label: "Notes", textarea: true },
 ];

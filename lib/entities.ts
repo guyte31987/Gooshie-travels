@@ -103,6 +103,8 @@ export type Entity = {
   generalArea?: string;
   area?: string;
   address?: string;
+  /** Exact Google Maps business URL, pasted by an editor for a precise link. */
+  mapsUrl?: string;
   lat?: number;
   lng?: number;
   website?: string;
