@@ -144,6 +144,20 @@ export function TripMap() {
           ))}
         </LayersControl>
       </MapContainer>
+      {layers.length > 0 && (
+        <div className="flex flex-wrap gap-x-3 gap-y-1.5 border-t border-slate-100 bg-white px-3 py-2">
+          {layers.map((layer) => (
+            <span key={layer.type} className="flex items-center gap-1.5 text-xs text-slate-600">
+              <span
+                className="inline-block h-2.5 w-2.5 rounded-full"
+                style={{ background: layer.color }}
+              />
+              {ENTITY_TABS.find((t) => t.type === layer.type)?.label ?? layer.type}
+              <span className="text-slate-400">({layer.points.length})</span>
+            </span>
+          ))}
+        </div>
+      )}
       <p className="bg-slate-50 px-3 py-2 text-xs text-slate-400">
         Showing {pinCount} itinerary place{pinCount === 1 ? "" : "s"} with a geocoded location and a
         Google Maps link. Toggle layers top-right; tap a pin for links.
