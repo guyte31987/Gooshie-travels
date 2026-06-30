@@ -239,27 +239,86 @@ function fmtTime(min: number): string {
 
 // ── Itinerary section ────────────────────────────────────────────────────────
 
-function ItinerarySection({ days }: { days: RecapItineraryDay[] }) {
+function ItinerarySection({
+  days,
+  itemsByEntityId,
+  onSelect,
+}: {
+  days: RecapItineraryDay[];
+  itemsByEntityId: Map<string, RecapItem>;
+  onSelect: (i: RecapItem) => void;
+}) {
+  const [activeFilter, setActiveFilter] = useState<string>("all");
+
   const sorted = useMemo(
     () => [...days].sort((a, b) => a.day.localeCompare(b.day)),
     [days]
   );
 
+  // Collect unique category types across all activities, in canonical order
+  const categoryTypes = useMemo(() => {
+    const seen = new Set<string>();
+    for (const day of sorted) for (const act of day.activities) seen.add(act.type);
+    return ENTITY_TABS.map((t) => t.type).filter((t) => seen.has(t));
+  }, [sorted]);
+
+  const visibleDays = useMemo(() => {
+    if (activeFilter === "all") return sorted;
+    return sorted
+      .map((day) => ({
+        ...day,
+        activities: day.activities.filter((a) => a.type === activeFilter),
+      }))
+      .filter((day) => day.activities.length > 0);
+  }, [sorted, activeFilter]);
+
   return (
     <section className="px-5 py-5 sm:px-6">
       {/* Section header */}
-      <div className="mb-4 flex items-center gap-2.5">
+      <div className="mb-3 flex items-center gap-2.5">
         <span className="shrink-0 rounded-[3px]" style={{ width: 5, height: 26, background: "#8A8175" }} />
         <h2 className="font-display text-[22px] font-semibold text-ink">Itinerary</h2>
         <span className="font-accent text-[13px] italic text-ink-faint">{sorted.length} days</span>
       </div>
 
+      {/* Category filter pills */}
+      {categoryTypes.length > 1 && (
+        <div className="mb-4 flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+          <button
+            onClick={() => setActiveFilter("all")}
+            className="shrink-0 rounded-full px-3 py-1 font-sans text-[12px] font-semibold transition"
+            style={{
+              background: activeFilter === "all" ? "#211C18" : "#ece7dd",
+              color: activeFilter === "all" ? "#fff" : "#6b6256",
+            }}
+          >
+            All
+          </button>
+          {categoryTypes.map((type) => (
+            <button
+              key={type}
+              onClick={() => setActiveFilter(activeFilter === type ? "all" : type)}
+              className="shrink-0 rounded-full px-3 py-1 font-sans text-[12px] font-semibold transition"
+              style={{
+                background: activeFilter === type ? catColor(type) : "#ece7dd",
+                color: activeFilter === type ? "#fff" : "#6b6256",
+              }}
+            >
+              {labelOf(type)}
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="space-y-5">
-        {sorted.map((day, di) => {
+        {visibleDays.map((day, di) => {
           const dt = new Date(day.day + "T12:00:00");
           const weekday = dt.toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" });
           const dateStr = dt.toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
           const activities = [...day.activities].sort((a, b) => a.start - b.start);
+
+          // Day index from the full sorted list (not filtered) so "Day 1" stays stable
+          const realDayIdx = sorted.findIndex((d) => d.day === day.day);
 
           return (
             <div key={day.day}>
@@ -269,61 +328,57 @@ function ItinerarySection({ days }: { days: RecapItineraryDay[] }) {
                   className="shrink-0 rounded-full px-2.5 py-0.5 font-mono text-[10px] font-bold tracking-[0.1em] text-white"
                   style={{ background: "#211C18", textTransform: "uppercase" }}
                 >
-                  Day {di + 1}
+                  Day {realDayIdx + 1}
                 </span>
                 <span className="font-sans text-[13px] font-semibold text-ink">
                   {weekday}, {dateStr}
                 </span>
               </div>
 
-              {/* Activity cards */}
+              {/* Activity rows */}
               <div className="overflow-hidden rounded-2xl border border-border" style={{ background: "#fff" }}>
-                {activities.map((act, ai) => (
-                  <div
-                    key={`${act.entityId}-${ai}`}
-                    className="flex items-center gap-3 px-4 py-3"
-                    style={{
-                      borderTop: ai > 0 ? "1px solid #ece7dd" : undefined,
-                    }}
-                  >
-                    {/* Time */}
-                    <span
-                      className="w-10 shrink-0 text-right font-mono text-[11px] font-semibold text-ink-faint"
+                {activities.map((act, ai) => {
+                  const recapItem = itemsByEntityId.get(act.entityId);
+                  const Wrapper = recapItem ? "button" : "div";
+                  return (
+                    <Wrapper
+                      key={`${act.entityId}-${ai}`}
+                      {...(recapItem ? { onClick: () => onSelect(recapItem) } : {})}
+                      className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-[#faf7f2]"
+                      style={{ borderTop: ai > 0 ? "1px solid #ece7dd" : undefined }}
                     >
-                      {fmtTime(act.start)}
-                    </span>
-
-                    {/* Connector line */}
-                    <div className="flex shrink-0 flex-col items-center self-stretch">
-                      <div className="w-px flex-1" style={{ background: ai === 0 ? "transparent" : "#ece7dd" }} />
-                      <span
-                        className="my-0.5 h-2 w-2 shrink-0 rounded-full"
-                        style={{ background: catColor(act.type) }}
-                      />
-                      <div className="w-px flex-1" style={{ background: ai === activities.length - 1 ? "transparent" : "#ece7dd" }} />
-                    </div>
-
-                    {/* Name + category */}
-                    <div className="min-w-0 flex-1">
-                      <p className="font-display text-[15px] font-semibold leading-tight text-ink">
-                        {act.name}
-                      </p>
-                      <p
-                        className="mt-0.5 font-mono text-[10px] tracking-[0.1em]"
-                        style={{ textTransform: "uppercase", color: catColor(act.type) }}
-                      >
-                        {labelOf(act.type)}
-                      </p>
-                    </div>
-
-                    {/* End time */}
-                    {act.end > act.start && (
-                      <span className="shrink-0 font-mono text-[10px] text-ink-ghost">
-                        → {fmtTime(act.end)}
+                      {/* Time */}
+                      <span className="w-10 shrink-0 text-right font-mono text-[11px] font-semibold text-ink-faint">
+                        {fmtTime(act.start)}
                       </span>
-                    )}
-                  </div>
-                ))}
+
+                      {/* Connector dot */}
+                      <div className="flex shrink-0 flex-col items-center self-stretch">
+                        <div className="w-px flex-1" style={{ background: ai === 0 ? "transparent" : "#ece7dd" }} />
+                        <span className="my-0.5 h-2 w-2 shrink-0 rounded-full" style={{ background: catColor(act.type) }} />
+                        <div className="w-px flex-1" style={{ background: ai === activities.length - 1 ? "transparent" : "#ece7dd" }} />
+                      </div>
+
+                      {/* Name + category */}
+                      <div className="min-w-0 flex-1">
+                        <p className="font-display text-[15px] font-semibold leading-tight text-ink">{act.name}</p>
+                        <p className="mt-0.5 font-mono text-[10px] tracking-[0.1em]" style={{ textTransform: "uppercase", color: catColor(act.type) }}>
+                          {labelOf(act.type)}
+                        </p>
+                      </div>
+
+                      {/* End time + chevron */}
+                      <div className="flex shrink-0 items-center gap-1.5">
+                        {act.end > act.start && (
+                          <span className="font-mono text-[10px] text-ink-ghost">→ {fmtTime(act.end)}</span>
+                        )}
+                        {recapItem && (
+                          <span className="text-[13px] text-ink-ghost">›</span>
+                        )}
+                      </div>
+                    </Wrapper>
+                  );
+                })}
               </div>
             </div>
           );
@@ -898,6 +953,11 @@ export function RecapView({ recap }: { recap: Recap }) {
 
   const mustVisit = useMemo(() => items.filter((i) => i.mustVisit), [items]);
 
+  const itemsByEntityId = useMemo(
+    () => new Map(items.map((i) => [i.entityId, i])),
+    [items]
+  );
+
   // Group items by category, preserving canonical ENTITY_TABS order
   const categoryGroups = useMemo(() => {
     const byType = new Map<string, RecapItem[]>();
@@ -965,7 +1025,11 @@ export function RecapView({ recap }: { recap: Recap }) {
       <div className="mx-auto max-w-xl">
         {/* Itinerary */}
         {recap.itinerary && recap.itinerary.length > 0 && (
-          <ItinerarySection days={recap.itinerary} />
+          <ItinerarySection
+            days={recap.itinerary}
+            itemsByEntityId={itemsByEntityId}
+            onSelect={setActive}
+          />
         )}
 
         {/* Must visit reel */}
