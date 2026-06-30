@@ -1164,7 +1164,7 @@ export function RecapView({ recap }: { recap: Recap }) {
               <h2 className="font-display text-[22px] font-semibold text-ink">Map</h2>
               <span className="font-accent text-[13px] italic text-ink-faint">{items.length} places</span>
             </div>
-            <RecapMap items={items} onSelect={setActive} />
+            <RecapMap items={items} itinerary={recap.itinerary} onSelect={setActive} />
           </section>
         )}
 
