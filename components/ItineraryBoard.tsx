@@ -11,6 +11,7 @@ import { useAuth } from "./AuthProvider";
 import { getTrip, tripDays } from "@/lib/trips";
 import { subscribeEntities, saveEntity, seedEntitiesIfNew, subscribeTripDoc, saveTripStays, type DBEntity, type TripStay } from "@/lib/db";
 import { suggestGeneralArea } from "@/lib/areas";
+import { geocodeAddress } from "@/lib/geo";
 import { slugId } from "@/lib/slug";
 import {
   subscribeSlots, subscribePlanInstances, saveSlot, savePlanInstance, deleteSlot, deletePlanInstance,
@@ -60,7 +61,7 @@ export function ItineraryBoard({ tripId }: { tripId: string }) {
         id: e.id, name: e.name, type: e.type,
         area: e.area || e.generalArea, parent: e.parentId ? nameOf.get(e.parentId) : undefined,
         address: e.address, website: e.website, instagram: e.instagram, hours: e.hours,
-        notes: e.notes, photos: e.photos,
+        notes: e.notes, photos: e.photos, mapsUrl: e.mapsUrl, lat: e.lat, lng: e.lng,
       });
     }
     return m;
@@ -173,7 +174,7 @@ export function ItineraryBoard({ tripId }: { tripId: string }) {
     onDeleteStay: (from: string) => {
       saveTripStays(tripId, (stays ?? []).filter((s) => s.from !== from));
     },
-    onSaveEntity: (entityId, patch) => {
+    onSaveEntity: async (entityId, patch) => {
       const existing = dbEntities.find((e) => e.id === entityId);
       // If a brand-new venue was typed inline, create the venue entity first then link it.
       let resolvedParentId = patch.parentId ?? existing?.parentId;
@@ -185,12 +186,24 @@ export function ItineraryBoard({ tripId }: { tripId: string }) {
       }
       // A club entry with a parent is a party/night, not a standalone venue.
       const resolvedType = patch.type === "club" && resolvedParentId ? "party" : patch.type;
+      // Geocode to precise coords when the address is new or changed, so itinerary
+      // edits keep map pins exact — same behaviour as the Database form.
+      let lat = existing?.lat;
+      let lng = existing?.lng;
+      const addr = patch.address?.trim();
+      const addressChanged = (existing?.address ?? "") !== (patch.address ?? "");
+      if (addr && (lat === undefined || lng === undefined || addressChanged)) {
+        const pt = await geocodeAddress(addr);
+        if (pt) { lat = pt.lat; lng = pt.lng; }
+      }
       saveEntity({
         ...(existing ?? {}),
         id: entityId, name: patch.name, type: resolvedType,
         area: patch.area, address: patch.address, website: patch.website,
         instagram: patch.instagram, hours: patch.hours,
         notes: patch.notes ?? existing?.notes,
+        mapsUrl: patch.mapsUrl,
+        lat, lng,
         parentId: resolvedParentId,
         generalArea: existing?.generalArea ?? suggestGeneralArea(patch.area, patch.address, patch.name),
       });

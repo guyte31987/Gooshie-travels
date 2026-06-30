@@ -12,6 +12,8 @@ import {
   type Member,
   type Role,
 } from "@/lib/members";
+import { getEntities, saveEntity } from "@/lib/db";
+import { geocodeAddress } from "@/lib/geo";
 
 const ROLES: Role[] = ["viewer", "editor", "admin"];
 
@@ -49,6 +51,45 @@ export function AdminPanel() {
     setMsg(`Invited ${email} as ${inviteRole}.`);
   };
 
+  // --- Backfill coordinates --------------------------------------------------
+  // Geocode every entity that has an address but no lat/lng, so existing places
+  // get precise map pins. Nominatim asks for ~1 req/sec, so we space the calls.
+  const [backfilling, setBackfilling] = useState(false);
+  const [backfillMsg, setBackfillMsg] = useState<string | null>(null);
+
+  const runBackfill = async () => {
+    setBackfilling(true);
+    setBackfillMsg("Loading places…");
+    try {
+      const all = await getEntities();
+      const todo = all.filter(
+        (e) => (e.address ?? "").trim() && (e.lat === undefined || e.lng === undefined)
+      );
+      if (todo.length === 0) {
+        setBackfillMsg("All places with an address already have coordinates. Nothing to do.");
+        return;
+      }
+      let done = 0;
+      let updated = 0;
+      for (const e of todo) {
+        setBackfillMsg(`Geocoding ${done + 1} of ${todo.length}… (${updated} located)`);
+        const pt = await geocodeAddress(e.address!.trim());
+        if (pt) {
+          await saveEntity({ ...e, lat: pt.lat, lng: pt.lng });
+          updated++;
+        }
+        done++;
+        // Be polite to Nominatim's ~1 req/sec usage policy.
+        if (done < todo.length) await new Promise((r) => setTimeout(r, 1100));
+      }
+      setBackfillMsg(`Done. Located ${updated} of ${todo.length} place${todo.length === 1 ? "" : "s"}.`);
+    } catch (err) {
+      setBackfillMsg(err instanceof Error ? err.message : "Backfill failed.");
+    } finally {
+      setBackfilling(false);
+    }
+  };
+
   return (
     <div>
       {/* Invite by email */}
@@ -81,6 +122,28 @@ export function AdminPanel() {
           They&apos;ll skip the pending queue and get in as soon as they sign in with this email.
         </p>
         {msg && <p className="mt-2 text-sm text-emerald-600">{msg}</p>}
+      </Section>
+
+      {/* Maintenance */}
+      <Section title="Maintenance">
+        <div className="rounded-lg border border-slate-200 bg-white p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="text-sm">
+              <div className="font-medium">Backfill map coordinates</div>
+              <div className="text-slate-500">
+                Geocode every place that has an address but no pin location yet.
+              </div>
+            </div>
+            <button
+              onClick={runBackfill}
+              disabled={backfilling}
+              className="rounded-lg bg-rust px-4 py-2 text-sm font-medium text-white hover:bg-rust/90 disabled:opacity-50"
+            >
+              {backfilling ? "Running…" : "Run backfill"}
+            </button>
+          </div>
+          {backfillMsg && <p className="mt-2 text-sm text-slate-600">{backfillMsg}</p>}
+        </div>
       </Section>
 
       {/* Pending requests */}

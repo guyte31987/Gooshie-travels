@@ -10,6 +10,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ENTITY_TABS, type EntityType } from "@/lib/entities";
 import { buildTripIcs, downloadIcs, type IcsStay } from "@/lib/ics-export";
 import { requestEnrichment } from "@/lib/enrich";
+import { googleMapsUrl } from "@/lib/geo";
 import { activityStatusOf, bookingStatusOf, setInstanceRating, type ActivityStatus, type BookingStatus, type Capacity } from "@/lib/itinerary";
 import { ACTIVITY_PILL, BOOKING_PILL } from "@/lib/statusStyles";
 import { useAuth } from "./AuthProvider";
@@ -39,6 +40,9 @@ export type CalEntity = {
   id: string; name: string; type: EntityType;
   area?: string; parent?: string; address?: string; website?: string; instagram?: string; phone?: string; hours?: string;
   notes?: string;
+  /** Exact Google Maps business URL stored on the entity. */
+  mapsUrl?: string;
+  lat?: number; lng?: number;
   /** The entity's favourited photos (shown in the Database). */
   photos?: string[];
 };
@@ -49,6 +53,7 @@ export type CalInstance = { slotId: string; entityId: string; capacity: Capacity
 export type EntityPatch = {
   name: string; type: EntityType;
   area?: string; address?: string; website?: string; instagram?: string; hours?: string; notes?: string;
+  mapsUrl?: string;
   parentId?: string;
 };
 
@@ -897,6 +902,11 @@ function DetailSheet({ slot, instances, entityById, canEdit, handlers, isNew, tr
   const c = TYPE_COLORS[type] ?? TYPE_COLORS.uncategorised;
   const title = ent?.name ?? label;
   const mapQuery = ent?.address || `${ent?.name ?? label}${ent?.area ? " " + ent.area : ""}`;
+  // Prefer the entity's exact stored Maps link; fall back to a name/address search.
+  const mapsHref = googleMapsUrl({
+    name: ent?.name ?? label, address: ent?.address, area: ent?.area,
+    lat: ent?.lat, lng: ent?.lng, mapsUrl: ent?.mapsUrl,
+  }) ?? mapsSearch(mapQuery);
 
   const save = () => {
     if (main && canEdit) {
@@ -973,7 +983,7 @@ function DetailSheet({ slot, instances, entityById, canEdit, handlers, isNew, tr
         {/* Info rows — structured label/value table */}
         {!adhoc && (ent?.address || ent?.hours || ent?.website || ent?.instagram || ent?.phone) && (
           <div className="mt-4 space-y-2 rounded-xl bg-fill-soft px-4 py-3 text-sm">
-            <a href={mapsSearch(mapQuery)} target="_blank" rel="noreferrer" className="flex items-start gap-3 hover:opacity-80">
+            <a href={mapsHref} target="_blank" rel="noreferrer" className="flex items-start gap-3 hover:opacity-80">
               <span className="w-14 shrink-0 font-mono text-[10px] font-semibold uppercase tracking-widest text-faint pt-0.5">Address</span>
               <span className="text-ink underline decoration-slate-300">{ent?.address || `Find "${ent?.name}" on Maps`}</span>
             </a>
@@ -1394,7 +1404,7 @@ function PlaceEditor({ entityId, ent, fallbackName, clubs, onSave, onCancel }: {
   const [notes, setNotes] = useState(""); // populated by auto-fill only; not shown as a field
   const [parentId, setParentId] = useState<string>("");
   const [newVenueName, setNewVenueName] = useState("");
-  const [mapsUrl, setMapsUrl] = useState("");
+  const [mapsUrl, setMapsUrl] = useState(ent?.mapsUrl ?? "");
   const [enriching, setEnriching] = useState(false);
   const [enrichError, setEnrichError] = useState<string | null>(null);
   const [enriched, setEnriched] = useState(false);
@@ -1435,7 +1445,7 @@ function PlaceEditor({ entityId, ent, fallbackName, clubs, onSave, onCancel }: {
     if (parentId === "__new__" && !newVenueName.trim()) return;
     onSave({ name: name.trim(), type, area: area.trim() || undefined, address: address.trim() || undefined,
       website: website.trim() || undefined, instagram: instagram.trim() || undefined, hours: hours.trim() || undefined,
-      notes: notes.trim() || undefined,
+      notes: notes.trim() || undefined, mapsUrl: mapsUrl.trim() || undefined,
       parentId: (type === "club" && resolvedParentId) ? resolvedParentId : undefined });
   };
 
@@ -1448,7 +1458,7 @@ function PlaceEditor({ entityId, ent, fallbackName, clubs, onSave, onCancel }: {
         </select>
       </div>
       <input value={mapsUrl} onChange={(e) => setMapsUrl(e.target.value)}
-        placeholder="Google Maps link (optional — helps AI find the exact place)"
+        placeholder="Google Maps link (saved — also helps AI find the exact place)"
         className={inp + " text-xs text-slate-500"} />
       <div className="flex items-center gap-2">
         <button type="button" onClick={autoFill} disabled={enriching || !name.trim()}

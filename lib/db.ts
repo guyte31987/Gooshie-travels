@@ -13,6 +13,7 @@ import {
   deleteDoc,
   doc,
   getDoc,
+  getDocs,
   onSnapshot,
   query,
   serverTimestamp,
@@ -102,6 +103,12 @@ function subColl<T>(path: string, cb: (rows: T[]) => void): () => void {
 
 export const subscribeEntities = (cb: (e: DBEntity[]) => void) =>
   subColl<DBEntity>("entities", (rows) => cb(rows.filter((e) => e.name)));
+
+/** One-shot fetch of every entity in the Database (for admin maintenance jobs). */
+export async function getEntities(): Promise<DBEntity[]> {
+  const snap = await getDocs(collection(requireDb(), "entities"));
+  return snap.docs.map((d) => d.data() as DBEntity).filter((e) => e.name);
+}
 
 export async function saveEntity(e: DBEntity): Promise<void> {
   await setDoc(doc(requireDb(), "entities", e.id), { ...e, updatedAt: serverTimestamp() }, { merge: true });
