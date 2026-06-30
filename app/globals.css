@@ -6,7 +6,15 @@ html {
   -webkit-text-size-adjust: 100%;
 }
 
+:root {
+  /* Map design-spec variable names onto the Next.js font variables */
+  --font-ui: var(--font-sans);
+  --font-editorial: var(--font-accent);
+}
+
 body {
-  @apply bg-ivory text-ink antialiased;
-  font-family: var(--font-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background-color: #F7F2E9;
+  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+  color: #211C18;
+  -webkit-font-smoothing: antialiased;
 }

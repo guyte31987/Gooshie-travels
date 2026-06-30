@@ -6,266 +6,553 @@ import { ENTITY_TABS } from "@/lib/entities";
 import { externalUrl, instagramUrl, instagramHandle } from "@/lib/geo";
 import type { Recap, RecapItem } from "@/lib/recap";
 
-// Leaflet touches `window`, so load the map only on the client.
 const RecapMap = dynamic(() => import("./RecapMap"), {
   ssr: false,
-  loading: () => <div className="h-[55vh] animate-pulse rounded-2xl bg-stone-100" />,
+  loading: () => <div className="h-[55vh] animate-pulse rounded-2xl bg-ivory-muted" />,
 });
 
+// ── Category colours (muted, one per type) ──────────────────────────────────
+const CAT_COLOR: Record<string, string> = {
+  food: "#C0683A",
+  museum: "#7E5A86",
+  party: "#A8456A",
+  club: "#A8456A",
+  bar: "#C0683A",
+  hike: "#5E7445",
+  spa: "#3F7E80",
+  vintage: "#B08A2E",
+  sight: "#5A7891",
+  attraction: "#5A7891",
+  accommodation: "#4338ca",
+  show: "#7E5A86",
+  event: "#8A8175",
+};
+
+// Category types that get the 1+2 asymmetric grid layout
+const GRID_TYPES = new Set(["food", "bar", "party", "club"]);
+
+const catColor = (type: string) => CAT_COLOR[type] ?? "#8A8175";
 const labelOf = (t: string) => ENTITY_TABS.find((x) => x.type === t)?.label ?? t;
-const emojiOf = (t: string) => ENTITY_TABS.find((x) => x.type === t)?.emoji ?? "";
-/** The publicly-loadable photos for an item (public copies, falling back to picked). */
-const pics = (i: RecapItem): string[] => (i.publicPhotos?.length ? i.publicPhotos : i.photos) ?? [];
 
-type SortKey = "rating" | "name" | "category";
+const pics = (i: RecapItem): string[] =>
+  (i.publicPhotos?.length ? i.publicPhotos : i.photos) ?? [];
 
-export function RecapView({ recap }: { recap: Recap }) {
-  const [active, setActive] = useState<RecapItem | null>(null);
-  const [filter, setFilter] = useState<string>("all");
-  const [sort, setSort] = useState<SortKey>("rating");
+const gradientFor = (type: string) => {
+  const c = catColor(type);
+  return `linear-gradient(150deg, ${c} 0%, ${c}99 60%, ${c}44 100%)`;
+};
 
-  const items = recap.items ?? [];
-  const cover = recap.coverPublicUrl || recap.coverPhotoUrl;
+// ── Helpers ──────────────────────────────────────────────────────────────────
 
-  // Featured = items with a photo or a blurb, "Must visit" first then admin order.
-  const featured = useMemo(
-    () =>
-      items
-        .filter((i) => pics(i).length > 0 || i.blurb)
-        .sort((a, b) => Number(!!b.mustVisit) - Number(!!a.mustVisit)),
-    [items]
-  );
-
-  // Categories present, in the canonical tab order.
-  const categories = useMemo(() => {
-    const present = new Set(items.map((i) => i.type));
-    return ENTITY_TABS.filter((t) => present.has(t.type)).map((t) => t.type);
-  }, [items]);
-
-  const list = useMemo(() => {
-    let rows = filter === "all" ? items : items.filter((i) => i.type === filter);
-    rows = [...rows];
-    if (sort === "rating")
-      rows.sort(
-        (a, b) => Number(!!b.mustVisit) - Number(!!a.mustVisit) || (b.rating ?? -1) - (a.rating ?? -1)
-      );
-    else if (sort === "name") rows.sort((a, b) => a.name.localeCompare(b.name));
-    else rows.sort((a, b) => labelOf(a.type).localeCompare(labelOf(b.type)) || a.name.localeCompare(b.name));
-    return rows;
-  }, [items, filter, sort]);
-
+function CategoryDot({ type, size = 8 }: { type: string; size?: number }) {
   return (
-    <div className="min-h-screen bg-stone-50 text-stone-900">
-      {/* Hero */}
-      <header className="relative">
-        {cover ? (
-          <div className="relative h-64 w-full overflow-hidden sm:h-80">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={cover} alt="" className="h-full w-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-            <div className="absolute bottom-0 left-0 right-0 mx-auto max-w-3xl px-5 pb-5 text-white">
-              <h1 className="text-2xl font-bold sm:text-3xl">{recap.title}</h1>
-              {recap.subtitle && <p className="mt-1 text-sm text-white/90">{recap.subtitle}</p>}
-              {recap.dateLabel && <p className="mt-0.5 text-xs text-white/70">{recap.dateLabel}</p>}
-            </div>
-          </div>
-        ) : (
-          <div className="mx-auto max-w-3xl px-5 pt-10">
-            <h1 className="text-2xl font-bold sm:text-3xl">{recap.title}</h1>
-            {recap.subtitle && <p className="mt-1 text-sm text-stone-500">{recap.subtitle}</p>}
-            {recap.dateLabel && <p className="mt-0.5 text-xs text-stone-400">{recap.dateLabel}</p>}
-          </div>
-        )}
-      </header>
+    <span
+      className="shrink-0 rounded-[3px]"
+      style={{ width: size, height: size, background: catColor(type) }}
+    />
+  );
+}
 
-      <main className="mx-auto max-w-3xl px-5 py-8">
-        {recap.intro && <p className="mb-8 text-base leading-relaxed text-stone-600">{recap.intro}</p>}
+function RatingChip({ rating }: { rating: number }) {
+  return (
+    <span
+      className="shrink-0 rounded-full px-2.5 py-0.5 font-display text-[13px] font-semibold text-rust"
+      style={{ background: "#f6e9df" }}
+    >
+      ★ {rating.toFixed(1)}
+    </span>
+  );
+}
 
-        {/* Featured cards */}
-        {featured.length > 0 && (
-          <section className="mb-12">
-            <h2 className="mb-4 text-lg font-semibold">Highlights</h2>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {featured.map((item) => (
-                <button
-                  key={item.entityId}
-                  onClick={() => setActive(item)}
-                  className={`group relative overflow-hidden rounded-2xl border bg-white text-left shadow-sm transition hover:shadow-md ${
-                    item.mustVisit ? "border-amber-300 ring-1 ring-amber-300" : "border-stone-200"
-                  }`}
-                >
-                  {item.mustVisit && (
-                    <span className="absolute left-2 top-2 z-10 rounded-full bg-amber-400 px-2 py-0.5 text-[11px] font-bold text-white shadow">
-                      ★ Must visit
-                    </span>
-                  )}
-                  {pics(item)[0] && (
-                    <div className="aspect-[4/3] w-full overflow-hidden">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={pics(item)[0]}
-                        alt=""
-                        className="h-full w-full object-cover transition group-hover:scale-105"
-                      />
-                    </div>
-                  )}
-                  <div className="p-4">
-                    <div className="flex items-center gap-2">
-                      <span>{emojiOf(item.type)}</span>
-                      <h3 className="flex-1 font-semibold">{item.name}</h3>
-                      {item.rating != null && <Stars rating={item.rating} />}
-                    </div>
-                    <p className="mt-0.5 text-xs text-stone-400">
-                      {labelOf(item.type)}
-                      {item.generalArea ? ` · ${item.generalArea}` : ""}
-                    </p>
-                    {item.blurb && <p className="mt-2 line-clamp-3 text-sm text-stone-600">{item.blurb}</p>}
-                  </div>
-                </button>
-              ))}
-            </div>
-          </section>
-        )}
+// ── Photo/gradient card background ──────────────────────────────────────────
 
-        {/* Map */}
-        <section className="mb-12 isolate">
-          <h2 className="mb-4 text-lg font-semibold">Map</h2>
-          <RecapMap items={items} onSelect={setActive} />
-        </section>
-
-        {/* Full recommendations list */}
-        <section>
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-lg font-semibold">All recommendations</h2>
-            <label className="flex items-center gap-1.5 text-xs text-stone-500">
-              Sort
-              <select
-                value={sort}
-                onChange={(e) => setSort(e.target.value as SortKey)}
-                className="rounded-lg border border-stone-300 bg-white px-2 py-1 text-xs outline-none"
-              >
-                <option value="rating">Rating</option>
-                <option value="name">Name</option>
-                <option value="category">Category</option>
-              </select>
-            </label>
-          </div>
-
-          {/* Category filter chips */}
-          <div className="mb-3 flex flex-wrap gap-1.5">
-            <Chip active={filter === "all"} onClick={() => setFilter("all")}>
-              All ({items.length})
-            </Chip>
-            {categories.map((c) => (
-              <Chip key={c} active={filter === c} onClick={() => setFilter(c)}>
-                {emojiOf(c)} {labelOf(c)}
-              </Chip>
-            ))}
-          </div>
-
-          <ul className="divide-y divide-stone-100 overflow-hidden rounded-2xl border border-stone-200 bg-white">
-            {list.map((item) => (
-              <li key={item.entityId}>
-                <button
-                  onClick={() => setActive(item)}
-                  className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-stone-50"
-                >
-                  {pics(item)[0] ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={pics(item)[0]} alt="" className="h-12 w-12 shrink-0 rounded-lg object-cover" />
-                  ) : (
-                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-stone-100 text-lg">
-                      {emojiOf(item.type)}
-                    </span>
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <p className="flex items-center gap-1.5 truncate text-sm font-medium">
-                      {item.mustVisit && <span className="text-amber-400">★</span>}
-                      {item.name}
-                    </p>
-                    <p className="truncate text-xs text-stone-400">
-                      {labelOf(item.type)}
-                      {item.generalArea ? ` · ${item.generalArea}` : ""}
-                    </p>
-                  </div>
-                  {item.rating != null && <Stars rating={item.rating} />}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        <footer className="mt-12 text-center text-xs text-stone-400">Gooshie Travels</footer>
-      </main>
-
-      {active && <DetailModal item={active} onClose={() => setActive(null)} />}
+function CardPhoto({
+  item,
+  height = 140,
+  className = "",
+}: {
+  item: RecapItem;
+  height?: number;
+  className?: string;
+}) {
+  const photo = pics(item)[0];
+  return (
+    <div
+      className={`relative w-full overflow-hidden ${className}`}
+      style={{
+        height,
+        background: photo ? undefined : gradientFor(item.type),
+      }}
+    >
+      {photo && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={photo} alt="" className="h-full w-full object-cover" />
+      )}
+      <div
+        className="absolute inset-0"
+        style={{ background: "linear-gradient(to bottom, transparent 40%, rgba(33,28,24,.55) 100%)" }}
+      />
+      {item.generalArea && (
+        <span className="absolute bottom-2.5 left-3.5 font-accent text-[13px] italic text-white">
+          {item.generalArea}
+        </span>
+      )}
     </div>
   );
 }
 
-function DetailModal({ item, onClose }: { item: RecapItem; onClose: () => void }) {
-  const igHref = instagramUrl(item.instagram);
-  const webHref = item.website ? externalUrl(item.website) ?? item.website : null;
+// ── Hero band ────────────────────────────────────────────────────────────────
+
+function HeroBand({
+  recap,
+  mustVisitCount,
+  totalCount,
+}: {
+  recap: Recap;
+  mustVisitCount: number;
+  totalCount: number;
+}) {
+  const cover = recap.coverPublicUrl || recap.coverPhotoUrl;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4" onClick={onClose}>
-      <div
-        className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-white sm:rounded-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {pics(item)[0] && (
-          <div className="aspect-[4/3] w-full overflow-hidden sm:rounded-t-2xl">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={pics(item)[0]} alt="" className="h-full w-full object-cover" />
-          </div>
+    <div className="relative min-h-[300px] overflow-hidden sm:min-h-[340px]">
+      {/* Background: cover photo or rust gradient */}
+      {cover ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={cover} alt="" className="absolute inset-0 h-full w-full object-cover" />
+      ) : (
+        <div
+          className="absolute inset-0"
+          style={{ background: "linear-gradient(150deg,#c2592f 0%,#d98a4a 55%,#e6c79b 100%)" }}
+        />
+      )}
+      {/* Gradient overlay */}
+      <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 25%, rgba(33,28,24,.78) 100%)" }} />
+
+      {/* Content */}
+      <div className="relative flex h-full min-h-[300px] flex-col justify-end px-6 pb-6 sm:min-h-[340px]">
+        <p className="mb-2 font-mono text-[10px] tracking-[0.12em] text-white/70" style={{ textTransform: "uppercase" }}>
+          GOOSHIE TRAVELS
+          {recap.dateLabel ? ` · ${recap.dateLabel}` : ""}
+        </p>
+        <h1
+          className="font-display text-[34px] font-semibold leading-none tracking-[-0.01em] text-white sm:text-[38px]"
+          style={{ textShadow: "0 2px 16px rgba(0,0,0,.3)" }}
+        >
+          {recap.title}
+        </h1>
+        {recap.subtitle && (
+          <p className="mt-2 font-accent text-[15px] italic text-white/88">
+            {recap.subtitle}
+          </p>
         )}
-        <div className="p-5">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-lg">{emojiOf(item.type)}</span>
-                <h2 className="text-lg font-semibold">{item.name}</h2>
-                {item.mustVisit && (
-                  <span className="rounded-full bg-amber-400 px-2 py-0.5 text-[11px] font-bold text-white">
-                    ★ Must visit
-                  </span>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {recap.dateLabel && (
+            <span
+              className="rounded-full border px-3 py-1 font-sans text-[11px] font-semibold text-white/90"
+              style={{ background: "rgba(255,255,255,.15)", borderColor: "rgba(255,255,255,.25)" }}
+            >
+              {recap.dateLabel}
+            </span>
+          )}
+          <span
+            className="rounded-full border px-3 py-1 font-sans text-[11px] font-semibold text-white/90"
+            style={{ background: "rgba(255,255,255,.15)", borderColor: "rgba(255,255,255,.25)" }}
+          >
+            {totalCount} picks
+          </span>
+          {mustVisitCount > 0 && (
+            <span
+              className="rounded-full border px-3 py-1 font-sans text-[11px] font-semibold text-white/90"
+              style={{ background: "rgba(255,255,255,.15)", borderColor: "rgba(255,255,255,.25)" }}
+            >
+              ★ {mustVisitCount} must visit
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Stats row ────────────────────────────────────────────────────────────────
+
+function StatsRow({
+  items,
+  mustVisitCount,
+}: {
+  items: RecapItem[];
+  mustVisitCount: number;
+}) {
+  const rated = items.filter((i) => typeof i.rating === "number");
+  const avg = rated.length > 0 ? rated.reduce((s, i) => s + i.rating!, 0) / rated.length : null;
+
+  const stats = [
+    { label: "Places", value: String(items.length) },
+    { label: "Must visit", value: String(mustVisitCount) },
+    ...(avg != null ? [{ label: "Avg rating", value: avg.toFixed(1) }] : []),
+  ];
+
+  return (
+    <div className="flex border-b border-t border-border-divider">
+      {stats.map((s, i) => (
+        <div
+          key={s.label}
+          className="flex flex-1 flex-col items-center py-3 text-center"
+          style={{ borderRight: i < stats.length - 1 ? "1px solid #ece7dd" : undefined }}
+        >
+          <span className="font-display text-[22px] font-semibold text-ink">{s.value}</span>
+          <span
+            className="mt-0.5 font-mono text-[9px] tracking-[0.12em] text-ink-faint"
+            style={{ textTransform: "uppercase" }}
+          >
+            {s.label}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Must-visit reel ──────────────────────────────────────────────────────────
+
+function MustVisitReel({
+  items,
+  onSelect,
+}: {
+  items: RecapItem[];
+  onSelect: (i: RecapItem) => void;
+}) {
+  return (
+    <section className="pb-8 pt-6">
+      <div className="flex items-baseline gap-2.5 px-5 sm:px-6">
+        <h2 className="font-display text-[22px] font-semibold text-ink">Must visit</h2>
+        <span className="font-accent text-[13px] italic text-ink-faint">non-negotiable</span>
+      </div>
+      <div className="mt-4 flex gap-3.5 overflow-x-auto px-5 pb-2 sm:px-6" style={{ scrollbarWidth: "none" }}>
+        {items.map((item) => (
+          <button
+            key={item.entityId}
+            onClick={() => onSelect(item)}
+            className="w-[220px] shrink-0 overflow-hidden rounded-2xl border border-border text-left shadow-sm transition hover:shadow-md"
+            style={{ background: "#fff" }}
+          >
+            {/* Photo / gradient */}
+            <div className="relative h-[148px] w-full overflow-hidden" style={{ background: gradientFor(item.type) }}>
+              {pics(item)[0] && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={pics(item)[0]} alt="" className="h-full w-full object-cover" />
+              )}
+              <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 40%, rgba(33,28,24,.55) 100%)" }} />
+              <span
+                className="absolute left-2.5 top-2.5 rounded-full px-2.5 py-1 font-sans text-[10px] font-semibold text-white"
+                style={{ background: "rgba(33,28,24,.5)" }}
+              >
+                ★ Must visit
+              </span>
+              {item.generalArea && (
+                <span className="absolute bottom-2.5 left-3 font-accent text-[12px] italic text-white">
+                  {item.generalArea}
+                </span>
+              )}
+            </div>
+            <div className="p-3.5">
+              <div className="flex items-center gap-1.5">
+                <CategoryDot type={item.type} />
+                <span
+                  className="font-mono text-[10px] tracking-[0.12em]"
+                  style={{ textTransform: "uppercase", color: catColor(item.type) }}
+                >
+                  {labelOf(item.type)}
+                </span>
+              </div>
+              <h3 className="mt-1 font-display text-[17px] font-semibold leading-tight text-ink">
+                {item.name}
+              </h3>
+              {item.generalArea && (
+                <p className="mt-0.5 font-mono text-[10px] tracking-[0.08em] text-ink-ghost" style={{ textTransform: "uppercase" }}>
+                  {item.generalArea}
+                </p>
+              )}
+              {item.blurb && (
+                <p className="mt-2 font-accent text-[12px] italic leading-snug text-ink-secondary line-clamp-2">
+                  {item.blurb}
+                </p>
+              )}
+              {item.rating != null && (
+                <div className="mt-2.5">
+                  <RatingChip rating={item.rating} />
+                </div>
+              )}
+            </div>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+// ── Category section ─────────────────────────────────────────────────────────
+
+function CategorySection({
+  type,
+  items,
+  onSelect,
+}: {
+  type: string;
+  items: RecapItem[];
+  onSelect: (i: RecapItem) => void;
+}) {
+  const color = catColor(type);
+  const useGrid = GRID_TYPES.has(type);
+  const preview = items.slice(0, useGrid ? 3 : 4);
+  const rest = items.length - preview.length;
+
+  return (
+    <section className="px-5 py-5 sm:px-6">
+      {/* Section header */}
+      <div className="mb-3.5 flex items-center gap-2.5">
+        <span className="shrink-0 rounded-[3px]" style={{ width: 5, height: 26, background: color }} />
+        <h2 className="font-display text-[22px] font-semibold text-ink">{labelOf(type)}</h2>
+        <span className="font-accent text-[13px] italic text-ink-faint">{items.length} picks</span>
+      </div>
+
+      {useGrid ? (
+        // 1+2 asymmetric grid
+        <div className="flex flex-col gap-2.5">
+          {/* Big card */}
+          {preview[0] && (
+            <button
+              onClick={() => onSelect(preview[0])}
+              className="overflow-hidden rounded-xl border border-border text-left"
+              style={{ background: "#fff" }}
+            >
+              <CardPhoto item={preview[0]} height={130} />
+              <div className="flex items-start justify-between p-3">
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-display text-[16px] font-semibold leading-tight text-ink">
+                    {preview[0].name}
+                  </h3>
+                  {preview[0].blurb && (
+                    <p className="mt-1 font-sans text-[11px] leading-snug text-ink-faint line-clamp-2">
+                      {preview[0].blurb}
+                    </p>
+                  )}
+                </div>
+                {preview[0].rating != null && (
+                  <div className="ml-2 shrink-0">
+                    <RatingChip rating={preview[0].rating} />
+                  </div>
                 )}
               </div>
-              <p className="mt-0.5 text-xs text-stone-400">
+            </button>
+          )}
+          {/* Two small cards */}
+          {preview.length > 1 && (
+            <div className="grid grid-cols-2 gap-2.5">
+              {preview.slice(1, 3).map((item) => (
+                <button
+                  key={item.entityId}
+                  onClick={() => onSelect(item)}
+                  className="overflow-hidden rounded-xl border border-border text-left"
+                  style={{ background: "#fff" }}
+                >
+                  <CardPhoto item={item} height={76} />
+                  <div className="p-2.5">
+                    <h3 className="font-display text-[13px] font-semibold leading-tight text-ink line-clamp-1">
+                      {item.name}
+                    </h3>
+                    <p className="mt-0.5 font-sans text-[10px] text-ink-faint">
+                      {item.generalArea || labelOf(item.type)}
+                    </p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        // Horizontal scroll
+        <div className="flex gap-2.5 overflow-x-auto pb-2" style={{ scrollbarWidth: "none" }}>
+          {preview.map((item) => (
+            <button
+              key={item.entityId}
+              onClick={() => onSelect(item)}
+              className="w-[130px] shrink-0 overflow-hidden rounded-xl border border-border text-left"
+              style={{ background: "#fff" }}
+            >
+              <CardPhoto item={item} height={80} />
+              <div className="p-2.5">
+                <h3 className="font-display text-[13px] font-semibold leading-tight text-ink line-clamp-1">
+                  {item.name}
+                </h3>
+                <p className="mt-0.5 font-sans text-[10px] text-ink-faint">
+                  {item.generalArea || labelOf(item.type)}
+                </p>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* See all button */}
+      {rest > 0 && (
+        <p className="mt-3 text-center font-sans text-xs font-semibold text-rust">
+          +{rest} more {labelOf(type).toLowerCase()} picks
+        </p>
+      )}
+    </section>
+  );
+}
+
+// ── Detail bottom sheet ───────────────────────────────────────────────────────
+
+function DetailSheet({ item, onClose }: { item: RecapItem; onClose: () => void }) {
+  const igHref = instagramUrl(item.instagram);
+  const webHref = item.website ? externalUrl(item.website) ?? item.website : null;
+  const photo = pics(item)[0];
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center"
+      style={{ background: "rgba(33,28,24,.5)" }}
+      onClick={onClose}
+    >
+      <div
+        className="max-h-[92vh] w-full max-w-lg overflow-hidden"
+        style={{
+          background: "#FBF8F1",
+          borderRadius: "26px 26px 0 0",
+          boxShadow: "0 -16px 40px -12px rgba(0,0,0,.4)",
+          display: "flex",
+          flexDirection: "column",
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Drag handle */}
+        <div className="flex justify-center pt-2.5 pb-1 shrink-0">
+          <span className="h-1 w-9 rounded-full" style={{ background: "#dcd4c4" }} />
+        </div>
+
+        {/* Photo / gradient */}
+        <div
+          className="relative shrink-0 overflow-hidden"
+          style={{
+            height: 168,
+            background: photo ? undefined : gradientFor(item.type),
+          }}
+        >
+          {photo && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={photo} alt="" className="h-full w-full object-cover" />
+          )}
+          <div
+            className="absolute inset-0"
+            style={{ background: "linear-gradient(to bottom, transparent 50%, rgba(33,28,24,.5) 100%)" }}
+          />
+          {item.generalArea && (
+            <span className="absolute bottom-3 left-4 font-accent text-[13px] italic text-white">
+              {item.generalArea}
+            </span>
+          )}
+        </div>
+
+        {/* Scrollable body */}
+        <div className="flex-1 overflow-y-auto px-5 pb-0 pt-4" style={{ minHeight: 0 }}>
+          {/* Category + rating + close */}
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-1.5">
+              <CategoryDot type={item.type} size={9} />
+              <span
+                className="font-mono text-[10px] font-semibold tracking-[0.14em]"
+                style={{ textTransform: "uppercase", color: catColor(item.type) }}
+              >
                 {labelOf(item.type)}
                 {item.generalArea ? ` · ${item.generalArea}` : ""}
-                {item.area ? ` · ${item.area}` : ""}
-              </p>
+              </span>
             </div>
             <div className="flex shrink-0 items-center gap-2">
-              {item.rating != null && <Stars rating={item.rating} />}
-              <button onClick={onClose} className="text-stone-400 hover:text-stone-600">
+              {item.rating != null && <RatingChip rating={item.rating} />}
+              <button
+                onClick={onClose}
+                className="flex h-7 w-7 items-center justify-center rounded-full border border-border text-ink-faint hover:text-ink"
+              >
                 ✕
               </button>
             </div>
           </div>
 
-          {item.blurb && <p className="mt-3 text-sm leading-relaxed text-stone-600">{item.blurb}</p>}
+          {/* Title */}
+          <h2 className="mt-2 font-display text-[26px] font-semibold leading-none text-ink">
+            {item.name}
+            {item.mustVisit && (
+              <span
+                className="ml-2 rounded-full px-2 py-0.5 font-sans text-[11px] font-bold text-white"
+                style={{ background: "#f59e0b", verticalAlign: "middle" }}
+              >
+                ★ Must visit
+              </span>
+            )}
+          </h2>
 
-          {/* Place details */}
-          {(item.hours || item.address) && (
-            <dl className="mt-3 space-y-1 text-xs">
+          {/* Blurb */}
+          {item.blurb && (
+            <p className="mt-2.5 font-accent text-[14px] italic leading-relaxed text-ink-secondary">
+              {item.blurb}
+            </p>
+          )}
+
+          {/* Info rows: HOURS / ADDRESS / LINKS */}
+          {(item.hours || item.address || webHref || igHref) && (
+            <div className="mt-3.5">
               {item.hours && (
-                <div className="flex gap-2">
-                  <dt className="w-14 shrink-0 font-medium text-stone-400">Hours</dt>
-                  <dd className="text-stone-600">{item.hours}</dd>
+                <div className="flex gap-3 border-t border-border-divider py-1.5">
+                  <span
+                    className="w-16 shrink-0 pt-0.5 font-mono text-[9px] tracking-[0.1em] text-ink-ghost"
+                    style={{ textTransform: "uppercase" }}
+                  >
+                    Hours
+                  </span>
+                  <span className="flex-1 font-sans text-[13px] text-ink-body">{item.hours}</span>
                 </div>
               )}
               {item.address && (
-                <div className="flex gap-2">
-                  <dt className="w-14 shrink-0 font-medium text-stone-400">Address</dt>
-                  <dd className="text-stone-600">{item.address}</dd>
+                <div className="flex gap-3 border-t border-border-divider py-1.5">
+                  <span
+                    className="w-16 shrink-0 pt-0.5 font-mono text-[9px] tracking-[0.1em] text-ink-ghost"
+                    style={{ textTransform: "uppercase" }}
+                  >
+                    Address
+                  </span>
+                  <span className="flex-1 font-sans text-[13px] text-ink-body">{item.address}</span>
                 </div>
               )}
-            </dl>
+              {(webHref || igHref) && (
+                <div className="flex gap-3 border-t border-b border-border-divider py-1.5">
+                  <span
+                    className="w-16 shrink-0 pt-0.5 font-mono text-[9px] tracking-[0.1em] text-ink-ghost"
+                    style={{ textTransform: "uppercase" }}
+                  >
+                    Links
+                  </span>
+                  <div className="flex flex-wrap gap-x-3 gap-y-1">
+                    {webHref && (
+                      <a href={webHref} target="_blank" rel="noreferrer" className="font-sans text-[13px] font-semibold text-rust">
+                        {item.website?.replace(/^https?:\/\//, "").replace(/\/$/, "")} ↗
+                      </a>
+                    )}
+                    {igHref && (
+                      <a href={igHref} target="_blank" rel="noreferrer" className="font-sans text-[13px] font-semibold text-rust">
+                        {instagramHandle(item.instagram)} ↗
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           )}
 
-          {/* Remaining photos */}
+          {/* Additional photos */}
           {pics(item).length > 1 && (
             <div className="mt-4 grid grid-cols-3 gap-1.5">
               {pics(item).slice(1).map((url) => (
@@ -275,32 +562,75 @@ function DetailModal({ item, onClose }: { item: RecapItem; onClose: () => void }
             </div>
           )}
 
-          {/* Picked comments */}
+          {/* Group comments */}
           {item.comments && item.comments.length > 0 && (
-            <div className="mt-4 space-y-2 border-t border-stone-100 pt-3">
-              {item.comments.map((c, i) => (
-                <div key={i} className="rounded-lg bg-stone-50 px-3 py-2 text-sm text-stone-600">
-                  <span className="font-medium text-stone-700">{c.author}: </span>
-                  {c.text}
-                </div>
-              ))}
+            <div className="mt-4">
+              <p
+                className="mb-2 font-mono text-[10px] tracking-[0.12em] text-ink-faint"
+                style={{ textTransform: "uppercase" }}
+              >
+                From the group
+              </p>
+              <div className="space-y-2">
+                {item.comments.map((c, i) => (
+                  <div
+                    key={i}
+                    className="flex gap-2 rounded-[10px] p-2.5"
+                    style={{ background: "#f3ede1" }}
+                  >
+                    <span
+                      className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full font-sans text-[10px] font-bold text-white"
+                      style={{ background: catColor("museum") }}
+                    >
+                      {(c.author?.[0] ?? "?").toUpperCase()}
+                    </span>
+                    <div className="min-w-0 flex-1 font-sans text-[12px] leading-snug text-ink-secondary">
+                      <span className="font-semibold text-ink">{c.author}</span>
+                      {" "}{c.text}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
+          <div className="h-5" />
+        </div>
 
-          {/* Links */}
-          {(webHref || igHref) && (
-            <div className="mt-4 flex flex-wrap gap-2 border-t border-stone-100 pt-3 text-xs">
-              {webHref && (
-                <a href={webHref} target="_blank" rel="noreferrer" className="font-medium text-indigo-600 hover:underline">
-                  Website ↗
-                </a>
-              )}
-              {igHref && (
-                <a href={igHref} target="_blank" rel="noreferrer" className="font-medium text-indigo-600 hover:underline">
-                  {instagramHandle(item.instagram)} ↗
-                </a>
-              )}
-            </div>
+        {/* Footer CTA */}
+        <div
+          className="flex shrink-0 gap-2.5 border-t border-border-divider px-5 py-3"
+          style={{ background: "#FBF8F1" }}
+        >
+          {webHref && (
+            <a
+              href={webHref}
+              target="_blank"
+              rel="noreferrer"
+              className="flex-1 rounded-[10px] py-3 text-center font-sans text-[13px] font-semibold text-ink"
+              style={{ background: "#efe9dd" }}
+            >
+              Website ↗
+            </a>
+          )}
+          {item.address && (
+            <a
+              href={`https://maps.google.com/?q=${encodeURIComponent(item.address)}`}
+              target="_blank"
+              rel="noreferrer"
+              className="flex-1 rounded-[10px] py-3 text-center font-sans text-[13px] font-semibold text-white"
+              style={{ background: "#211C18" }}
+            >
+              Maps ›
+            </a>
+          )}
+          {!webHref && !item.address && (
+            <button
+              onClick={onClose}
+              className="flex-1 rounded-[10px] py-3 text-center font-sans text-[13px] font-semibold text-ink"
+              style={{ background: "#efe9dd" }}
+            >
+              Close
+            </button>
           )}
         </div>
       </div>
@@ -308,23 +638,99 @@ function DetailModal({ item, onClose }: { item: RecapItem; onClose: () => void }
   );
 }
 
-function Stars({ rating }: { rating: number }) {
-  return (
-    <span className="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
-      ★ {rating.toFixed(1)}
-    </span>
-  );
-}
+// ── Main component ────────────────────────────────────────────────────────────
 
-function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+export function RecapView({ recap }: { recap: Recap }) {
+  const [active, setActive] = useState<RecapItem | null>(null);
+
+  const items = recap.items ?? [];
+
+  const mustVisit = useMemo(() => items.filter((i) => i.mustVisit), [items]);
+
+  // Group items by category, preserving canonical ENTITY_TABS order
+  const categoryGroups = useMemo(() => {
+    const byType = new Map<string, RecapItem[]>();
+    for (const item of items) {
+      const arr = byType.get(item.type) ?? [];
+      arr.push(item);
+      byType.set(item.type, arr);
+    }
+    // Sort: must-visit first within each category
+    for (const arr of byType.values()) {
+      arr.sort((a, b) => Number(!!b.mustVisit) - Number(!!a.mustVisit) || (b.rating ?? -1) - (a.rating ?? -1));
+    }
+    // Return in canonical tab order
+    const ordered: Array<{ type: string; items: RecapItem[] }> = [];
+    for (const tab of ENTITY_TABS) {
+      if (byType.has(tab.type)) {
+        ordered.push({ type: tab.type, items: byType.get(tab.type)! });
+      }
+    }
+    return ordered;
+  }, [items]);
+
   return (
-    <button
-      onClick={onClick}
-      className={`rounded-full px-3 py-1 text-xs font-medium transition ${
-        active ? "bg-stone-900 text-white" : "border border-stone-200 bg-white text-stone-600 hover:bg-stone-50"
-      }`}
-    >
-      {children}
-    </button>
+    <div className="min-h-screen" style={{ background: "#F7F2E9", fontFamily: "var(--font-sans)" }}>
+      {/* Hero */}
+      <HeroBand
+        recap={recap}
+        mustVisitCount={mustVisit.length}
+        totalCount={items.length}
+      />
+
+      {/* Intro */}
+      {recap.intro && (
+        <div className="mx-auto max-w-xl px-5 py-5 sm:px-6">
+          <p className="font-accent text-[15px] italic leading-relaxed text-ink-secondary">
+            {recap.intro}
+          </p>
+        </div>
+      )}
+
+      {/* Stats row */}
+      {items.length > 0 && (
+        <div className="mx-auto max-w-xl">
+          <StatsRow items={items} mustVisitCount={mustVisit.length} />
+        </div>
+      )}
+
+      <div className="mx-auto max-w-xl">
+        {/* Must visit reel */}
+        {mustVisit.length > 0 && (
+          <MustVisitReel items={mustVisit} onSelect={setActive} />
+        )}
+
+        {/* Category sections */}
+        {categoryGroups.map(({ type, items: catItems }) => (
+          <CategorySection
+            key={type}
+            type={type}
+            items={catItems}
+            onSelect={setActive}
+          />
+        ))}
+
+        {/* Map */}
+        {items.some((i) => typeof i.lat === "number") && (
+          <section className="isolate px-5 pb-8 sm:px-6">
+            <div className="mb-3 flex items-baseline gap-2">
+              <h2 className="font-display text-[22px] font-semibold text-ink">Map</h2>
+              <span className="font-accent text-[13px] italic text-ink-faint">{items.length} places</span>
+            </div>
+            <RecapMap items={items} onSelect={setActive} />
+          </section>
+        )}
+
+        {/* Footer */}
+        <footer
+          className="mt-4 px-5 py-8 text-center font-mono text-[10px] tracking-[0.12em] text-ink-ghost sm:px-6"
+          style={{ textTransform: "uppercase" }}
+        >
+          Powered by Gooshie Travels
+        </footer>
+      </div>
+
+      {active && <DetailSheet item={active} onClose={() => setActive(null)} />}
+    </div>
   );
 }
