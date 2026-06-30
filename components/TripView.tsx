@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { AppHeader } from "./AppHeader";
 import { ItineraryBoard } from "./ItineraryBoard";
@@ -10,7 +11,13 @@ import { TripDataProvider } from "./TripData";
 import { useAuth } from "./AuthProvider";
 import { getTrip } from "@/lib/trips";
 
-type Tab = "itinerary" | "planning" | "recap";
+// Leaflet touches `window`, so the map is client-only (no SSR).
+const TripMap = dynamic(() => import("./TripMap").then((m) => m.TripMap), {
+  ssr: false,
+  loading: () => <div className="h-[70vh] animate-pulse rounded-xl bg-slate-100" />,
+});
+
+type Tab = "itinerary" | "planning" | "map" | "recap";
 
 export function TripView({ tripId }: { tripId: string }) {
   const trip = getTrip(tripId);
@@ -43,6 +50,9 @@ export function TripView({ tripId }: { tripId: string }) {
             <TabBtn active={tab === "planning"} onClick={() => setTab("planning")}>
               Trip DB
             </TabBtn>
+            <TabBtn active={tab === "map"} onClick={() => setTab("map")}>
+              Map
+            </TabBtn>
             {canEdit && (
               <TabBtn active={tab === "recap"} onClick={() => setTab("recap")}>
                 Recap
@@ -54,6 +64,7 @@ export function TripView({ tripId }: { tripId: string }) {
         <main>
           {tab === "itinerary" && <ItineraryBoard tripId={trip.id} />}
           {tab === "planning" && <PlanningTab />}
+          {tab === "map" && <TripMap />}
           {tab === "recap" && (
             <RecapBuilder tripId={trip.id} tripName={trip.name} dateLabel={trip.dateLabel} />
           )}
