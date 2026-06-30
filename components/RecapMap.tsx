@@ -31,10 +31,13 @@ const colorOf = (t: EntityType) => TYPE_COLOR[t] ?? "#a8a29e";
 // character that would look wrong tilted.
 const TRAVELLER = {
   glyph: "🚗",
-  size: 30,
+  size: 46,
   rotate: true,
   /** Emoji car points left at 0°; nudge so "facing right" reads as 0° heading. */
   baseRotation: 180,
+  /** Little riders stacked on top of the car; kept upright (they don't rotate). */
+  toppers: "🥝✡️",
+  topperSize: 20,
 };
 
 type Point = { item: RecapItem; pos: LatLng };
@@ -113,7 +116,7 @@ function Traveller({
     () =>
       L.divIcon({
         className: "recap-traveller",
-        html: `<span class="recap-traveller-glyph" style="font-size:${TRAVELLER.size}px;line-height:1">${TRAVELLER.glyph}</span>`,
+        html: `<span class="recap-traveller-toppers" style="font-size:${TRAVELLER.topperSize}px;line-height:1">${TRAVELLER.toppers}</span><span class="recap-traveller-glyph" style="font-size:${TRAVELLER.size}px;line-height:1">${TRAVELLER.glyph}</span>`,
         iconSize: [TRAVELLER.size, TRAVELLER.size],
         iconAnchor: [TRAVELLER.size / 2, TRAVELLER.size / 2],
       }),
