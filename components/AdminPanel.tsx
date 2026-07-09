@@ -147,6 +147,12 @@ export function AdminPanel() {
 
       {/* Maintenance */}
       <Section title="Maintenance">
+        <details className="group">
+          <summary className="cursor-pointer list-none rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">
+            <span className="inline-block transition-transform group-open:rotate-90">▸</span>{" "}
+            Backfill, maps &amp; geocode tools
+          </summary>
+          <div className="mt-3 space-y-3">
         <div className="rounded-lg border border-slate-200 bg-white p-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="text-sm">
@@ -213,13 +219,15 @@ export function AdminPanel() {
           )}
         </div>
 
-        <div className="mt-3">
+        <div>
           <TripMapsFiller />
         </div>
 
-        <div className="mt-3">
+        <div>
           <GeocodeAudit />
         </div>
+          </div>
+        </details>
       </Section>
 
       {/* Pending requests */}
