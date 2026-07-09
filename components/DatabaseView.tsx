@@ -30,9 +30,10 @@ import {
 } from "@/lib/db";
 import { subscribePlanInstances } from "@/lib/itinerary";
 import { exportEntities } from "@/lib/export";
-import { TRIPS } from "@/lib/trips";
+import { useTrips } from "@/lib/trips";
 
 export function DatabaseView() {
+  const TRIPS = useTrips();
   const { isAdmin, role } = useAuth();
   const canEdit = isAdmin || role === "editor";
   const [entities, setEntities] = useState<DBEntity[]>([]);

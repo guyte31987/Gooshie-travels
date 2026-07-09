@@ -7,25 +7,17 @@
 // what it means everywhere else.
 
 import { useEffect, useMemo, useState } from "react";
-import { subscribeEntities, subscribeTripItems, subscribeTrips, saveEntity, type DBEntity, type TripItem, type Trip } from "@/lib/db";
+import { subscribeEntities, subscribeTripItems, saveEntity, type DBEntity, type TripItem } from "@/lib/db";
 import { subscribeSlots, subscribePlanInstances, type Slot, type PlanInstance } from "@/lib/itinerary";
 import { buildTripEntities } from "@/lib/trip-entities";
-import { TRIPS } from "@/lib/trips";
+import { useTrips } from "@/lib/trips";
 import { ENTITY_TABS } from "@/lib/entities";
 
 const emojiOf = (type: string) =>
   ENTITY_TABS.find((t) => t.type === type || (type === "party" && t.type === "club"))?.emoji ?? "•";
 
 export function TripMapsFiller() {
-  // Trip list: Firestore trips merged with the static catalog (by id).
-  const [fsTrips, setFsTrips] = useState<Trip[]>([]);
-  useEffect(() => subscribeTrips(setFsTrips), []);
-  const trips = useMemo(() => {
-    const byId = new Map<string, { id: string; name: string; areas: string[] }>();
-    for (const t of TRIPS) byId.set(t.id, { id: t.id, name: t.name, areas: t.areas });
-    for (const t of fsTrips) byId.set(t.id, { id: t.id, name: t.name, areas: t.areas ?? [] });
-    return [...byId.values()];
-  }, [fsTrips]);
+  const trips = useTrips();
 
   const [tripId, setTripId] = useState("");
   useEffect(() => {

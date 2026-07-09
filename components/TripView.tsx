@@ -9,7 +9,7 @@ import { PlanningTab } from "./PlanningTab";
 import { RecapBuilder } from "./RecapBuilder";
 import { TripDataProvider } from "./TripData";
 import { useAuth } from "./AuthProvider";
-import { getTrip } from "@/lib/trips";
+import { useTrip } from "@/lib/trips";
 
 // Leaflet touches `window`, so the map is client-only (no SSR).
 const TripMap = dynamic(() => import("./TripMap").then((m) => m.TripMap), {
@@ -20,7 +20,7 @@ const TripMap = dynamic(() => import("./TripMap").then((m) => m.TripMap), {
 type Tab = "itinerary" | "planning" | "map" | "recap";
 
 export function TripView({ tripId }: { tripId: string }) {
-  const trip = getTrip(tripId);
+  const trip = useTrip(tripId);
   const { isAdmin, role } = useAuth();
   const canEdit = isAdmin || role === "editor";
   const [tab, setTab] = useState<Tab>("itinerary");

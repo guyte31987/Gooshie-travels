@@ -2,9 +2,13 @@
 
 import Link from "next/link";
 import { AppHeader } from "./AppHeader";
-import { TRIPS } from "@/lib/trips";
+import { useTrips } from "@/lib/trips";
+import { useAuth } from "./AuthProvider";
+import { NewTripForm } from "./NewTripForm";
 
 export function TripsHome() {
+  const TRIPS = useTrips();
+  const { isAdmin } = useAuth();
   return (
     <div className="mx-auto min-h-screen max-w-2xl px-4 pb-16">
       <AppHeader title="Gooshie Travels" subtitle="Trips, shared with friends." />
@@ -36,9 +40,7 @@ export function TripsHome() {
         ))}
       </ul>
 
-      <p className="mt-6 text-center text-xs text-slate-400">
-        More trips, in-app trip creation, and the editable Database are coming next.
-      </p>
+      {isAdmin && <NewTripForm />}
     </div>
   );
 }

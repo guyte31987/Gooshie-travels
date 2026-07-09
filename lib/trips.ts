@@ -1,5 +1,10 @@
-// Trip catalog. For now this is a static list with one trip; in Stage B it moves
-// to a Firestore `trips` collection (same shape) so trips can be created in-app.
+// Trip catalog. Backed by the Firestore `trips` collection (see lib/db.ts) so
+// trips can be created in-app via the admin panel. NYC_SEED is the original
+// trip's metadata, used as a one-time fallback if Firestore has no trips yet
+// (e.g. a fresh environment before the collection has been seeded).
+
+import { useEffect, useState } from "react";
+import { subscribeTrips, type Trip } from "./db";
 
 export type TripMeta = {
   id: string;
@@ -12,16 +17,38 @@ export type TripMeta = {
   areas: string[];
 };
 
-export const TRIPS: TripMeta[] = [
-  {
-    id: "nyc-2026",
-    name: "NYC Pride & Berkshires",
-    dateLabel: "18–28 June 2026",
-    startDate: "2026-06-18",
-    endDate: "2026-06-28",
-    areas: ["New York City", "Upstate New York", "Berkshires (Western MA)", "Pennsylvania"],
-  },
-];
+const NYC_SEED: TripMeta = {
+  id: "nyc-2026",
+  name: "NYC Pride & Berkshires",
+  dateLabel: "18–28 June 2026",
+  startDate: "2026-06-18",
+  endDate: "2026-06-28",
+  areas: ["New York City", "Upstate New York", "Berkshires (Western MA)", "Pennsylvania"],
+};
+
+function toTripMeta(t: Trip): TripMeta {
+  return {
+    id: t.id,
+    name: t.name,
+    dateLabel: t.dateLabel ?? "",
+    startDate: t.startDate ?? "",
+    endDate: t.endDate ?? "",
+    areas: t.areas ?? [],
+  };
+}
+
+/** Live-subscribes to the trip catalog. Falls back to the NYC seed trip if Firestore has none yet. */
+export function useTrips(): TripMeta[] {
+  const [trips, setTrips] = useState<TripMeta[]>([NYC_SEED]);
+
+  useEffect(() => {
+    return subscribeTrips((rows) => {
+      setTrips(rows.length > 0 ? rows.map(toTripMeta) : [NYC_SEED]);
+    });
+  }, []);
+
+  return trips;
+}
 
 /** Inclusive list of YYYY-MM-DD days a trip spans. */
 export function tripDays(t: TripMeta): string[] {
@@ -36,6 +63,8 @@ export function tripDays(t: TripMeta): string[] {
   return out;
 }
 
-export function getTrip(id: string): TripMeta | undefined {
-  return TRIPS.find((t) => t.id === id);
+/** Live-subscribes to a single trip by id (undefined while loading / not found). */
+export function useTrip(id: string): TripMeta | undefined {
+  const trips = useTrips();
+  return trips.find((t) => t.id === id);
 }

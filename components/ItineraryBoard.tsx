@@ -8,7 +8,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ItineraryCalendar, type CalEntity, type CalSlot, type CalInstance, type CalHandlers } from "./ItineraryGrid";
 import { useAuth } from "./AuthProvider";
-import { getTrip, tripDays } from "@/lib/trips";
+import { useTrip, tripDays } from "@/lib/trips";
 import { subscribeEntities, saveEntity, seedEntitiesIfNew, subscribeTripDoc, saveTripStays, type DBEntity, type TripStay } from "@/lib/db";
 import { suggestGeneralArea } from "@/lib/areas";
 import { geocodeAddress } from "@/lib/geo";
@@ -18,11 +18,10 @@ import {
   seedItinerary, isItinerarySeeded, instanceId, type Slot, type PlanInstance,
 } from "@/lib/itinerary";
 import { nycSeedSlots, nycSeedInstances, nycSeedEntities } from "@/lib/itinerary-seed";
-import { PREVIEW_STAYS } from "@/lib/preview-data";
 import type { IcsStay } from "@/lib/ics-export";
 
 export function ItineraryBoard({ tripId }: { tripId: string }) {
-  const trip = getTrip(tripId);
+  const trip = useTrip(tripId);
   const { isAdmin, role } = useAuth();
   const canEdit = isAdmin || role === "editor";
   const [dbEntities, setDbEntities] = useState<DBEntity[]>([]);
@@ -45,13 +44,6 @@ export function ItineraryBoard({ tripId }: { tripId: string }) {
     const unsubT = subscribeTripDoc(tripId, (t) => setStays(t?.stays ?? []));
     return () => { unsubE(); unsubS(); unsubI(); unsubT(); };
   }, [tripId]);
-
-  // Seed PREVIEW_STAYS into Firestore on first load when Firestore has no stays yet.
-  useEffect(() => {
-    if (stays !== null && stays.length === 0 && tripId === "nyc-2026") {
-      saveTripStays(tripId, PREVIEW_STAYS);
-    }
-  }, [stays, tripId]);
 
   const entityById = useMemo(() => {
     const nameOf = new Map(dbEntities.map((e) => [e.id, e.name]));
@@ -90,10 +82,13 @@ export function ItineraryBoard({ tripId }: { tripId: string }) {
     return (
       <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
         <p className="text-sm text-slate-500">No itinerary yet for this trip.</p>
-        {canEdit && (
+        {canEdit && tripId === "nyc-2026" && (
           <button onClick={seed} disabled={seeding} className="mt-3 rounded-lg bg-rust px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
             {seeding ? "Seeding…" : "Seed from the reviewed mapping"}
           </button>
+        )}
+        {canEdit && tripId !== "nyc-2026" && (
+          <p className="mt-3 text-xs text-slate-400">Add days/entities to this trip from the Database to start building the itinerary.</p>
         )}
       </div>
     );

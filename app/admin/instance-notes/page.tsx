@@ -10,7 +10,7 @@ import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { subscribeEntities, saveEntity, type DBEntity } from "@/lib/db";
 import { savePlanInstance } from "@/lib/itinerary";
-import { TRIPS } from "@/lib/trips";
+import { useTrips } from "@/lib/trips";
 import type { PlanInstance } from "@/lib/itinerary";
 
 type Row = {
@@ -71,6 +71,7 @@ function NoteRow({ row, onSaved }: { row: Row; onSaved: () => void }) {
 
 export default function InstanceNotesPage() {
   const { isAdmin, loading } = useAuth();
+  const TRIPS = useTrips();
   const [rows, setRows] = useState<Row[] | null>(null);
   const [entities, setEntities] = useState<DBEntity[]>([]);
   const [tick, setTick] = useState(0);

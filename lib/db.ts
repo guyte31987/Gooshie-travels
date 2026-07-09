@@ -33,6 +33,9 @@ export type Trip = {
   id: string;
   name: string;
   dateLabel?: string;
+  /** Trip span (YYYY-MM-DD) — drives the itinerary grid's day columns. */
+  startDate?: string;
+  endDate?: string;
   areas: string[];
   stays?: TripStay[];
 };

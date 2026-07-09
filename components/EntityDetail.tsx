@@ -10,7 +10,7 @@ import { useTripData, useOptionalTripData, TripDataProvider } from "./TripData";
 import { useAuth } from "./AuthProvider";
 import { saveEntity, type DBEntity } from "@/lib/db";
 import { savePlanInstance, setInstanceRating, activityStatusOf, bookingStatusOf, type PlanInstance, type ActivityStatus, type BookingStatus } from "@/lib/itinerary";
-import { TRIPS } from "@/lib/trips";
+import { useTrips } from "@/lib/trips";
 import { useBackClose } from "@/lib/useBackClose";
 
 /** The entity popup — place-level info, general comments, and per-visit appearances.
@@ -250,6 +250,7 @@ export function EntityDetail({
 /** GDB view: resolve this entity's slots in every trip and list them grouped by trip.
  *  Each trip gets its own TripDataProvider so Appearance's instanceMap is correctly scoped. */
 function AllTripsAppearances({ entityId }: { entityId: string }) {
+  const TRIPS = useTrips();
   // Track which trips reported slots so we can show an empty state when none do.
   const [withSlots, setWithSlots] = useState<Set<string>>(new Set());
   const report = (tid: string, has: boolean) =>
