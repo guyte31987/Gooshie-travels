@@ -31,6 +31,10 @@ const CAT_COLOR: Record<string, string> = {
 const catColor = (type: string) => CAT_COLOR[type] ?? "#8A8175";
 const labelOf = (t: string) => ENTITY_TABS.find((x) => x.type === t)?.label ?? t;
 
+/** "party" is a legacy synonym for "club" (kept for old Firestore docs) — fold
+ *  it in so those items land in the Clubs section instead of vanishing. */
+const canonicalType = (type: string) => (type === "party" ? "club" : type);
+
 const pics = (i: RecapItem): string[] =>
   (i.publicPhotos?.length ? i.publicPhotos : i.photos) ?? [];
 
@@ -237,7 +241,7 @@ function ItinerarySection({
   // Collect unique category types across all activities, in canonical order
   const categoryTypes = useMemo(() => {
     const seen = new Set<string>();
-    for (const day of sorted) for (const act of day.activities) seen.add(act.type);
+    for (const day of sorted) for (const act of day.activities) seen.add(canonicalType(act.type));
     return ENTITY_TABS.map((t) => t.type).filter((t) => seen.has(t));
   }, [sorted]);
 
@@ -246,7 +250,7 @@ function ItinerarySection({
     return sorted
       .map((day) => ({
         ...day,
-        activities: day.activities.filter((a) => a.type === activeFilter),
+        activities: day.activities.filter((a) => canonicalType(a.type) === activeFilter),
       }))
       .filter((day) => day.activities.length > 0);
   }, [sorted, activeFilter]);
@@ -905,9 +909,10 @@ function DatabaseSection({
       {(() => {
         const byType = new Map<string, RecapItem[]>();
         for (const w of visibleUncovered) {
-          const arr = byType.get(w.type) ?? [];
+          const t = canonicalType(w.type);
+          const arr = byType.get(t) ?? [];
           arr.push(w);
-          byType.set(w.type, arr);
+          byType.set(t, arr);
         }
         return [...byType.entries()].map(([type, wItems]) => (
           <CategorySection
@@ -940,9 +945,10 @@ export function RecapView({ recap }: { recap: Recap }) {
   const categoryGroups = useMemo(() => {
     const byType = new Map<string, RecapItem[]>();
     for (const item of items) {
-      const arr = byType.get(item.type) ?? [];
+      const t = canonicalType(item.type);
+      const arr = byType.get(t) ?? [];
       arr.push(item);
-      byType.set(item.type, arr);
+      byType.set(t, arr);
     }
     // Sort: must-visit first within each category
     for (const arr of byType.values()) {
@@ -962,16 +968,17 @@ export function RecapView({ recap }: { recap: Recap }) {
   const wishlistByType = useMemo(() => {
     const m = new Map<string, RecapItem[]>();
     for (const w of wishlist) {
-      const arr = m.get(w.type) ?? [];
+      const t = canonicalType(w.type);
+      const arr = m.get(t) ?? [];
       arr.push(w);
-      m.set(w.type, arr);
+      m.set(t, arr);
     }
     return m;
   }, [wishlist]);
 
   // Wishlist types not covered by any visited category — shown standalone at end
   const uncoveredWishlist = useMemo(
-    () => wishlist.filter((w) => !categoryGroups.some((g) => g.type === w.type)),
+    () => wishlist.filter((w) => !categoryGroups.some((g) => g.type === canonicalType(w.type))),
     [wishlist, categoryGroups]
   );
 
