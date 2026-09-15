@@ -50,15 +50,19 @@ export function useTrips(): TripMeta[] {
   return trips;
 }
 
-/** Inclusive list of YYYY-MM-DD days a trip spans. */
+/** Inclusive list of YYYY-MM-DD days a trip spans. Empty if the trip has no valid start/end date. */
 export function tripDays(t: TripMeta): string[] {
   const out: string[] = [];
   const [y, m, d] = t.startDate.split("-").map(Number);
   const end = t.endDate;
-  for (let dt = new Date(Date.UTC(y, m - 1, d)); ; dt.setUTCDate(dt.getUTCDate() + 1)) {
+  const start = new Date(Date.UTC(y, m - 1, d));
+  if (Number.isNaN(start.getTime()) || !end) return out;
+  for (let dt = start; ; dt.setUTCDate(dt.getUTCDate() + 1)) {
     const iso = dt.toISOString().slice(0, 10);
     out.push(iso);
     if (iso >= end) break;
+    // Guard against a malformed/unreachable end date looping forever.
+    if (out.length > 366) break;
   }
   return out;
 }
