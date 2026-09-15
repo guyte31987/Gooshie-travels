@@ -46,7 +46,10 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  // Network-first for pages
+  // Network-first for pages. If the network fails and we've never cached this
+  // exact page before, fall back to the precached shell rather than resolving
+  // with `undefined` — an undefined Response is what makes Chrome show its
+  // generic "This page couldn't load" error instead of the app.
   e.respondWith(
     fetch(e.request)
       .then((res) => {
@@ -54,6 +57,6 @@ self.addEventListener('fetch', (e) => {
         caches.open(CACHE).then((c) => c.put(e.request, clone));
         return res;
       })
-      .catch(() => caches.match(e.request))
+      .catch(async () => (await caches.match(e.request)) || caches.match('/'))
   );
 });
