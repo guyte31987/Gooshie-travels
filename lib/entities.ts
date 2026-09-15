@@ -55,13 +55,13 @@ export type EntityType =
 
 export const ENTITY_TABS: { type: EntityType; label: string; emoji: string; operational?: boolean }[] = [
   { type: "food", label: "Food", emoji: "🍴" },
-  { type: "vintage", label: "Vintage", emoji: "👕" },
   { type: "museum", label: "Museums", emoji: "🖼" },
   { type: "club", label: "Clubs", emoji: "🎶" },
-  { type: "bar", label: "Bars", emoji: "🍸" },
-  { type: "spa", label: "Wellness", emoji: "🧖" },
   { type: "sight", label: "Sights", emoji: "📸" },
   { type: "attraction", label: "Attractions", emoji: "🎢" },
+  { type: "vintage", label: "Vintage", emoji: "👕" },
+  { type: "bar", label: "Bars", emoji: "🍸" },
+  { type: "spa", label: "Wellness", emoji: "🧖" },
   { type: "hike", label: "Hikes", emoji: "🥾" },
   { type: "show", label: "Shows", emoji: "🎭" },
   { type: "event", label: "Events", emoji: "🎫" },

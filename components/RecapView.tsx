@@ -66,6 +66,9 @@ function RatingChip({ rating }: { rating: number }) {
 
 // ── Photo/gradient card background ──────────────────────────────────────────
 
+/** True when a place has at least one photo to show. */
+const hasPhoto = (item: RecapItem): boolean => pics(item).length > 0;
+
 function CardPhoto({
   item,
   height = 140,
@@ -76,18 +79,34 @@ function CardPhoto({
   className?: string;
 }) {
   const photo = pics(item)[0];
+
+  // No photo: skip the image entirely — just the place name, large, on a flat
+  // category-color block (no dark overlay needed since there's nothing to dim).
+  if (!photo) {
+    return (
+      <div
+        className={`relative flex w-full items-center justify-center overflow-hidden px-3 text-center ${className}`}
+        style={{ height, background: catColor(item.type) }}
+      >
+        <h3
+          className="font-display font-semibold leading-tight text-white line-clamp-3"
+          style={{ fontSize: height >= 120 ? 20 : height >= 90 ? 16 : 13 }}
+        >
+          {item.name}
+        </h3>
+        {item.generalArea && (
+          <span className="absolute bottom-2 left-3 font-accent text-[11px] italic text-white/80">
+            {item.generalArea}
+          </span>
+        )}
+      </div>
+    );
+  }
+
   return (
-    <div
-      className={`relative w-full overflow-hidden ${className}`}
-      style={{
-        height,
-        background: photo ? undefined : gradientFor(item.type),
-      }}
-    >
-      {photo && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={photo} alt="" className="h-full w-full object-cover" />
-      )}
+    <div className={`relative w-full overflow-hidden ${className}`} style={{ height }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={photo} alt="" className="h-full w-full object-cover" />
       <div
         className="absolute inset-0"
         style={{ background: "linear-gradient(to bottom, transparent 40%, rgba(33,28,24,.55) 100%)" }}
@@ -359,16 +378,28 @@ function ItinerarySection({
                         <div className="w-px flex-1" style={{ background: ai === activities.length - 1 ? "transparent" : "#ece7dd" }} />
                       </div>
 
-                      {/* Name + category */}
+                      {/* Name + category + score/blurb */}
                       <div className="min-w-0 flex-1">
-                        <p className="font-display text-[15px] font-semibold leading-tight text-ink">{act.name}</p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="font-display text-[15px] font-semibold leading-tight text-ink">{act.name}</p>
+                          {recapItem?.rating != null && (
+                            <span className="shrink-0 font-display text-[11px] font-semibold text-rust">
+                              ★ {recapItem.rating.toFixed(1)}
+                            </span>
+                          )}
+                        </div>
                         <p className="mt-0.5 font-mono text-[10px] tracking-[0.1em]" style={{ textTransform: "uppercase", color: catColor(act.type) }}>
                           {labelOf(act.type)}
                         </p>
+                        {recapItem?.blurb && (
+                          <p className="mt-0.5 truncate font-accent text-[12px] italic text-ink-faint">
+                            {recapItem.blurb}
+                          </p>
+                        )}
                       </div>
 
                       {/* End time + chevron */}
-                      <div className="flex shrink-0 items-center gap-1.5">
+                      <div className="flex shrink-0 items-center gap-1.5 self-start pt-0.5">
                         {act.end > act.start && (
                           <span className="font-mono text-[10px] text-ink-ghost">→ {fmtTime(act.end)}</span>
                         )}
@@ -450,13 +481,22 @@ function MustVisitReel({
             className="w-[220px] shrink-0 overflow-hidden rounded-2xl border border-border text-left shadow-sm transition hover:shadow-md"
             style={{ background: "#fff" }}
           >
-            {/* Photo / gradient */}
-            <div className="relative h-[148px] w-full overflow-hidden" style={{ background: gradientFor(item.type) }}>
-              {pics(item)[0] && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={pics(item)[0]} alt="" className="h-full w-full object-cover" />
+            {/* Photo — or, with none, the name large on a flat category-color block */}
+            <div
+              className="relative flex h-[148px] w-full items-center justify-center overflow-hidden px-4 text-center"
+              style={{ background: hasPhoto(item) ? undefined : catColor(item.type) }}
+            >
+              {hasPhoto(item) ? (
+                <>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={pics(item)[0]} alt="" className="h-full w-full object-cover" />
+                  <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 40%, rgba(33,28,24,.55) 100%)" }} />
+                </>
+              ) : (
+                <h3 className="font-display text-[19px] font-semibold leading-tight text-white line-clamp-3">
+                  {item.name}
+                </h3>
               )}
-              <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 40%, rgba(33,28,24,.55) 100%)" }} />
               <span
                 className="absolute left-2.5 top-2.5 rounded-full px-2.5 py-1 font-sans text-[10px] font-semibold text-white"
                 style={{ background: "rgba(33,28,24,.5)" }}
@@ -479,9 +519,11 @@ function MustVisitReel({
                   {labelOf(item.type)}
                 </span>
               </div>
-              <h3 className="mt-1 font-display text-[17px] font-semibold leading-tight text-ink">
-                {item.name}
-              </h3>
+              {hasPhoto(item) && (
+                <h3 className="mt-1 font-display text-[17px] font-semibold leading-tight text-ink">
+                  {item.name}
+                </h3>
+              )}
               {item.generalArea && (
                 <p className="mt-0.5 font-mono text-[10px] tracking-[0.08em] text-ink-ghost" style={{ textTransform: "uppercase" }}>
                   {item.generalArea}
@@ -545,9 +587,11 @@ function CategorySection({
               <CardPhoto item={preview[0]} height={130} />
               <div className="flex items-start justify-between p-3">
                 <div className="min-w-0 flex-1">
-                  <h3 className="font-display text-[16px] font-semibold leading-tight text-ink">
-                    {preview[0].name}
-                  </h3>
+                  {hasPhoto(preview[0]) && (
+                    <h3 className="font-display text-[16px] font-semibold leading-tight text-ink">
+                      {preview[0].name}
+                    </h3>
+                  )}
                   {preview[0].blurb && (
                     <p className="mt-1 font-sans text-[11px] leading-snug text-ink-faint line-clamp-2">
                       {preview[0].blurb}
@@ -574,9 +618,11 @@ function CategorySection({
                 >
                   <CardPhoto item={item} height={76} />
                   <div className="p-2.5">
-                    <h3 className="font-display text-[13px] font-semibold leading-tight text-ink line-clamp-1">
-                      {item.name}
-                    </h3>
+                    {hasPhoto(item) && (
+                      <h3 className="font-display text-[13px] font-semibold leading-tight text-ink line-clamp-1">
+                        {item.name}
+                      </h3>
+                    )}
                     <p className="mt-0.5 font-sans text-[10px] text-ink-faint">
                       {item.generalArea || labelOf(item.type)}
                     </p>
@@ -598,9 +644,11 @@ function CategorySection({
             >
               <CardPhoto item={item} height={80} />
               <div className="p-2.5">
-                <h3 className="font-display text-[13px] font-semibold leading-tight text-ink line-clamp-1">
-                  {item.name}
-                </h3>
+                {hasPhoto(item) && (
+                  <h3 className="font-display text-[13px] font-semibold leading-tight text-ink line-clamp-1">
+                    {item.name}
+                  </h3>
+                )}
                 <p className="mt-0.5 font-sans text-[10px] text-ink-faint">
                   {item.generalArea || labelOf(item.type)}
                 </p>
@@ -1139,6 +1187,22 @@ export function RecapView({ recap }: { recap: Recap }) {
       )}
 
       <div className="mx-auto max-w-xl">
+        {/* Places & Activities */}
+        {items.length > 0 && (
+          <div className="px-5 pt-1 sm:px-6">
+            <h2 className="font-display text-[26px] font-semibold leading-none text-ink">
+              Places &amp; Activities
+            </h2>
+          </div>
+        )}
+        <DatabaseSection
+          mustVisit={mustVisit}
+          categoryGroups={categoryGroups}
+          wishlistByType={wishlistByType}
+          uncoveredWishlist={uncoveredWishlist}
+          onSelect={setActive}
+        />
+
         {/* Itinerary */}
         {recap.itinerary && recap.itinerary.length > 0 && (
           <ItinerarySection
@@ -1147,15 +1211,6 @@ export function RecapView({ recap }: { recap: Recap }) {
             onSelect={setActive}
           />
         )}
-
-        {/* Database section */}
-        <DatabaseSection
-          mustVisit={mustVisit}
-          categoryGroups={categoryGroups}
-          wishlistByType={wishlistByType}
-          uncoveredWishlist={uncoveredWishlist}
-          onSelect={setActive}
-        />
 
         {/* Map */}
         {items.some((i) => typeof i.lat === "number") && (
