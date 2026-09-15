@@ -28,9 +28,6 @@ const CAT_COLOR: Record<string, string> = {
   event: "#8A8175",
 };
 
-// Category types that get the 1+2 asymmetric grid layout
-const GRID_TYPES = new Set(["food", "bar", "party", "club"]);
-
 const catColor = (type: string) => CAT_COLOR[type] ?? "#8A8175";
 const labelOf = (t: string) => ENTITY_TABS.find((x) => x.type === t)?.label ?? t;
 
@@ -64,57 +61,20 @@ function RatingChip({ rating }: { rating: number }) {
   );
 }
 
-// ── Photo/gradient card background ──────────────────────────────────────────
+// ── Row thumbnail ────────────────────────────────────────────────────────────
 
-/** True when a place has at least one photo to show. */
-const hasPhoto = (item: RecapItem): boolean => pics(item).length > 0;
-
-function CardPhoto({
-  item,
-  height = 140,
-  className = "",
-}: {
-  item: RecapItem;
-  height?: number;
-  className?: string;
-}) {
+/** Small square thumbnail for a list row: the place's photo, or a flat
+ *  category-color block when it has none. */
+function RowThumb({ item, size = 44 }: { item: RecapItem; size?: number }) {
   const photo = pics(item)[0];
-
-  // No photo: skip the image entirely — just the place name, large, on a flat
-  // category-color block (no dark overlay needed since there's nothing to dim).
-  if (!photo) {
-    return (
-      <div
-        className={`relative flex w-full items-center justify-center overflow-hidden px-3 text-center ${className}`}
-        style={{ height, background: catColor(item.type) }}
-      >
-        <h3
-          className="font-display font-semibold leading-tight text-white line-clamp-3"
-          style={{ fontSize: height >= 120 ? 20 : height >= 90 ? 16 : 13 }}
-        >
-          {item.name}
-        </h3>
-        {item.generalArea && (
-          <span className="absolute bottom-2 left-3 font-accent text-[11px] italic text-white/80">
-            {item.generalArea}
-          </span>
-        )}
-      </div>
-    );
-  }
-
   return (
-    <div className={`relative w-full overflow-hidden ${className}`} style={{ height }}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={photo} alt="" className="h-full w-full object-cover" />
-      <div
-        className="absolute inset-0"
-        style={{ background: "linear-gradient(to bottom, transparent 40%, rgba(33,28,24,.55) 100%)" }}
-      />
-      {item.generalArea && (
-        <span className="absolute bottom-2.5 left-3.5 font-accent text-[13px] italic text-white">
-          {item.generalArea}
-        </span>
+    <div
+      className="shrink-0 overflow-hidden rounded-lg"
+      style={{ width: size, height: size, background: photo ? undefined : catColor(item.type) }}
+    >
+      {photo && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={photo} alt="" className="h-full w-full object-cover" />
       )}
     </div>
   );
@@ -458,95 +418,6 @@ function StatsRow({
   );
 }
 
-// ── Must-visit reel ──────────────────────────────────────────────────────────
-
-function MustVisitReel({
-  items,
-  onSelect,
-}: {
-  items: RecapItem[];
-  onSelect: (i: RecapItem) => void;
-}) {
-  return (
-    <section className="pb-8 pt-6">
-      <div className="flex items-baseline gap-2.5 px-5 sm:px-6">
-        <h2 className="font-display text-[22px] font-semibold text-ink">Must visit</h2>
-        <span className="font-accent text-[13px] italic text-ink-faint">non-negotiable</span>
-      </div>
-      <div className="mt-4 flex gap-3.5 overflow-x-auto px-5 pb-2 sm:px-6" style={{ scrollbarWidth: "none" }}>
-        {items.map((item) => (
-          <button
-            key={item.entityId}
-            onClick={() => onSelect(item)}
-            className="w-[220px] shrink-0 overflow-hidden rounded-2xl border border-border text-left shadow-sm transition hover:shadow-md"
-            style={{ background: "#fff" }}
-          >
-            {/* Photo — or, with none, the name large on a flat category-color block */}
-            <div
-              className="relative flex h-[148px] w-full items-center justify-center overflow-hidden px-4 text-center"
-              style={{ background: hasPhoto(item) ? undefined : catColor(item.type) }}
-            >
-              {hasPhoto(item) ? (
-                <>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={pics(item)[0]} alt="" className="h-full w-full object-cover" />
-                  <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 40%, rgba(33,28,24,.55) 100%)" }} />
-                </>
-              ) : (
-                <h3 className="font-display text-[19px] font-semibold leading-tight text-white line-clamp-3">
-                  {item.name}
-                </h3>
-              )}
-              <span
-                className="absolute left-2.5 top-2.5 rounded-full px-2.5 py-1 font-sans text-[10px] font-semibold text-white"
-                style={{ background: "rgba(33,28,24,.5)" }}
-              >
-                ★ Must visit
-              </span>
-              {item.generalArea && (
-                <span className="absolute bottom-2.5 left-3 font-accent text-[12px] italic text-white">
-                  {item.generalArea}
-                </span>
-              )}
-            </div>
-            <div className="p-3.5">
-              <div className="flex items-center gap-1.5">
-                <CategoryDot type={item.type} />
-                <span
-                  className="font-mono text-[10px] tracking-[0.12em]"
-                  style={{ textTransform: "uppercase", color: catColor(item.type) }}
-                >
-                  {labelOf(item.type)}
-                </span>
-              </div>
-              {hasPhoto(item) && (
-                <h3 className="mt-1 font-display text-[17px] font-semibold leading-tight text-ink">
-                  {item.name}
-                </h3>
-              )}
-              {item.generalArea && (
-                <p className="mt-0.5 font-mono text-[10px] tracking-[0.08em] text-ink-ghost" style={{ textTransform: "uppercase" }}>
-                  {item.generalArea}
-                </p>
-              )}
-              {item.blurb && (
-                <p className="mt-2 font-accent text-[12px] italic leading-snug text-ink-secondary line-clamp-2">
-                  {item.blurb}
-                </p>
-              )}
-              {item.rating != null && (
-                <div className="mt-2.5">
-                  <RatingChip rating={item.rating} />
-                </div>
-              )}
-            </div>
-          </button>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 // ── Category section ─────────────────────────────────────────────────────────
 
 function CategorySection({
@@ -561,9 +432,6 @@ function CategorySection({
   onSelect: (i: RecapItem) => void;
 }) {
   const color = catColor(type);
-  const useGrid = GRID_TYPES.has(type);
-  const preview = items.slice(0, useGrid ? 3 : 4);
-  const rest = items.length - preview.length;
 
   return (
     <section className="px-5 py-5 sm:px-6">
@@ -574,95 +442,51 @@ function CategorySection({
         <span className="font-accent text-[13px] italic text-ink-faint">{items.length} picks</span>
       </div>
 
-      {useGrid ? (
-        // 1+2 asymmetric grid
-        <div className="flex flex-col gap-2.5">
-          {/* Big card */}
-          {preview[0] && (
-            <button
-              onClick={() => onSelect(preview[0])}
-              className="overflow-hidden rounded-xl border border-border text-left"
-              style={{ background: "#fff" }}
-            >
-              <CardPhoto item={preview[0]} height={130} />
-              <div className="flex items-start justify-between p-3">
-                <div className="min-w-0 flex-1">
-                  {hasPhoto(preview[0]) && (
-                    <h3 className="font-display text-[16px] font-semibold leading-tight text-ink">
-                      {preview[0].name}
-                    </h3>
-                  )}
-                  {preview[0].blurb && (
-                    <p className="mt-1 font-sans text-[11px] leading-snug text-ink-faint line-clamp-2">
-                      {preview[0].blurb}
-                    </p>
-                  )}
-                </div>
-                {preview[0].rating != null && (
-                  <div className="ml-2 shrink-0">
-                    <RatingChip rating={preview[0].rating} />
-                  </div>
-                )}
-              </div>
-            </button>
-          )}
-          {/* Two small cards */}
-          {preview.length > 1 && (
-            <div className="grid grid-cols-2 gap-2.5">
-              {preview.slice(1, 3).map((item) => (
-                <button
-                  key={item.entityId}
-                  onClick={() => onSelect(item)}
-                  className="overflow-hidden rounded-xl border border-border text-left"
-                  style={{ background: "#fff" }}
-                >
-                  <CardPhoto item={item} height={76} />
-                  <div className="p-2.5">
-                    {hasPhoto(item) && (
-                      <h3 className="font-display text-[13px] font-semibold leading-tight text-ink line-clamp-1">
-                        {item.name}
-                      </h3>
-                    )}
-                    <p className="mt-0.5 font-sans text-[10px] text-ink-faint">
-                      {item.generalArea || labelOf(item.type)}
-                    </p>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      ) : (
-        // Horizontal scroll
-        <div className="flex gap-2.5 overflow-x-auto pb-2" style={{ scrollbarWidth: "none" }}>
-          {preview.map((item) => (
+      {/* Rows — every pick, must-visits first (already sorted upstream) */}
+      {items.length > 0 && (
+        <div className="overflow-hidden rounded-2xl border border-border" style={{ background: "#fff" }}>
+          {items.map((item, i) => (
             <button
               key={item.entityId}
               onClick={() => onSelect(item)}
-              className="w-[130px] shrink-0 overflow-hidden rounded-xl border border-border text-left"
-              style={{ background: "#fff" }}
+              className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-[#faf7f2]"
+              style={{ borderTop: i > 0 ? "1px solid #ece7dd" : undefined }}
             >
-              <CardPhoto item={item} height={80} />
-              <div className="p-2.5">
-                {hasPhoto(item) && (
-                  <h3 className="font-display text-[13px] font-semibold leading-tight text-ink line-clamp-1">
+              <RowThumb item={item} />
+
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <p className="min-w-0 truncate font-display text-[15px] font-semibold leading-tight text-ink">
                     {item.name}
-                  </h3>
-                )}
-                <p className="mt-0.5 font-sans text-[10px] text-ink-faint">
-                  {item.generalArea || labelOf(item.type)}
+                  </p>
+                  {item.mustVisit && (
+                    <span
+                      className="shrink-0 rounded-full px-1.5 py-[1px] font-mono text-[8px] font-bold tracking-[0.06em] text-white"
+                      style={{ background: "#f59e0b" }}
+                    >
+                      MUST
+                    </span>
+                  )}
+                  {item.rating != null && (
+                    <span className="shrink-0 font-display text-[11px] font-semibold text-rust">
+                      ★ {item.rating.toFixed(1)}
+                    </span>
+                  )}
+                </div>
+                <p className="mt-0.5 font-mono text-[10px] tracking-[0.1em]" style={{ textTransform: "uppercase", color }}>
+                  {item.generalArea || labelOf(type)}
                 </p>
+                {item.blurb && (
+                  <p className="mt-0.5 truncate font-accent text-[12px] italic text-ink-faint">
+                    {item.blurb}
+                  </p>
+                )}
               </div>
+
+              <span className="shrink-0 text-[13px] text-ink-ghost">›</span>
             </button>
           ))}
         </div>
-      )}
-
-      {/* See all button */}
-      {rest > 0 && (
-        <p className="mt-3 text-center font-sans text-xs font-semibold text-rust">
-          +{rest} more {labelOf(type).toLowerCase()} picks
-        </p>
       )}
 
       {/* "For next visit" wishlist items */}
@@ -996,13 +820,11 @@ function DetailSheet({ item, onClose }: { item: RecapItem; onClose: () => void }
 // ── Database section ──────────────────────────────────────────────────────────
 
 function DatabaseSection({
-  mustVisit,
   categoryGroups,
   wishlistByType,
   uncoveredWishlist,
   onSelect,
 }: {
-  mustVisit: RecapItem[];
   categoryGroups: Array<{ type: string; items: RecapItem[] }>;
   wishlistByType: Map<string, RecapItem[]>;
   uncoveredWishlist: RecapItem[];
@@ -1067,14 +889,6 @@ function DatabaseSection({
           </div>
         )}
       </div>
-
-      {/* Must-visit reel — show when All or if the filter matches any must-visit */}
-      {mustVisit.length > 0 && (activeFilter === "all" || mustVisit.some((i) => i.type === activeFilter)) && (
-        <MustVisitReel
-          items={activeFilter === "all" ? mustVisit : mustVisit.filter((i) => i.type === activeFilter)}
-          onSelect={onSelect}
-        />
-      )}
 
       {/* Category sections */}
       {visibleGroups.map(({ type, items: catItems }) => (
@@ -1196,7 +1010,6 @@ export function RecapView({ recap }: { recap: Recap }) {
           </div>
         )}
         <DatabaseSection
-          mustVisit={mustVisit}
           categoryGroups={categoryGroups}
           wishlistByType={wishlistByType}
           uncoveredWishlist={uncoveredWishlist}
